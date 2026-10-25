@@ -28,7 +28,7 @@ Not "anti-AI". "Transparent about AI." That's more honest (AI use is a spectrum)
 | **Writers and poets** | Authors Guild "Human Authored" has certified 5,000+ books, so writers already seek this. Draft history is natural evidence. |
 | Later: code, music, ideas, design | Code buyers care less about human authorship; ideas are legally weak to sell. Add once the core works. |
 
-**Watch:** [Fybe](https://fybe.art/) describes itself as a "no gen-AI arts marketplace" (2026). Our difference: graded transparency (a % with a range, not a yes/no badge), writing as well as art, and the embeddable badge that travels with the work.
+**Watch:** [Fybe](https://fybe.art/), a no-AI, no-drop-shipping Etsy alternative for **fiber arts** (cross-stitch, embroidery, knitting), founded by Rachel Powell in Maine. It opened to sellers around August 2026, was crowdfunded, uses volunteer moderators, and charges 5% at most. No revenue or funding figures are public. It isn't a direct competitor, but it is proof that sellers will move over AI, and its 5% fee sets creators' expectations. Our difference: graded transparency (a % with a range, not a yes/no rule), writing as well as art, and the embeddable badge that travels with the work.
 
 ---
 
