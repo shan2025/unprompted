@@ -52,7 +52,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 | Detection | Add at least one commercial detector per medium via `src/lib/analysis/providers.ts` |
 | Provenance | Verify C2PA signatures (today we only detect that a manifest exists) |
 | File delivery | Deliverables are text or links; add secure file uploads and downloads |
-| Storage | Uploads go to `data/uploads` on local disk; use object storage on serverless hosts (`src/lib/uploads.ts`) |
+| Storage | Images (up to 4 MB) are stored in the database; move to object storage as volume grows (`src/lib/uploads.ts`) |
 | Accounts | Email verification, password reset, seller identity verification, rate limiting |
 | Moderation | Creator appeals UI, edit and relist after review, reputation history |
 | Legal | Terms of service, DMCA process, refund policy (see the research doc) |
@@ -82,12 +82,44 @@ The built-in analyzer is a transparent baseline, not a production detector. Its 
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint |
 | `npm run setup` | Migrate and seed (`db:migrate`, `db:seed` separately) |
 | `npm run db:generate` | Create a migration after editing `src/lib/db/schema.ts` |
+| `npm run build:deploy` | What Vercel runs: migrate, seed an empty database, ensure the moderator, build |
 
 ## Stack
 
 Next.js 16 (App Router, Cache Components, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 · Drizzle ORM · libSQL/SQLite · Vitest.
 
-**Deploying:** the database is libSQL, so the same code runs against a local file or a hosted [Turso](https://turso.tech) database. Set `DATABASE_URL` and `DATABASE_AUTH_TOKEN`, plus `SITE_URL` for badge links. On serverless hosts (e.g. Vercel), move uploads to object storage first. On a VPS with a persistent disk, `npm run build && npm start` works as-is.
+## Deploying (Vercel + Turso, both have free tiers)
+
+The app runs on [Vercel](https://vercel.com) with a hosted [Turso](https://turso.tech) database. Every deploy runs `npm run build:deploy`, which updates the database schema, adds the demo listings to an empty database, makes sure your moderator account exists, and builds the site.
+
+**1. Create the database (Turso)**
+
+1. Sign up at [turso.tech](https://turso.tech) (GitHub login works) and create a database, e.g. `unprompted`.
+2. On the database page, copy its URL (`libsql://unprompted-<you>.turso.io`).
+3. Create a database token and copy it.
+
+**2. Create the site (Vercel)**
+
+1. Go to [vercel.com/new](https://vercel.com/new), sign in with GitHub, and import `shan2025/unprompted`.
+2. Before clicking **Deploy**, open **Environment Variables** and add:
+
+   | Name | Value |
+   | --- | --- |
+   | `DATABASE_URL` | the Turso URL from step 1 |
+   | `DATABASE_AUTH_TOKEN` | the Turso token from step 1 |
+   | `ADMIN_EMAIL` | the email you'll use to moderate |
+   | `ADMIN_PASSWORD` | a password of at least 10 characters |
+
+3. Click **Deploy**. In a couple of minutes you get a live `https://unprompted-….vercel.app` address. Log in there with `ADMIN_EMAIL` and `ADMIN_PASSWORD` to reach `/admin`.
+
+After that, every push to `main` redeploys automatically.
+
+Notes:
+- On the live site, demo accounts get random passwords, so nobody can log into them. There is no shared demo login.
+- `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` also work, if you connect Turso through Vercel's Storage tab instead.
+- Badge links use your Vercel address automatically. Set `SITE_URL` once you add a custom domain.
+- Vercel's free Hobby plan is for non-commercial use. Move to a paid plan before taking real payments.
+- Elsewhere: any Node host works. With a persistent disk you can skip Turso, since the default is a local SQLite file in `data/`.
 
 ## Screenshots
 

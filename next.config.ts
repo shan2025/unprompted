@@ -7,8 +7,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@libsql/client", "libsql"],
   experimental: {
     serverActions: {
-      // Listings can include an image of up to 8 MB.
-      bodySizeLimit: "10mb",
+      // Listings can include an image of up to 4 MB; Vercel caps requests at 4.5 MB.
+      bodySizeLimit: "4.5mb",
     },
   },
   turbopack: {

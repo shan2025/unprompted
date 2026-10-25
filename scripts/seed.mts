@@ -1,14 +1,21 @@
-// Demo data for local development. Every listing is flagged as a demo and
-// shown with a DEMO label: the "creators" are fictional and the sample text
-// was written for testing, so none of it should pass as real human work.
+// Demo data. Every listing is flagged as a demo and shown with a DEMO label:
+// the "creators" are fictional and the sample text was written for testing,
+// so none of it should pass as real human work.
+//
+//   npm run db:seed               Local: wipes the database, demo password for every account.
+//   tsx scripts/seed.mts --deploy Live site: only seeds an empty database, demo accounts get
+//                                 random passwords, and no moderator is created (see ensure-admin).
 
+import { randomBytes } from "node:crypto";
+import { count } from "drizzle-orm";
 import { assess } from "../src/lib/assess";
 import type { CategoryId, LicenseId } from "../src/lib/categories";
 import { db, schema } from "../src/lib/db";
 import { hashPassword } from "../src/lib/password";
 import type { Disclosure, Evidence } from "../src/lib/scoring";
 
-const DEMO_PASSWORD = "demo-password";
+const DEPLOY = process.argv.includes("--deploy");
+const DEMO_PASSWORD = DEPLOY ? randomBytes(24).toString("base64url") : "demo-password";
 const DAY = 24 * 60 * 60 * 1000;
 
 const NONE: Disclosure = { ideation: "none", creation: "none", refinement: "none", assets: "none" };
@@ -248,11 +255,21 @@ Where every whispered moment sings.`,
   },
 ];
 
-await db.delete(schema.flags);
-await db.delete(schema.orders);
-await db.delete(schema.listings);
-await db.delete(schema.sessions);
-await db.delete(schema.users);
+if (DEPLOY) {
+  const [{ n }] = await db.select({ n: count() }).from(schema.users);
+  if (n > 0) {
+    console.log("Database already has accounts; skipping demo data.");
+    process.exit(0);
+  }
+  people.splice(people.findIndex((p) => p.handle === "team"), 1);
+} else {
+  await db.delete(schema.flags);
+  await db.delete(schema.orders);
+  await db.delete(schema.listings);
+  await db.delete(schema.sessions);
+  await db.delete(schema.uploads);
+  await db.delete(schema.users);
+}
 
 const passwordHash = await hashPassword(DEMO_PASSWORD);
 const ids = new Map<string, number>();
@@ -328,5 +345,9 @@ await db.insert(schema.flags).values({
   details: "The first paragraph reads fully generated to me. Is 30% really right?",
 });
 
-console.log(`\nSeeded ${people.length} accounts (password: ${DEMO_PASSWORD}) and ${items.length} demo listings.`);
-console.log("Admin login: admin@unprompted.test");
+if (DEPLOY) {
+  console.log(`\nSeeded ${people.length} demo accounts (random passwords) and ${items.length} demo listings.`);
+} else {
+  console.log(`\nSeeded ${people.length} accounts (password: ${DEMO_PASSWORD}) and ${items.length} demo listings.`);
+  console.log("Admin login: admin@unprompted.test");
+}

@@ -9,7 +9,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 
 export type AuthState = { error?: string; values?: { email?: string; name?: string; handle?: string } } | null;
 
-const RESERVED = new Set(["admin", "api", "explore", "sell", "dashboard", "login", "signup", "standard", "unprompted"]);
+const RESERVED = new Set(["admin", "api", "explore", "sell", "dashboard", "login", "signup", "standard", "team", "unprompted"]);
 
 export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState> {
   const name = String(fd.get("name") ?? "").trim();

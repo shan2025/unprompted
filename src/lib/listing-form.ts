@@ -4,7 +4,8 @@ import type { MediaScan } from "./analysis/media";
 import type { ContentKind, Segment } from "./analysis/text";
 import { EVIDENCE_KINDS, LEVELS, STAGES, type Disclosure, type Evidence, type EvidenceKind, type Level, type Score } from "./scoring";
 
-export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+// Stays under the 4.5 MB request limit on Vercel.
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 export const MAX_EVIDENCE = 6;
 
 export type FieldErrors = Partial<Record<string, string>>;
@@ -102,7 +103,7 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
   const file = fd.get("cover");
   if (file instanceof File && file.size > 0) {
     if (file.size > MAX_IMAGE_BYTES) {
-      errors.cover = "Images must be 8 MB or smaller.";
+      errors.cover = "Images must be 4 MB or smaller.";
     } else {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const ext = sniffImageType(bytes);

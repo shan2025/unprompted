@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { blob, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { MediaScan } from "../analysis/media";
 import type { Segment } from "../analysis/text";
 import type { Disclosure, Evidence, Score } from "../scoring";
@@ -104,6 +104,13 @@ export const flags = sqliteTable("flags", {
   status: text("status", { enum: ["open", "dismissed", "upheld"] })
     .notNull()
     .default("open"),
+  createdAt: createdAt(),
+});
+
+export const uploads = sqliteTable("uploads", {
+  name: text("name").primaryKey(),
+  contentType: text("content_type").notNull(),
+  bytes: blob("bytes", { mode: "buffer" }).notNull(),
   createdAt: createdAt(),
 });
 
