@@ -4,7 +4,7 @@
 
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db, schema } from "../src/lib/db";
+import { closeDb, db, schema } from "../src/lib/db";
 import { hashPassword } from "../src/lib/password";
 
 const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -12,6 +12,7 @@ const password = process.env.ADMIN_PASSWORD ?? "";
 
 if (!email) {
   console.log("ADMIN_EMAIL not set; skipping moderator account.");
+  await closeDb();
   process.exit(0);
 }
 
@@ -40,3 +41,5 @@ if (existing) {
   });
   console.log(`Created moderator account ${email}.`);
 }
+
+await closeDb();

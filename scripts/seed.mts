@@ -10,7 +10,8 @@ import { randomBytes } from "node:crypto";
 import { count } from "drizzle-orm";
 import { assess } from "../src/lib/assess";
 import type { CategoryId, LicenseId } from "../src/lib/categories";
-import { db, schema } from "../src/lib/db";
+import { closeDb, db, schema } from "../src/lib/db";
+import { databaseUrl, isLocalDatabase } from "../src/lib/db/config";
 import { hashPassword } from "../src/lib/password";
 import type { Disclosure, Evidence } from "../src/lib/scoring";
 
@@ -263,6 +264,10 @@ if (DEPLOY) {
   }
   people.splice(people.findIndex((p) => p.handle === "team"), 1);
 } else {
+  if (!isLocalDatabase(databaseUrl())) {
+    console.error("Refusing to wipe a database that isn't on this machine. Use --deploy for hosted databases.");
+    process.exit(1);
+  }
   await db.delete(schema.flags);
   await db.delete(schema.orders);
   await db.delete(schema.listings);
@@ -351,3 +356,5 @@ if (DEPLOY) {
   console.log(`\nSeeded ${people.length} accounts (password: ${DEMO_PASSWORD}) and ${items.length} demo listings.`);
   console.log("Admin login: admin@unprompted.test");
 }
+
+await closeDb();

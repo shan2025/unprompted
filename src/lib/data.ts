@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, avg, count, desc, eq, inArray, like, lte, or, sql, sum } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, ilike, inArray, lte, or, sql, sum } from "drizzle-orm";
 import { isCategory } from "./categories";
 import { db, schema } from "./db";
 import { TIER_INFO, type Tier } from "./scoring";
@@ -50,7 +50,7 @@ export async function searchListings(filters: ListingFilters) {
   const where = [inArray(listings.status, PUBLIC_STATUSES)];
   if (filters.q) {
     const term = `%${filters.q.replace(/[%_]/g, "")}%`;
-    where.push(or(like(listings.title, term), like(listings.summary, term), like(users.name, term))!);
+    where.push(or(ilike(listings.title, term), ilike(listings.summary, term), ilike(users.name, term))!);
   }
   if (filters.category && isCategory(filters.category)) where.push(eq(listings.category, filters.category));
   if (filters.maxAi !== undefined) where.push(lte(listings.aiPercent, filters.maxAi));
@@ -138,7 +138,7 @@ export async function getDashboard(userId: number) {
       tier: listings.tier,
       priceCents: listings.priceCents,
       createdAt: listings.createdAt,
-      sales: sql<number>`(select count(*) from ${orders} where ${orders.listingId} = ${listings.id})`,
+      sales: sql<number>`(select count(*)::int from ${orders} where ${orders.listingId} = ${listings.id})`,
     })
     .from(listings)
     .where(eq(listings.creatorId, userId))
@@ -205,7 +205,7 @@ export async function marketStats() {
     .select({ n: count(), avgAi: avg(listings.aiPercent) })
     .from(listings)
     .where(inArray(listings.status, PUBLIC_STATUSES));
-  const [creators] = await db.select({ n: sql<number>`count(distinct ${listings.creatorId})` }).from(listings);
+  const [creators] = await db.select({ n: sql<number>`count(distinct ${listings.creatorId})::int` }).from(listings);
   return { listings: row?.n ?? 0, avgAi: Math.round(Number(row?.avgAi ?? 0)), creators: creators?.n ?? 0 };
 }
 

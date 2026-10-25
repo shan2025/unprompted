@@ -1,16 +1,19 @@
-import { sql } from "drizzle-orm";
-import { blob, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { boolean, customType, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { MediaScan } from "../analysis/media";
 import type { Segment } from "../analysis/text";
 import type { Disclosure, Evidence, Score } from "../scoring";
 
-const createdAt = () =>
-  integer("created_at", { mode: "timestamp_ms" })
-    .notNull()
-    .default(sql`(unixepoch() * 1000)`);
+// Every table enables row-level security with no policies. The app connects
+// as the database owner, which bypasses RLS, while Supabase's public data API
+// (the anon and authenticated roles) can read nothing.
 
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+const id = () => integer("id").primaryKey().generatedAlwaysAsIdentity();
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+export const users = pgTable("users", {
+  id: id(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
@@ -18,16 +21,16 @@ export const users = sqliteTable("users", {
   bio: text("bio").notNull().default(""),
   role: text("role", { enum: ["member", "admin"] }).notNull().default("member"),
   createdAt: createdAt(),
-});
+}).enableRLS();
 
-export const sessions = sqliteTable("sessions", {
+export const sessions = pgTable("sessions", {
   // SHA-256 of the cookie token, so a leaked database can't be replayed.
   id: text("id").primaryKey(),
   userId: integer("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
-});
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}).enableRLS();
 
 export interface StoredAnalysis {
   score: Score;
@@ -39,10 +42,10 @@ export interface StoredAnalysis {
   analyzedAt: string;
 }
 
-export const listings = sqliteTable(
+export const listings = pgTable(
   "listings",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: id(),
     slug: text("slug").notNull().unique(),
     creatorId: integer("creator_id")
       .notNull()
@@ -63,20 +66,20 @@ export const listings = sqliteTable(
     aiLow: integer("ai_low").notNull(),
     aiHigh: integer("ai_high").notNull(),
     tier: text("tier").notNull(),
-    processVerified: integer("process_verified", { mode: "boolean" }).notNull().default(false),
-    disclosure: text("disclosure", { mode: "json" }).$type<Disclosure>().notNull(),
-    evidence: text("evidence", { mode: "json" }).$type<Evidence[]>().notNull(),
-    analysis: text("analysis", { mode: "json" }).$type<StoredAnalysis>().notNull(),
-    isDemo: integer("is_demo", { mode: "boolean" }).notNull().default(false),
+    processVerified: boolean("process_verified").notNull().default(false),
+    disclosure: jsonb("disclosure").$type<Disclosure>().notNull(),
+    evidence: jsonb("evidence").$type<Evidence[]>().notNull(),
+    analysis: jsonb("analysis").$type<StoredAnalysis>().notNull(),
+    isDemo: boolean("is_demo").notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [index("listings_status_idx").on(t.status, t.createdAt), index("listings_creator_idx").on(t.creatorId)],
-);
+).enableRLS();
 
-export const orders = sqliteTable(
+export const orders = pgTable(
   "orders",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: id(),
     listingId: integer("listing_id")
       .notNull()
       .references(() => listings.id, { onDelete: "cascade" }),
@@ -88,31 +91,35 @@ export const orders = sqliteTable(
     status: text("status", { enum: ["demo", "paid", "refunded"] }).notNull(),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("orders_listing_buyer_idx").on(t.listingId, t.buyerId)],
-);
+  (t) => [uniqueIndex("orders_listing_buyer_idx").on(t.listingId, t.buyerId), index("orders_buyer_idx").on(t.buyerId)],
+).enableRLS();
 
-export const flags = sqliteTable("flags", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  listingId: integer("listing_id")
-    .notNull()
-    .references(() => listings.id, { onDelete: "cascade" }),
-  reporterId: integer("reporter_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  reason: text("reason", { enum: ["undisclosed-ai", "stolen", "misleading", "other"] }).notNull(),
-  details: text("details").notNull().default(""),
-  status: text("status", { enum: ["open", "dismissed", "upheld"] })
-    .notNull()
-    .default("open"),
-  createdAt: createdAt(),
-});
+export const flags = pgTable(
+  "flags",
+  {
+    id: id(),
+    listingId: integer("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    reporterId: integer("reporter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reason: text("reason", { enum: ["undisclosed-ai", "stolen", "misleading", "other"] }).notNull(),
+    details: text("details").notNull().default(""),
+    status: text("status", { enum: ["open", "dismissed", "upheld"] })
+      .notNull()
+      .default("open"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("flags_listing_idx").on(t.listingId), index("flags_reporter_idx").on(t.reporterId)],
+).enableRLS();
 
-export const uploads = sqliteTable("uploads", {
+export const uploads = pgTable("uploads", {
   name: text("name").primaryKey(),
   contentType: text("content_type").notNull(),
-  bytes: blob("bytes", { mode: "buffer" }).notNull(),
+  bytes: bytea("bytes").notNull(),
   createdAt: createdAt(),
-});
+}).enableRLS();
 
 export type User = typeof users.$inferSelect;
 export type Listing = typeof listings.$inferSelect;

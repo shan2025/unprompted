@@ -14,11 +14,11 @@ When a scan disagrees strongly with a disclosure, the listing goes to a **human 
 
 ## Quick start
 
-Requires Node 20+.
+Requires Node 20+ and a PostgreSQL database. Locally, any Postgres works (Postgres.app, Homebrew, Docker, or `supabase start`). By default the app connects to `postgres://postgres:postgres@localhost:5432/unprompted`; set `DATABASE_URL` in `.env.local` to use something else.
 
 ```bash
 npm install
-npm run setup     # creates the SQLite database and loads demo data
+npm run setup     # creates the tables and loads demo data (local databases only)
 npm run dev       # http://localhost:3000
 ```
 
@@ -86,27 +86,26 @@ The built-in analyzer is a transparent baseline, not a production detector. Its 
 
 ## Stack
 
-Next.js 16 (App Router, Cache Components, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 · Drizzle ORM · libSQL/SQLite · Vitest.
+Next.js 16 (App Router, Cache Components, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 · Drizzle ORM · PostgreSQL (Supabase) · Vitest.
 
-## Deploying (Vercel + Turso, both have free tiers)
+## Deploying (Vercel + Supabase, both have free tiers)
 
-The app runs on [Vercel](https://vercel.com) with a hosted [Turso](https://turso.tech) database. Every deploy runs `npm run build:deploy`, which updates the database schema, adds the demo listings to an empty database, makes sure your moderator account exists, and builds the site.
+The site runs on [Vercel](https://vercel.com) and stores its data in a [Supabase](https://supabase.com) Postgres database. Every deploy runs `npm run build:deploy`, which updates the database tables, adds the demo listings to an empty database, makes sure your moderator account exists, and builds the site.
 
-**1. Create the database (Turso)**
+**1. Get the database connection string (Supabase)**
 
-1. Sign up at [turso.tech](https://turso.tech) (GitHub login works) and create a database, e.g. `unprompted`.
-2. On the database page, copy its URL (`libsql://unprompted-<you>.turso.io`).
-3. Create a database token and copy it.
+1. Open your Supabase project and click **Connect** at the top.
+2. Choose **Transaction pooler** and copy the URI. It looks like `postgresql://postgres.<project-ref>:[YOUR-PASSWORD]@aws-….pooler.supabase.com:6543/postgres`.
+3. Replace `[YOUR-PASSWORD]` with your database password. If you've forgotten it, reset it under Project Settings → Database.
 
 **2. Create the site (Vercel)**
 
-1. Go to [vercel.com/new](https://vercel.com/new), sign in with GitHub, and import `shan2025/unprompted`.
+1. Go to [vercel.com/new](https://vercel.com/new), sign in with GitHub, and import `shan2025/unprompted`. Skip any suggested storage integrations.
 2. Before clicking **Deploy**, open **Environment Variables** and add:
 
    | Name | Value |
    | --- | --- |
-   | `DATABASE_URL` | the Turso URL from step 1 |
-   | `DATABASE_AUTH_TOKEN` | the Turso token from step 1 |
+   | `DATABASE_URL` | the connection string from step 1 |
    | `ADMIN_EMAIL` | the email you'll use to moderate |
    | `ADMIN_PASSWORD` | a password of at least 10 characters |
 
@@ -116,10 +115,11 @@ After that, every push to `main` redeploys automatically.
 
 Notes:
 - On the live site, demo accounts get random passwords, so nobody can log into them. There is no shared demo login.
-- `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` also work, if you connect Turso through Vercel's Storage tab instead.
+- All tables have row-level security turned on with no policies. The app connects as the database owner; Supabase's public data API can't read anything.
+- `npm run db:seed` (which wipes data) refuses to run against any database that isn't on your own machine.
+- Supabase pauses free projects after 7 days without traffic. Restore from the dashboard, or upgrade.
 - Badge links use your Vercel address automatically. Set `SITE_URL` once you add a custom domain.
 - Vercel's free Hobby plan is for non-commercial use. Move to a paid plan before taking real payments.
-- Elsewhere: any Node host works. With a persistent disk you can skip Turso, since the default is a local SQLite file in `data/`.
 
 ## Screenshots
 

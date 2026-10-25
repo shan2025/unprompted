@@ -56,7 +56,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     .from(schema.sessions)
     .innerJoin(schema.users, eq(schema.sessions.userId, schema.users.id))
     // Compare against the database clock so rendering never reads the time.
-    .where(and(eq(schema.sessions.id, hashToken(token)), gt(schema.sessions.expiresAt, sql`unixepoch() * 1000`)))
+    .where(and(eq(schema.sessions.id, hashToken(token)), gt(schema.sessions.expiresAt, sql`now()`)))
     .limit(1);
   return row ?? null;
 });
