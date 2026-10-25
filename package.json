@@ -16,8 +16,7 @@
     "build:deploy": "tsx scripts/migrate.mts && tsx scripts/seed.mts --deploy && tsx scripts/ensure-admin.mts && next build"
   },
   "dependencies": {
-    "@fontsource-variable/fraunces": "^5.3.0",
-    "@fontsource-variable/public-sans": "^5.3.0",
+    "@fontsource-variable/figtree": "^5.3.0",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.3",
     "postgres": "^3.4.9",

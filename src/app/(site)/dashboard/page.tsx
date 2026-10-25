@@ -34,7 +34,7 @@ async function Dashboard() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h1 className="mt-1 text-4xl font-semibold">Hi, {user.name.split(" ")[0]}</h1>
+          <h1 className="mt-1 text-4xl font-light">Hi, {user.name.split(" ")[0]}</h1>
           <Link href={`/u/${user.handle}`} className="link mt-1 inline-block text-sm text-ink-soft">
             View your public profile
           </Link>
@@ -51,7 +51,7 @@ async function Dashboard() {
       </div>
 
       <section className="mt-12">
-        <h2 className="text-2xl font-semibold">Your listings</h2>
+        <h2 className="text-2xl font-normal">Your listings</h2>
         {data.listings.length === 0 ? (
           <p className="card mt-4 p-8 text-center text-ink-soft">
             You haven&apos;t listed anything yet.{" "}
@@ -95,7 +95,7 @@ async function Dashboard() {
       </section>
 
       <section className="mt-12">
-        <h2 className="text-2xl font-semibold">Your purchases</h2>
+        <h2 className="text-2xl font-normal">Your purchases</h2>
         {data.purchases.length === 0 ? (
           <p className="mt-3 text-ink-soft">
             Nothing yet.{" "}
@@ -129,7 +129,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="card p-5">
       <span className="eyebrow">{label}</span>
-      <span className="mt-1 block font-display text-3xl font-semibold">{value}</span>
+      <span className="mt-1 block font-display text-3xl font-light">{value}</span>
     </div>
   );
 }

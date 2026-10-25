@@ -1,42 +1,23 @@
 @import "tailwindcss";
 
-/* Warm paper and ink. Every color is a token so dark mode is one override. */
+/* Simple and light: white space, black type, square corners, one typeface. */
 :root {
-  --paper: #f4efe6;
-  --card: #fffdf8;
-  --ink: #1f1b16;
-  --ink-soft: #4b443b;
-  --muted: #7a7062;
-  --line: #e0d6c3;
-  --accent: #b5441b;
-  --accent-ink: #fffaf3;
-  --accent-soft: #f4ddd0;
-  --human: #2e6b3b;
-  --led: #23657a;
-  --assist: #94600a;
-  --heavy: #a3271b;
-  --mark: rgb(214 104 50 / 0.28);
+  --paper: #ffffff;
+  --card: #ffffff;
+  --ink: #111111;
+  --ink-soft: #3c3c3c;
+  --muted: #767676;
+  --line: #e4e4e4;
+  --field: #f2f2f2;
+  --accent: #111111;
+  --accent-ink: #ffffff;
+  --accent-soft: #f2f2f2;
+  --human: #2f6b3c;
+  --led: #24617a;
+  --assist: #8a5a0b;
+  --heavy: #a12a1e;
+  --mark: rgb(226 120 60 / 0.25);
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #16130f;
-    --card: #1f1b16;
-    --ink: #f2ece1;
-    --ink-soft: #d2c9ba;
-    --muted: #9d9282;
-    --line: #3a3229;
-    --accent: #e57849;
-    --accent-ink: #1a0e07;
-    --accent-soft: #3b2418;
-    --human: #7cc48a;
-    --led: #6db8cf;
-    --assist: #e3a83e;
-    --heavy: #f07b6b;
-    --mark: rgb(229 120 73 / 0.32);
-    color-scheme: dark;
-  }
 }
 
 @theme inline {
@@ -46,6 +27,7 @@
   --color-ink-soft: var(--ink-soft);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-field: var(--field);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
@@ -53,15 +35,21 @@
   --color-led: var(--led);
   --color-assist: var(--assist);
   --color-heavy: var(--heavy);
-  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
-  --font-sans: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Square corners everywhere; rounded-full stays round for dots and pills. */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
 }
 
 body {
-  background-color: var(--paper);
-  /* Faint paper grain. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.4 0 0 0 0 0.3 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -70,9 +58,7 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--font-display);
-  font-optical-sizing: auto;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -81,46 +67,73 @@ p {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: #e8e8e8;
 }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 rounded-none px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-ink text-paper hover:bg-accent hover:text-accent-ink;
+  @apply btn bg-ink text-white hover:bg-[#333];
 }
 @utility btn-accent {
-  @apply btn bg-accent text-accent-ink hover:bg-ink hover:text-paper;
+  @apply btn bg-ink text-white hover:bg-[#333];
 }
 @utility btn-ghost {
-  @apply btn border border-line text-ink hover:border-ink;
+  @apply btn border border-ink text-ink hover:bg-ink hover:text-white;
 }
 @utility field {
-  @apply w-full rounded-lg border border-line bg-card px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-ink focus:outline-none;
+  @apply w-full rounded-none border-0 border-b border-transparent bg-field px-4 py-3 text-[15px] text-ink placeholder:text-muted focus:border-ink focus:outline-none;
 }
 @utility label {
-  @apply mb-1.5 block text-sm font-semibold text-ink;
+  @apply mb-2 block text-sm font-medium text-ink;
 }
 @utility hint {
-  @apply mt-1 text-xs text-muted;
+  @apply mt-1.5 text-xs text-muted;
 }
 @utility card {
-  @apply rounded-2xl border border-line bg-card;
+  @apply border border-line bg-card;
 }
 @utility eyebrow {
   @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
 }
 @utility link {
-  @apply underline decoration-line decoration-1 underline-offset-4 hover:decoration-accent;
+  @apply underline decoration-1 underline-offset-4 hover:decoration-2;
 }
 @utility prose-ink {
   & p + p {
     @apply mt-4;
+  }
+}
+
+/* Gentle entrance for each onboarding step. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+.rise {
+  animation: rise 0.45s ease both;
+}
+.fade {
+  animation: fade 0.6s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .fade {
+    animation: none;
   }
 }

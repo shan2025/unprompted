@@ -28,12 +28,15 @@ export function Cover({
   category,
   coverFile,
   title,
+  palette,
   className = "",
 }: {
   slug: string;
   category: string;
   coverFile?: string | null;
   title: string;
+  /** Fix the colour palette instead of deriving it from the slug. */
+  palette?: number;
   className?: string;
 }) {
   if (coverFile) {
@@ -44,10 +47,11 @@ export function Cover({
   }
 
   const r = rng(slug);
-  const p = PALETTES[Math.floor(r() * PALETTES.length)];
+  const pick = Math.floor(r() * PALETTES.length);
+  const p = PALETTES[palette ?? pick];
 
   return (
-    <svg viewBox="0 0 400 300" className={`h-full w-full ${className}`} role="img" aria-label={title} preserveAspectRatio="xMidYMid slice">
+    <svg viewBox="0 0 400 300" className={`h-full w-full ${className}`} role={title ? "img" : undefined} aria-hidden={title ? undefined : true} aria-label={title || undefined} preserveAspectRatio="xMidYMid slice">
       <rect width="400" height="300" fill={p.bg} />
       <Pattern category={category} r={r} ink={p.ink} accent={p.accent} />
     </svg>

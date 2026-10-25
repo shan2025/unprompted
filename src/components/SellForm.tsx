@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import { createListing, previewAssessment } from "@/app/actions/listings";
 import { CATEGORIES, LICENSES } from "@/lib/categories";
 import { MAX_EVIDENCE, type FieldErrors, type PreviewState } from "@/lib/listing-form";
-import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO } from "@/lib/scoring";
+import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Level } from "@/lib/scoring";
 import { ScoreCard } from "./Score";
 import { SegmentView } from "./SegmentView";
 
@@ -19,9 +19,9 @@ function Section({ step, title, intro, children }: { step: string; title: string
   return (
     <section className="card p-5 sm:p-7">
       <div className="mb-5 flex items-baseline gap-3">
-        <span className="font-display text-sm font-semibold text-accent">{step}</span>
+        <span className="font-display text-sm font-light text-accent">{step}</span>
         <div>
-          <h2 className="text-2xl font-semibold">{title}</h2>
+          <h2 className="text-2xl font-normal">{title}</h2>
           {intro && <p className="mt-1 text-sm text-ink-soft">{intro}</p>}
         </div>
       </div>
@@ -30,7 +30,7 @@ function Section({ step, title, intro, children }: { step: string; title: string
   );
 }
 
-export function SellForm() {
+export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: string; defaultAi?: Level }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [createState, createAction, publishing] = useActionState(createListing, null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
@@ -76,7 +76,7 @@ export function SellForm() {
               <label htmlFor="category" className="label">
                 Category
               </label>
-              <select id="category" name="category" className="field" defaultValue="">
+              <select id="category" name="category" className="field" defaultValue={defaultCategory ?? ""}>
                 <option value="" disabled>
                   Choose one
                 </option>
@@ -191,7 +191,7 @@ export function SellForm() {
                     title={LEVEL_INFO[level].hint}
                     className="cursor-pointer rounded-lg border border-line px-3 py-2 text-center text-sm font-medium text-ink-soft transition-colors hover:border-ink has-checked:border-ink has-checked:bg-ink has-checked:text-paper"
                   >
-                    <input type="radio" name={`disclosure_${stage}`} value={level} defaultChecked={level === "none"} className="sr-only" />
+                    <input type="radio" name={`disclosure_${stage}`} value={level} defaultChecked={level === (stage === "creation" ? (defaultAi ?? "none") : "none")} className="sr-only" />
                     {LEVEL_INFO[level].label}
                   </label>
                 ))}
@@ -319,7 +319,7 @@ export function SellForm() {
         ) : (
           <div className="card p-6">
             <span className="eyebrow">Your score</span>
-            <p className="mt-3 font-display text-2xl font-semibold leading-snug">See your number before anyone else does.</p>
+            <p className="mt-3 font-display text-2xl font-normal leading-snug">See your number before anyone else does.</p>
             <p className="mt-2 text-sm text-ink-soft">
               Fill in the form and press <strong>Check my score</strong>. We combine your disclosure, a scan of the work,
               and your evidence. Nothing is saved until you publish.

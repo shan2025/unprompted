@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 function H2({ id, children }: { id?: string; children: React.ReactNode }) {
   return (
-    <h2 id={id} className="mt-14 scroll-mt-8 text-3xl font-semibold">
+    <h2 id={id} className="mt-14 scroll-mt-8 text-3xl font-light">
       {children}
     </h2>
   );
@@ -21,7 +21,7 @@ export default function StandardPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
       <p className="eyebrow">The Unprompted standard</p>
-      <h1 className="mt-2 text-5xl font-semibold leading-tight">How scoring works</h1>
+      <h1 className="mt-2 text-5xl font-light leading-tight">How scoring works</h1>
       <p className="mt-5 text-lg leading-relaxed text-ink-soft">
         Every listing carries an <strong className="text-ink">AI-involvement estimate</strong>: roughly how much of the
         creative work came from AI rather than from the person selling it. It comes with a range, a stage-by-stage
@@ -177,7 +177,7 @@ export default function StandardPage() {
       </ul>
 
       <div className="mt-14 rounded-2xl bg-ink p-8 text-paper">
-        <p className="font-display text-2xl font-semibold">Made something?</p>
+        <p className="font-display text-2xl font-normal">Made something?</p>
         <p className="mt-2 text-paper/80">You&apos;ll see your score before anything is published.</p>
         <Link href="/sell" className="btn mt-5 bg-paper text-ink hover:bg-accent hover:text-accent-ink">
           Start a listing

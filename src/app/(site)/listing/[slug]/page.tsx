@@ -65,7 +65,7 @@ async function ListingView({ params, searchParams }: Props) {
   const purchase = (
     <div className="card p-5">
       <div className="flex items-baseline justify-between">
-        <span className="font-display text-4xl font-semibold">{formatPrice(listing.priceCents)}</span>
+        <span className="font-display text-4xl font-light">{formatPrice(listing.priceCents)}</span>
         <span className="text-sm text-muted">{plural(sales, "sale")}</span>
       </div>
       <p className="mt-1 text-sm text-ink-soft">{licenseLabel(listing.license)}</p>
@@ -107,7 +107,7 @@ async function ListingView({ params, searchParams }: Props) {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
-          <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">{listing.title}</h1>
+          <h1 className="text-4xl font-light leading-tight sm:text-5xl">{listing.title}</h1>
           <p className="mt-3 text-ink-soft">
             by{" "}
             <Link href={`/u/${creator.handle}`} className="link font-semibold text-ink">
@@ -131,7 +131,7 @@ async function ListingView({ params, searchParams }: Props) {
 
           {listing.preview && (
             <section className="mt-10">
-              <h2 className="text-2xl font-semibold">Preview</h2>
+              <h2 className="text-2xl font-normal">Preview</h2>
               <div className="card mt-4 p-5 sm:p-6">
                 <SegmentView text={listing.preview} segments={analysis.previewSegments} kind={analysis.previewKind} />
               </div>
@@ -139,7 +139,7 @@ async function ListingView({ params, searchParams }: Props) {
           )}
 
           <section className="mt-10">
-            <h2 className="text-2xl font-semibold">What you get</h2>
+            <h2 className="text-2xl font-normal">What you get</h2>
             {canSeeDeliverable ? (
               <div className="card mt-4 p-5 sm:p-6">
                 {listing.locked ? (
@@ -168,13 +168,13 @@ async function ListingView({ params, searchParams }: Props) {
 
           {listing.aiNotes && (
             <section className="mt-10">
-              <h2 className="text-2xl font-semibold">AI use, in the creator&apos;s words</h2>
+              <h2 className="text-2xl font-normal">AI use, in the creator&apos;s words</h2>
               <blockquote className="mt-4 border-l-2 border-accent pl-4 italic leading-relaxed text-ink-soft">{listing.aiNotes}</blockquote>
             </section>
           )}
 
           <section className="mt-10">
-            <h2 className="text-2xl font-semibold">Process evidence</h2>
+            <h2 className="text-2xl font-normal">Process evidence</h2>
             {evidence.length === 0 ? (
               <p className="mt-3 text-ink-soft">The creator hasn&apos;t attached any process evidence yet.</p>
             ) : (
@@ -196,7 +196,7 @@ async function ListingView({ params, searchParams }: Props) {
           </section>
 
           <section className="mt-10">
-            <h2 className="text-2xl font-semibold">How this was scored</h2>
+            <h2 className="text-2xl font-normal">How this was scored</h2>
             <div className="card mt-4 space-y-4 p-5 text-sm leading-relaxed text-ink-soft">
               <p>
                 Disclosed by the creator: <strong className="text-ink">{analysis.score.disclosedPercent}%</strong>. Estimate
@@ -248,7 +248,7 @@ async function ListingView({ params, searchParams }: Props) {
 
           <div className="card p-5">
             <span className="eyebrow">Creator</span>
-            <Link href={`/u/${creator.handle}`} className="mt-2 block font-display text-xl font-semibold hover:text-accent">
+            <Link href={`/u/${creator.handle}`} className="mt-2 block font-display text-xl font-medium hover:text-accent">
               {creator.name}
             </Link>
             <p className="text-sm text-muted">@{creator.handle}</p>

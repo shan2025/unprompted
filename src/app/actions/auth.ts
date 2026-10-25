@@ -2,13 +2,14 @@
 
 import { randomInt } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { redirect } from "next/navigation";
 import { createSession, destroySession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { safeNext } from "@/lib/format";
 import { hashPassword, verifyPassword } from "@/lib/password";
 
-export type AuthState = { error?: string; values?: { email?: string; name?: string } } | null;
+// On success the form does a full page load to `next`, rather than an in-app
+// redirect, so no page remembered from before the login change is reused.
+export type AuthState = { error?: string; next?: string; values?: { email?: string; name?: string } } | null;
 
 const RESERVED = new Set(["admin", "api", "explore", "sell", "dashboard", "login", "signup", "standard", "team", "unprompted"]);
 const MIN_PASSWORD = 8;
@@ -46,7 +47,7 @@ export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState>
     .values({ name, handle: await makeHandle(name), email, passwordHash: await hashPassword(password) })
     .returning({ id: schema.users.id });
   await createSession(user.id);
-  redirect(safeNext(fd.get("next"), "/dashboard"));
+  return { next: safeNext(fd.get("next"), "/dashboard") };
 }
 
 export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> {
@@ -58,10 +59,9 @@ export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> 
     return { error: "That email and password don't match.", values: { email } };
   }
   await createSession(user.id);
-  redirect(safeNext(fd.get("next"), "/dashboard"));
+  return { next: safeNext(fd.get("next"), "/dashboard") };
 }
 
 export async function logout() {
   await destroySession();
-  redirect("/");
 }

@@ -47,7 +47,7 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
     <>
       <div className="mb-8">
         <p className="eyebrow">Explore</p>
-        <h1 className="mt-1 text-4xl font-semibold">{heading}</h1>
+        <h1 className="mt-1 text-4xl font-light">{heading}</h1>
       </div>
 
       <form className="card mb-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto]" role="search">
@@ -99,7 +99,7 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
         <ListingGrid listings={listings} />
       ) : (
         <div className="card p-10 text-center">
-          <p className="font-display text-xl font-semibold">Nothing here yet.</p>
+          <p className="font-display text-xl font-medium">Nothing here yet.</p>
           <p className="mt-2 text-ink-soft">
             Try loosening the filters, or{" "}
             <Link href="/sell" className="link font-semibold text-ink">

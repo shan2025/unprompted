@@ -22,7 +22,7 @@ export default function AdminPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
       <p className="eyebrow">Moderation</p>
-      <h1 className="mt-1 text-4xl font-semibold">Review queue</h1>
+      <h1 className="mt-1 text-4xl font-light">Review queue</h1>
       <p className="mt-2 max-w-2xl text-ink-soft">
         Listings land here when automated checks disagree with the creator&apos;s disclosure, or when someone reports them.
         Look at the evidence, not just the number.
@@ -41,7 +41,7 @@ async function Queue() {
   return (
     <>
       <section className="mt-10">
-        <h2 className="text-2xl font-semibold">Listings awaiting review ({pending.length})</h2>
+        <h2 className="text-2xl font-normal">Listings awaiting review ({pending.length})</h2>
         {pending.length === 0 && <p className="mt-3 text-ink-soft">Nothing waiting.</p>}
         <ul className="mt-4 space-y-4">
           {pending.map(({ listing, creatorName, creatorHandle }) => {
@@ -50,7 +50,7 @@ async function Queue() {
               <li key={listing.id} className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <Link href={`/listing/${listing.slug}`} className="font-display text-xl font-semibold hover:text-accent">
+                    <Link href={`/listing/${listing.slug}`} className="font-display text-xl font-medium hover:text-accent">
                       {listing.title}
                     </Link>
                     <p className="text-sm text-muted">
@@ -92,7 +92,7 @@ async function Queue() {
       </section>
 
       <section className="mt-12">
-        <h2 className="text-2xl font-semibold">Open reports ({openFlags.length})</h2>
+        <h2 className="text-2xl font-normal">Open reports ({openFlags.length})</h2>
         {openFlags.length === 0 && <p className="mt-3 text-ink-soft">No open reports.</p>}
         <ul className="mt-4 space-y-4">
           {openFlags.map((f) => (

@@ -33,7 +33,7 @@ async function Creator({ params }: Props) {
       <div className="grid gap-8 border-b border-line pb-10 md:grid-cols-[1fr_auto] md:items-end">
         <div>
           <p className="eyebrow">Creator</p>
-          <h1 className="mt-1 text-5xl font-semibold">{creator.name}</h1>
+          <h1 className="mt-1 text-5xl font-light">{creator.name}</h1>
           <p className="mt-1 text-muted">
             @{creator.handle} · joined {formatDate(creator.createdAt)}
           </p>
@@ -42,15 +42,15 @@ async function Creator({ params }: Props) {
         <dl className="grid grid-cols-3 gap-6 text-center md:text-right">
           <div>
             <dt className="eyebrow">Avg. AI</dt>
-            <dd className="font-display text-3xl font-semibold">{stats.avgAi === null ? "–" : `${stats.avgAi}%`}</dd>
+            <dd className="font-display text-3xl font-light">{stats.avgAi === null ? "–" : `${stats.avgAi}%`}</dd>
           </div>
           <div>
             <dt className="eyebrow">Verified</dt>
-            <dd className="font-display text-3xl font-semibold">{stats.verified}</dd>
+            <dd className="font-display text-3xl font-light">{stats.verified}</dd>
           </div>
           <div>
             <dt className="eyebrow">Sales</dt>
-            <dd className="font-display text-3xl font-semibold">{stats.sales}</dd>
+            <dd className="font-display text-3xl font-light">{stats.sales}</dd>
           </div>
         </dl>
       </div>

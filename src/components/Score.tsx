@@ -23,8 +23,8 @@ export function TierStamp({ tier, size = "md" }: { tier: string; size?: "sm" | "
   if (!info) return null;
   return (
     <span
-      className={`inline-flex -rotate-2 items-center rounded-[5px] border-2 border-current font-display font-bold uppercase tracking-[0.08em] ${tierColor(tier)} ${
-        size === "sm" ? "px-1.5 py-px text-[10px]" : "px-2.5 py-0.5 text-xs"
+      className={`inline-flex items-center border border-current font-semibold uppercase tracking-[0.1em] ${tierColor(tier)} ${
+        size === "sm" ? "px-1.5 py-0.5 text-[9px]" : "px-2.5 py-1 text-[10px]"
       }`}
     >
       {info.label}
@@ -129,7 +129,7 @@ export function ScoreCard({ score, evidenceCount }: { score: Score; evidenceCoun
       </div>
 
       <div className="mt-2 flex items-baseline gap-3">
-        <span className={`font-display text-5xl font-semibold tracking-tight ${tierColor(score.tier)}`}>{score.percent}%</span>
+        <span className={`font-display text-5xl font-light tracking-tight ${tierColor(score.tier)}`}>{score.percent}%</span>
         <span className="text-sm text-ink-soft">
           estimated
           <br />

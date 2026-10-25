@@ -12,6 +12,10 @@ When a scan disagrees strongly with a disclosure, the listing goes to a **human 
 
 ![Home page](docs/screenshots/home.jpg)
 
+New visitors start at `/start`, a three-question setup (sell or buy, what kind of work, how much AI) that sends sellers to a pre-filled listing form and buyers to a filtered market.
+
+![Get started](docs/screenshots/start.jpg)
+
 ## Quick start
 
 Requires Node 20+ and a PostgreSQL database. Locally, any Postgres works (Postgres.app, Homebrew, Docker, or `supabase start`). By default the app connects to `postgres://postgres:postgres@localhost:5432/unprompted`; set `DATABASE_URL` in `.env.local` to use something else.

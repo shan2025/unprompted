@@ -25,10 +25,10 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
           <span className="eyebrow">{categoryLabel(listing.category)}</span>
           {listing.isDemo && <span className="rounded bg-line/70 px-1.5 text-[10px] font-semibold text-muted">DEMO</span>}
         </div>
-        <h3 className="mt-1.5 text-lg font-semibold leading-snug text-ink group-hover:text-accent">{listing.title}</h3>
+        <h3 className="mt-1.5 text-lg font-medium leading-snug text-ink group-hover:text-accent">{listing.title}</h3>
         <p className="mt-1 text-sm text-muted">by {listing.creatorName}</p>
         <div className="mt-auto flex items-center justify-between pt-4">
-          <span className="font-display text-lg font-semibold">{formatPrice(listing.priceCents)}</span>
+          <span className="font-display text-lg font-medium">{formatPrice(listing.priceCents)}</span>
           <AiPill percent={listing.aiPercent} tier={listing.tier} verified={listing.processVerified} />
         </div>
       </div>

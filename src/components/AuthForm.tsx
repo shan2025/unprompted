@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { login, signup } from "@/app/actions/auth";
 
 export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: string }) {
   const [state, action, pending] = useActionState(mode === "login" ? login : signup, null);
+
+  useEffect(() => {
+    if (state?.next) window.location.assign(state.next);
+  }, [state]);
   const v = state?.values ?? {};
   const other = mode === "login" ? "/signup" : "/login";
   const otherHref = next ? `${other}?next=${encodeURIComponent(next)}` : other;
@@ -49,8 +53,8 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
           {state.error}
         </p>
       )}
-      <button className="btn-primary w-full" disabled={pending}>
-        {pending ? "One moment…" : mode === "login" ? "Log in" : "Create account"}
+      <button className="btn-primary w-full" disabled={pending || Boolean(state?.next)}>
+        {pending || state?.next ? "One moment…" : mode === "login" ? "Log in" : "Create account"}
       </button>
       <p className="text-center text-sm text-ink-soft">
         {mode === "login" ? "New here? " : "Already have an account? "}
