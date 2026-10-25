@@ -289,7 +289,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
         </section>
       </div>
 
-      <aside className="lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:self-start lg:overflow-y-auto">
+      <aside className="lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:self-start lg:overflow-y-auto no-scrollbar">
         {preview?.ok ? (
           <div className="space-y-4">
             <ScoreCard score={preview.result.score} />
@@ -310,7 +310,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
               </div>
             )}
             {preview.result.segments.length > 0 && (
-              <div className="card max-h-[420px] overflow-y-auto p-4">
+              <div className="card max-h-[420px] overflow-y-auto no-scrollbar p-4">
                 <span className="eyebrow mb-3 block">Your preview, passage by passage</span>
                 <SegmentView text={preview.result.previewText} segments={preview.result.segments} kind={preview.result.previewKind} />
               </div>

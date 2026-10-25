@@ -137,3 +137,15 @@ p {
     animation: none;
   }
 }
+
+/* Inner panels scroll without a visible bar; the page bar stays thin and light. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d4 transparent;
+}

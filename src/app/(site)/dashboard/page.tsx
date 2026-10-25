@@ -60,7 +60,7 @@ async function Dashboard() {
             </Link>
           </p>
         ) : (
-          <div className="card mt-4 overflow-x-auto">
+          <div className="card mt-4 overflow-x-auto no-scrollbar">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
                 <tr>

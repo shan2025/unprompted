@@ -260,7 +260,7 @@ async function ListingView({ params, searchParams }: Props) {
               <span className="eyebrow">Embed this badge</span>
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG badge from our own route */}
               <img src={`/api/badge/${listing.slug}`} alt={badgeAlt} className="mt-3 h-6" />
-              <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-paper p-3 font-mono text-[11px] text-ink-soft">
+              <pre className="mt-3 overflow-x-auto no-scrollbar whitespace-pre-wrap break-all rounded-lg bg-paper p-3 font-mono text-[11px] text-ink-soft">
                 {badgeSnippet}
               </pre>
             </div>

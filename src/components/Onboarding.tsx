@@ -243,7 +243,7 @@ function CategorySearch({
       </div>
 
       {open && (
-        <div id="category-list" role="listbox" className="absolute inset-x-0 top-full z-10 max-h-[340px] overflow-y-auto bg-white py-4 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.18)]">
+        <div id="category-list" role="listbox" className="absolute inset-x-0 top-full z-10 max-h-[340px] overflow-y-auto no-scrollbar bg-white py-4 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.18)]">
           <p className="px-8 pb-2 text-[13px] font-semibold text-ink-soft">{query.trim() ? "Matches" : "Popular categories"}</p>
           {results.length === 0 && (
             <button type="button" onClick={() => pick("other", "Other")} className="block w-full px-8 py-2.5 text-left text-[18px] text-ink-soft hover:text-ink">

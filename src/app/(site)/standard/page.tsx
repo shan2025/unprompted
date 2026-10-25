@@ -67,7 +67,7 @@ export default function StandardPage() {
       <p className="mt-5 leading-relaxed text-ink-soft">
         Stages are weighted by what the buyer is paying for. In a poem the writing matters most. In an idea, the idea does.
       </p>
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-card">
+      <div className="mt-4 overflow-x-auto no-scrollbar rounded-2xl border border-line bg-card">
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
             <tr>

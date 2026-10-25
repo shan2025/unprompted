@@ -81,7 +81,7 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
         </label>
       </form>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
+      <div className="mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
         <Chip href="/explore" active={!isCategory(category)}>
           All
         </Chip>

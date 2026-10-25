@@ -52,7 +52,7 @@ export function SegmentView({ text, segments, kind }: { text: string; segments: 
       )}
       <div
         className={`whitespace-pre-wrap break-words leading-relaxed text-ink ${
-          mono ? "overflow-x-auto rounded-xl border border-line bg-paper p-4 font-mono text-[13px]" : "text-[16px]"
+          mono ? "no-scrollbar overflow-x-auto rounded-xl border border-line bg-paper p-4 font-mono text-[13px]" : "text-[16px]"
         }`}
       >
         {nodes}
