@@ -21,15 +21,6 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
             </label>
             <input id="name" name="name" className="field" defaultValue={v.name} autoComplete="name" required />
           </div>
-          <div>
-            <label htmlFor="handle" className="label">
-              Handle
-            </label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">@</span>
-              <input id="handle" name="handle" className="field pl-8" defaultValue={v.handle} autoComplete="username" required />
-            </div>
-          </div>
         </>
       )}
       <div>
@@ -48,10 +39,10 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
           type="password"
           className="field"
           autoComplete={mode === "login" ? "current-password" : "new-password"}
-          minLength={mode === "signup" ? 10 : undefined}
+          minLength={mode === "signup" ? 8 : undefined}
           required
         />
-        {mode === "signup" && <p className="hint">At least 10 characters.</p>}
+        {mode === "signup" && <p className="hint">At least 8 characters.</p>}
       </div>
       {state?.error && (
         <p role="alert" className="rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
