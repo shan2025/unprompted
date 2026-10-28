@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 import { Mark } from "./Logo";
 
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-line">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 text-sm text-ink-soft sm:grid-cols-[1.5fr_1fr_1fr] sm:px-6">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 text-sm text-ink-soft sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div className="max-w-sm">
-          <Mark className="mb-3 h-8 w-8 text-accent" />
+          <Mark className="mb-3 h-8 w-8 text-ink" />
           <p>
             A marketplace for work made by people. Every listing shows how much AI was involved, with the reasoning out in
             the open.
@@ -36,6 +37,24 @@ export function Footer() {
             Reviews &amp; disputes
           </Link>
         </div>
+        <div className="flex flex-col gap-2">
+          <span className="eyebrow mb-1">Legal</span>
+          <Link href="/terms" className="hover:text-ink">
+            Terms of service
+          </Link>
+          <Link href="/privacy" className="hover:text-ink">
+            Privacy policy
+          </Link>
+          <Link href="/refunds" className="hover:text-ink">
+            Refunds
+          </Link>
+          <Link href="/contact" className="hover:text-ink">
+            Contact
+          </Link>
+        </div>
+      </div>
+      <div className="border-t border-line">
+        <p className="mx-auto max-w-7xl px-4 py-6 text-xs text-muted sm:px-8">© 2026 {SITE.legalName}</p>
       </div>
     </footer>
   );

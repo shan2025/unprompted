@@ -54,7 +54,7 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
   const { score } = result;
   if (score.blocked) {
     return {
-      errors: { disclosure: "Unprompted only lists work that is at least half human-made." },
+      errors: { disclosure: "Unprompters only lists work that is at least half human-made." },
       message: `Your disclosure works out to ${score.disclosedPercent}% AI, above the 50% limit.`,
     };
   }

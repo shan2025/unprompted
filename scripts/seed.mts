@@ -22,7 +22,7 @@ const DAY = 24 * 60 * 60 * 1000;
 const NONE: Disclosure = { ideation: "none", creation: "none", refinement: "none", assets: "none" };
 
 const people = [
-  { handle: "team", name: "Unprompted Team", email: "admin@unprompted.test", role: "admin" as const, bio: "Moderation account." },
+  { handle: "team", name: "Unprompters Team", email: "admin@unprompted.test", role: "admin" as const, bio: "Moderation account." },
   { handle: "mara", name: "Mara Okafor", email: "mara@unprompted.test", bio: "Poems and short fiction. Drafts in pencil, always." },
   { handle: "tomas", name: "Tomás Reyes", email: "tomas@unprompted.test", bio: "Small, boring, reliable software." },
   { handle: "priya", name: "Priya Natarajan", email: "priya@unprompted.test", bio: "Ink, watercolour and lettering, painted on the Moray coast." },

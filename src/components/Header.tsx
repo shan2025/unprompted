@@ -8,7 +8,7 @@ export function Header() {
   return (
     <header className="border-b border-line bg-white">
       <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-6 px-4 sm:gap-10 sm:px-8">
-        <Link href="/" aria-label="Unprompted home">
+        <Link href="/" aria-label="Unprompters home">
           <Logo />
         </Link>
         <nav className="hidden items-center gap-8 text-[15px] text-ink md:flex">

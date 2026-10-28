@@ -1,4 +1,4 @@
-# Unprompted
+# Unprompters
 
 **A marketplace for work made by people: code, websites, writing, poetry, art, photography, design, music and ideas. Every listing shows how much AI was involved.**
 
@@ -123,6 +123,7 @@ Notes:
 - `npm run db:seed` (which wipes data) refuses to run against any database that isn't on your own machine.
 - Supabase pauses free projects after 7 days without traffic. Restore from the dashboard, or upgrade.
 - Badge links use your Vercel address automatically. Set `SITE_URL` once you add a custom domain.
+- The terms, privacy, refunds and contact pages read `LEGAL_NAME`, `CONTACT_EMAIL`, `LEGAL_ADDRESS` and `GRIEVANCE_OFFICER`. Set them once the business is registered, then redeploy. The page text is a starting draft and needs a lawyer's review.
 - Vercel's free Hobby plan is for non-commercial use. Move to a paid plan before taking real payments.
 
 ## Screenshots

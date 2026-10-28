@@ -53,6 +53,19 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
           {state.error}
         </p>
       )}
+      {mode === "signup" && (
+        <p className="text-xs leading-relaxed text-muted">
+          By creating an account you agree to our{" "}
+          <Link href="/terms" className="link text-ink-soft">
+            terms
+          </Link>{" "}
+          and confirm you&apos;ve read our{" "}
+          <Link href="/privacy" className="link text-ink-soft">
+            privacy policy
+          </Link>
+          , and that you are 18 or older.
+        </p>
+      )}
       <button className="btn-primary w-full" disabled={pending || Boolean(state?.next)}>
         {pending || state?.next ? "One moment…" : mode === "login" ? "Log in" : "Create account"}
       </button>

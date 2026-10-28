@@ -23,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   }
 
   const tier = row.listing.tier as Tier;
-  const left = "Unprompted";
+  const left = "Unprompters";
   const right = `${row.listing.aiPercent}% AI · ${TIER_INFO[tier]?.label ?? tier}`;
   const lw = textWidth(left);
   const rw = textWidth(right);

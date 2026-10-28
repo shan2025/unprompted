@@ -11,7 +11,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 // redirect, so no page remembered from before the login change is reused.
 export type AuthState = { error?: string; next?: string; values?: { email?: string; name?: string } } | null;
 
-const RESERVED = new Set(["admin", "api", "explore", "sell", "dashboard", "login", "signup", "standard", "team", "unprompted"]);
+const RESERVED = new Set(["admin", "api", "explore", "sell", "dashboard", "login", "signup", "standard", "team", "unprompted", "unprompters", "privacy", "terms", "refunds", "contact", "start"]);
 const MIN_PASSWORD = 8;
 
 // Public profile handle, made from the name: "Shan K." -> "shank".

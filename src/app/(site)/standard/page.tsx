@@ -6,7 +6,7 @@ import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, MAX_DISCLOSED, STAGES, STAGE_INFO, 
 
 export const metadata: Metadata = {
   title: "How scoring works",
-  description: "How Unprompted estimates AI involvement, what the number means, and what detection can't do.",
+  description: "How Unprompters estimates AI involvement, what the number means, and what detection can't do.",
 };
 
 function H2({ id, children }: { id?: string; children: React.ReactNode }) {
@@ -20,7 +20,7 @@ function H2({ id, children }: { id?: string; children: React.ReactNode }) {
 export default function StandardPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
-      <p className="eyebrow">The Unprompted standard</p>
+      <p className="eyebrow">The Unprompters standard</p>
       <h1 className="mt-2 text-5xl font-light leading-tight">How scoring works</h1>
       <p className="mt-5 text-lg leading-relaxed text-ink-soft">
         Every listing carries an <strong className="text-ink">AI-involvement estimate</strong>: roughly how much of the

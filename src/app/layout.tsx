@@ -3,7 +3,7 @@ import "@fontsource-variable/figtree";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Unprompted: human-made work, with receipts", template: "%s · Unprompted" },
+  title: { default: "Unprompters: human-made work, with receipts", template: "%s · Unprompters" },
   description:
     "A marketplace for code, writing, art, ideas and more, made by people. Every listing shows how much AI was involved, and why.",
 };

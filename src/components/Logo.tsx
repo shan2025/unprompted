@@ -15,7 +15,7 @@ export function Logo() {
   return (
     <span className="inline-flex items-center gap-2.5 text-ink">
       <Mark className="h-7 w-7" />
-      <span className="text-[17px] font-medium uppercase tracking-[0.14em]">Unprompted</span>
+      <span className="text-[17px] font-medium uppercase tracking-[0.14em]">Unprompters</span>
     </span>
   );
 }

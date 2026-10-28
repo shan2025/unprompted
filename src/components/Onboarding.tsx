@@ -86,7 +86,7 @@ export function Onboarding() {
     <div className="grid min-h-dvh lg:grid-cols-[1fr_minmax(320px,26vw)]">
       <div className="flex min-h-dvh flex-col">
         <header className="flex h-[88px] items-center justify-between px-5 sm:px-12">
-          <Link href="/" aria-label="Unprompted home">
+          <Link href="/" aria-label="Unprompters home">
             <Logo />
           </Link>
           <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 lg:hidden">

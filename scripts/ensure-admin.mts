@@ -33,7 +33,7 @@ if (existing) {
   const [taken] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.handle, "team")).limit(1);
   await db.insert(schema.users).values({
     email,
-    name: "Unprompted Team",
+    name: "Unprompters Team",
     handle: taken ? `team_${randomBytes(2).toString("hex")}` : "team",
     role: "admin",
     bio: "Moderation account.",

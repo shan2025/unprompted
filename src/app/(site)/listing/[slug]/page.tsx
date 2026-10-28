@@ -59,7 +59,7 @@ async function ListingView({ params, searchParams }: Props) {
   const { analysis } = listing;
   const evidence = listing.evidence;
 
-  const badgeAlt = `${listing.aiPercent}% AI, ${TIER_INFO[listing.tier as Tier]?.label ?? listing.tier}, on Unprompted`;
+  const badgeAlt = `${listing.aiPercent}% AI, ${TIER_INFO[listing.tier as Tier]?.label ?? listing.tier}, on Unprompters`;
   const badgeSnippet = `<a href="${siteUrl()}/listing/${listing.slug}"><img src="${siteUrl()}/api/badge/${listing.slug}" alt="${badgeAlt}"></a>`;
 
   const purchase = (
