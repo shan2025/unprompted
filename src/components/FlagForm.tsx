@@ -1,29 +1,46 @@
 "use client";
 
 import { useActionState } from "react";
-import { flagListing } from "@/app/actions/listings";
+import { submitReport } from "@/app/actions/reports";
 
-const REASONS = [
-  ["undisclosed-ai", "Undisclosed AI use"],
-  ["stolen", "Not the seller's work"],
-  ["misleading", "Misleading listing"],
-  ["other", "Something else"],
-] as const;
+const REASONS = {
+  listing: [
+    ["undisclosed-ai", "Undisclosed AI use"],
+    ["stolen", "Not the seller's work"],
+    ["misleading", "Misleading listing"],
+    ["other", "Something else"],
+  ],
+  post: [
+    ["undisclosed-ai", "Undisclosed AI use"],
+    ["stolen", "Not the author's work"],
+    ["abusive", "Abusive or spam"],
+    ["other", "Something else"],
+  ],
+  comment: [
+    ["abusive", "Abusive or harassing"],
+    ["misleading", "Spam or misleading"],
+    ["undisclosed-ai", "AI-generated comment"],
+    ["other", "Something else"],
+  ],
+} as const;
 
-export function FlagForm({ listingId }: { listingId: number }) {
-  const [state, action, pending] = useActionState(flagListing, null);
+const LABELS = { listing: "Report this listing", post: "Report this post", comment: "Report" };
 
-  if (state?.ok) return <p className="text-sm text-ink-soft">{state.message}</p>;
+export function FlagForm({ target, id, compact }: { target: keyof typeof REASONS; id: number; compact?: boolean }) {
+  const [state, action, pending] = useActionState(submitReport, null);
+
+  if (state?.ok) return <p className={`text-ink-soft ${compact ? "text-xs" : "text-sm"}`}>{state.message}</p>;
 
   return (
-    <details className="group text-sm">
+    <details className={`group ${compact ? "text-xs" : "text-sm"}`}>
       <summary className="cursor-pointer list-none font-medium text-muted hover:text-ink group-open:text-ink">
-        Report this listing
+        {LABELS[target]}
       </summary>
-      <form action={action} className="mt-3 space-y-3">
-        <input type="hidden" name="listingId" value={listingId} />
-        <select name="reason" className="field" defaultValue="undisclosed-ai" aria-label="Reason">
-          {REASONS.map(([v, l]) => (
+      <form action={action} className="mt-3 space-y-3 text-sm">
+        <input type="hidden" name="target" value={target} />
+        <input type="hidden" name="id" value={id} />
+        <select name="reason" className="field" defaultValue={REASONS[target][0][0]} aria-label="Reason">
+          {REASONS[target].map(([v, l]) => (
             <option key={v} value={v}>
               {l}
             </option>

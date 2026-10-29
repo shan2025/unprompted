@@ -138,7 +138,9 @@ export async function getDashboard(userId: number) {
       tier: listings.tier,
       priceCents: listings.priceCents,
       createdAt: listings.createdAt,
-      sales: sql<number>`(select count(*)::int from ${orders} where ${orders.listingId} = ${listings.id})`,
+      // Explicit table names: without a join drizzle leaves columns unqualified,
+      // so "listing_id" = "id" would compare two columns of orders.
+      sales: sql<number>`(select count(*)::int from orders o where o.listing_id = "listings"."id")`,
     })
     .from(listings)
     .where(eq(listings.creatorId, userId))

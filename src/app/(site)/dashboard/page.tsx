@@ -5,6 +5,7 @@ import { AiPill } from "@/components/Score";
 import { requireUser } from "@/lib/auth";
 import { getDashboard } from "@/lib/data";
 import { formatDate, formatPrice } from "@/lib/format";
+import { getMyPosts } from "@/lib/journal";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -27,7 +28,7 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const user = await requireUser("/dashboard");
-  const data = await getDashboard(user.id);
+  const [data, posts] = await Promise.all([getDashboard(user.id), getMyPosts(user.id)]);
 
   return (
     <>
@@ -39,9 +40,14 @@ async function Dashboard() {
             View your public profile
           </Link>
         </div>
-        <Link href="/sell" className="btn-primary">
-          New listing
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/journal/new" className="btn-ghost">
+            Write a post
+          </Link>
+          <Link href="/sell" className="btn-primary">
+            New listing
+          </Link>
+        </div>
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -86,6 +92,50 @@ async function Dashboard() {
                     </td>
                     <td className="px-4 py-3 text-right">{formatPrice(l.priceCents)}</td>
                     <td className="px-4 py-3 text-right">{l.sales}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-2xl font-normal">Your journal posts</h2>
+        {posts.length === 0 ? (
+          <p className="card mt-4 p-8 text-center text-ink-soft">
+            Not everything has to be for sale.{" "}
+            <Link href="/journal/new" className="link font-semibold text-ink">
+              Share your first post
+            </Link>
+          </p>
+        ) : (
+          <div className="card mt-4 overflow-x-auto no-scrollbar">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Title</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">AI</th>
+                  <th className="px-4 py-3 text-right font-semibold">Appreciations</th>
+                  <th className="px-4 py-3 text-right font-semibold">Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((p) => (
+                  <tr key={p.id} className="border-b border-line last:border-0">
+                    <td className="px-4 py-3">
+                      <Link href={`/journal/${p.slug}`} className="font-semibold hover:text-accent">
+                        {p.title}
+                      </Link>
+                      <div className="text-xs text-muted">{formatDate(p.createdAt)}</div>
+                    </td>
+                    <td className={`px-4 py-3 font-semibold ${STATUS[p.status]?.tone}`}>{STATUS[p.status]?.label ?? p.status}</td>
+                    <td className="px-4 py-3">
+                      <AiPill percent={p.aiPercent} tier={p.tier} />
+                    </td>
+                    <td className="px-4 py-3 text-right">{p.appreciations}</td>
+                    <td className="px-4 py-3 text-right">{p.comments}</td>
                   </tr>
                 ))}
               </tbody>

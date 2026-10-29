@@ -15,6 +15,9 @@ export function Header() {
           <Link href="/explore" className="hover:opacity-60">
             Explore
           </Link>
+          <Link href="/journal" className="hover:opacity-60">
+            Journal
+          </Link>
           <Link href="/standard" className="hover:opacity-60">
             How scoring works
           </Link>
@@ -38,6 +41,9 @@ async function UserMenu() {
         <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
           Explore
         </Link>
+        <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
+          Journal
+        </Link>
         <Link href="/login" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
           Log in
         </Link>
@@ -60,6 +66,12 @@ async function UserMenu() {
         <span className="sm:hidden">You</span>
       </Link>
       <LogoutButton className="hidden text-[13px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink sm:block" />
+      <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
+        Journal
+      </Link>
+      <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 sm:inline-flex">
+        Write
+      </Link>
       <Link href="/sell" className="btn-primary px-5 py-3">
         Sell
       </Link>

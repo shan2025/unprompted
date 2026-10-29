@@ -37,9 +37,63 @@ export interface PreviewResult {
 export type PreviewState = { ok: true; result: PreviewResult } | { ok: false; errors: FieldErrors; message?: string };
 export type CreateState = { errors?: FieldErrors; message?: string } | null;
 
-function str(fd: FormData, key: string) {
+export type ParsedImage = ParsedListing["image"];
+
+export function str(fd: FormData, key: string) {
   const v = fd.get(key);
   return typeof v === "string" ? v.trim() : "";
+}
+
+// The disclosure, evidence and image fields are shared by listings and
+// journal posts. Each parser records problems in `errors`.
+
+export function parseDisclosure(fd: FormData, errors: FieldErrors) {
+  const disclosure = {} as Disclosure;
+  for (const stage of STAGES) {
+    const level = str(fd, `disclosure_${stage}`);
+    if (!(LEVELS as readonly string[]).includes(level)) errors.disclosure = "Answer every stage of the AI disclosure.";
+    disclosure[stage] = (level || "none") as Level;
+  }
+  return disclosure;
+}
+
+export function parseEvidence(fd: FormData, errors: FieldErrors) {
+  const kinds = fd.getAll("evidence_kind").map(String);
+  const urls = fd.getAll("evidence_url").map((v) => String(v).trim());
+  const notes = fd.getAll("evidence_note").map((v) => String(v).trim());
+  const evidence: Evidence[] = [];
+  kinds.forEach((kind, i) => {
+    const url = urls[i] ?? "";
+    const note = (notes[i] ?? "").slice(0, 300);
+    if (!url && !note) return;
+    if (!(kind in EVIDENCE_KINDS) || kind === "c2pa") {
+      errors.evidence = "Choose what each piece of evidence is.";
+      return;
+    }
+    if (url && !/^https?:\/\/\S+\.\S+/.test(url)) {
+      errors.evidence = "Evidence links must start with http:// or https://";
+      return;
+    }
+    evidence.push({ kind: kind as EvidenceKind, ...(url && { url }), ...(note && { note }) });
+  });
+  if (evidence.length > MAX_EVIDENCE) errors.evidence = `Attach at most ${MAX_EVIDENCE} pieces of evidence.`;
+  return evidence;
+}
+
+export async function parseImage(fd: FormData, errors: FieldErrors): Promise<ParsedImage> {
+  const file = fd.get("cover");
+  if (!(file instanceof File) || file.size === 0) return null;
+  if (file.size > MAX_IMAGE_BYTES) {
+    errors.cover = "Images must be 4 MB or smaller.";
+    return null;
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const ext = sniffImageType(bytes);
+  if (!ext) {
+    errors.cover = "Upload a JPG, PNG, WebP or GIF.";
+    return null;
+  }
+  return { bytes, ext };
 }
 
 export async function parseListingForm(fd: FormData, { requireAttestation }: { requireAttestation: boolean }) {
@@ -72,45 +126,9 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
   const license = str(fd, "license");
   if (!isLicense(license)) errors.license = "Pick a license.";
 
-  const disclosure = {} as Disclosure;
-  for (const stage of STAGES) {
-    const level = str(fd, `disclosure_${stage}`);
-    if (!(LEVELS as readonly string[]).includes(level)) errors.disclosure = "Answer every stage of the AI disclosure.";
-    disclosure[stage] = (level || "none") as Level;
-  }
-
-  const kinds = fd.getAll("evidence_kind").map(String);
-  const urls = fd.getAll("evidence_url").map((v) => String(v).trim());
-  const notes = fd.getAll("evidence_note").map((v) => String(v).trim());
-  const evidence: Evidence[] = [];
-  kinds.forEach((kind, i) => {
-    const url = urls[i] ?? "";
-    const note = (notes[i] ?? "").slice(0, 300);
-    if (!url && !note) return;
-    if (!(kind in EVIDENCE_KINDS) || kind === "c2pa") {
-      errors.evidence = "Choose what each piece of evidence is.";
-      return;
-    }
-    if (url && !/^https?:\/\/\S+\.\S+/.test(url)) {
-      errors.evidence = "Evidence links must start with http:// or https://";
-      return;
-    }
-    evidence.push({ kind: kind as EvidenceKind, ...(url && { url }), ...(note && { note }) });
-  });
-  if (evidence.length > MAX_EVIDENCE) errors.evidence = `Attach at most ${MAX_EVIDENCE} pieces of evidence.`;
-
-  let image: ParsedListing["image"] = null;
-  const file = fd.get("cover");
-  if (file instanceof File && file.size > 0) {
-    if (file.size > MAX_IMAGE_BYTES) {
-      errors.cover = "Images must be 4 MB or smaller.";
-    } else {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const ext = sniffImageType(bytes);
-      if (!ext) errors.cover = "Upload a JPG, PNG, WebP or GIF.";
-      else image = { bytes, ext };
-    }
-  }
+  const disclosure = parseDisclosure(fd, errors);
+  const evidence = parseEvidence(fd, errors);
+  const image = await parseImage(fd, errors);
 
   if (!preview && !locked && !image && !errors.cover) {
     errors.preview = "Add a preview, the deliverable, or an image so there is something to show and check.";
