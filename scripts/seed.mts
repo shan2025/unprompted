@@ -9,7 +9,7 @@
 import "./env.mts";
 import { randomBytes } from "node:crypto";
 import { count } from "drizzle-orm";
-import { assess } from "../src/lib/assess";
+import { assess, scoreColumns } from "../src/lib/assess";
 import type { CategoryId, LicenseId } from "../src/lib/categories";
 import { closeDb, db, schema } from "../src/lib/db";
 import { databaseUrl, isLocalDatabase } from "../src/lib/db/config";
@@ -257,6 +257,95 @@ Where every whispered moment sings.`,
   },
 ];
 
+interface SeedPost {
+  by: string;
+  title: string;
+  category: CategoryId;
+  body: string;
+  disclosure: Disclosure;
+  evidence: Evidence[];
+  aiNotes?: string;
+}
+
+const journal: SeedPost[] = [
+  {
+    by: "mara",
+    title: "Why I still draft in pencil",
+    category: "writing",
+    body: `People ask this like it's a productivity question. It isn't. I draft in pencil because a pencil can't autocomplete me.
+
+The first draft of every poem in Salt Year was written in a Muji notebook that cost me two pounds. Half the pages have coffee rings. One has a shopping list across the middle of a stanza (eggs, bin bags, the good bread) and I left it in when I scanned it, because that's what the afternoon was actually like.
+
+When I type, I edit while I write. I'll go back and change "kept" to "hoarded" before the sentence is even finished, and by the end of the paragraph I've polished something that didn't deserve polishing yet. In pencil, crossing out is ugly and slow, so I just keep going. The bad lines stay on the page where I can see them, and sometimes the bad line is the one that turns out to matter.
+
+I type it up on the third pass. That's when the spellcheck goes on, and that's all the help I take.`,
+    disclosure: NONE,
+    evidence: [{ kind: "drafts", url: "https://example.com/demo/pencil-notebook", note: "Notebook pages from the Salt Year drafts" }],
+    aiNotes: "None. Spellcheck on the typed version.",
+  },
+  {
+    by: "priya",
+    title: "Three mornings at Portsoy: process notes",
+    category: "art",
+    body: `Morning one was a write-off. The wind kept flipping the block and I spent forty minutes holding paper down with my elbow. I got the harbour wall in pencil and nothing else.
+
+Morning two I brought bulldog clips. Laid in the sky wash first, really wet, then waited for the boats to sit still, which they never do. The left-hand mast is in the wrong place because the boat moved and I'd already committed. I've decided I like it.
+
+Morning three was ink only. Walnut ink for the rigging, a dip pen with a bent nib I keep meaning to replace. You can see where the nib caught the paper on the second boat.
+
+The time-lapse is morning two, filmed on my phone propped against a lobster creel.`,
+    disclosure: NONE,
+    evidence: [
+      { kind: "timelapse", url: "https://example.com/demo/portsoy-morning-two", note: "Phone time-lapse of the second morning" },
+      { kind: "sketches", url: "https://example.com/demo/portsoy-pencil", note: "Pencil layout from morning one" },
+    ],
+  },
+  {
+    by: "tomas",
+    title: "The bug that made me write retry-later",
+    category: "code",
+    body: `In 2022 I had a cron job that called a flaky payments API. It retried three times, instantly, with no delay. So did every other worker. When the API hiccupped at 9am, forty workers all hammered it at the same millisecond, it fell over properly, and I got paged at my kid's swimming lesson.
+
+The fix everyone links to is exponential backoff with jitter. I'd read the post. I hadn't actually done it. My first attempt used "equal jitter" because I misremembered the article, and it still clumped.
+
+Full jitter is almost insultingly simple: pick a random wait between zero and the cap. That's the whole trick. The randomness is what spreads the herd out.
+
+I've copy-pasted that function into six projects since then, so I finally put it in one place with tests. It still doesn't support AbortSignal. Someone asked in March. I'm sorry, Dev.`,
+    disclosure: NONE,
+    evidence: [{ kind: "version-history", url: "https://example.com/demo/retry-later-commits", note: "Commit history back to 2022" }],
+  },
+  {
+    by: "june",
+    title: "Inventory, after the move",
+    category: "poetry",
+    body: `One piano, upright, out of tune
+in the key of the old kitchen.
+Two boxes marked FRAGILE
+that held towels.
+A jar of buttons from my grandmother
+who never sewed.
+Fog on the window, which came free,
+and stayed.`,
+    disclosure: NONE,
+    evidence: [],
+  },
+  {
+    by: "sam",
+    title: "An idea I'm giving away: a map of tool libraries",
+    category: "idea",
+    body: `Every town I've lived in has had a tool library, and I found out about each one about a month before I moved away.
+
+The idea: a dead-simple map of tool libraries, repair cafés and "library of things" projects, with opening hours and a rough list of what they lend. No accounts, no app. Each library edits its own listing with a link they get by email.
+
+I talked to three organisers about it. All three said the same thing: they don't need another booking system, they need people to know they exist.
+
+I'm not going to build this. If you do, I'd love to hear about it. The interview notes are linked below.`,
+    disclosure: { ...NONE, refinement: "light" },
+    evidence: [{ kind: "drafts", url: "https://example.com/demo/tool-library-notes", note: "Interview notes with three organisers" }],
+    aiNotes: "I asked an AI to check the post for typos. The idea and interviews are mine.",
+  },
+];
+
 if (DEPLOY) {
   const [{ n }] = await db.select({ n: count() }).from(schema.users);
   if (n > 0) {
@@ -270,6 +359,10 @@ if (DEPLOY) {
     process.exit(1);
   }
   await db.delete(schema.flags);
+  await db.delete(schema.postAppreciations);
+  await db.delete(schema.postComments);
+  await db.delete(schema.follows);
+  await db.delete(schema.posts);
   await db.delete(schema.orders);
   await db.delete(schema.listings);
   await db.delete(schema.sessions);
@@ -351,10 +444,73 @@ await db.insert(schema.flags).values({
   details: "The first paragraph reads fully generated to me. Is 30% really right?",
 });
 
+const postIds = new Map<string, number>();
+for (const [i, item] of journal.entries()) {
+  const result = await assess({
+    category: item.category,
+    preview: item.body,
+    locked: "",
+    disclosure: item.disclosure,
+    evidence: item.evidence,
+  });
+  const { score } = result;
+  const slug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+  const [row] = await db
+    .insert(schema.posts)
+    .values({
+      slug,
+      authorId: ids.get(item.by)!,
+      title: item.title,
+      category: item.category,
+      body: item.body,
+      aiNotes: item.aiNotes ?? "",
+      status: score.needsReview ? "in_review" : "published",
+      disclosure: item.disclosure,
+      ...scoreColumns(result),
+      isDemo: true,
+      createdAt: new Date(Date.now() - (journal.length - i) * DAY + DAY / 2),
+    })
+    .returning({ id: schema.posts.id });
+  postIds.set(item.by, row.id);
+  console.log(
+    `${score.needsReview ? "REVIEW" : "posted"}  ${String(score.percent).padStart(3)}% (${score.low}-${score.high})  ${score.tier.padEnd(11)}  ${item.title}`,
+  );
+}
+
+const follow = (from: string, to: string) => ({ followerId: ids.get(from)!, followingId: ids.get(to)! });
+await db
+  .insert(schema.follows)
+  .values([follow("alex", "mara"), follow("alex", "priya"), follow("mara", "priya"), follow("june", "tomas"), follow("priya", "mara")]);
+
+const appreciate = (who: string, author: string) => ({ userId: ids.get(who)!, postId: postIds.get(author)! });
+await db
+  .insert(schema.postAppreciations)
+  .values([
+    appreciate("alex", "mara"),
+    appreciate("priya", "mara"),
+    appreciate("june", "mara"),
+    appreciate("alex", "priya"),
+    appreciate("mara", "priya"),
+    appreciate("sam", "tomas"),
+    appreciate("mara", "june"),
+  ]);
+
+const comment = (who: string, author: string, body: string) => ({ authorId: ids.get(who)!, postId: postIds.get(author)!, body });
+await db.insert(schema.postComments).values([
+  comment("priya", "mara", "The shopping list in the stanza is the best thing I've read this week."),
+  comment("mara", "mara", "It was very good bread."),
+  comment("alex", "priya", "Bulldog clips. Of course. I've lost so many sketches to wind."),
+  comment("tomas", "sam", "I'd use this. Our local one is only open Saturday mornings and nobody knows."),
+]);
+
 if (DEPLOY) {
-  console.log(`\nSeeded ${people.length} demo accounts (random passwords) and ${items.length} demo listings.`);
+  console.log(
+    `\nSeeded ${people.length} demo accounts (random passwords), ${items.length} demo listings and ${journal.length} demo posts.`,
+  );
 } else {
-  console.log(`\nSeeded ${people.length} accounts (password: ${DEMO_PASSWORD}) and ${items.length} demo listings.`);
+  console.log(
+    `\nSeeded ${people.length} accounts (password: ${DEMO_PASSWORD}), ${items.length} demo listings and ${journal.length} demo posts.`,
+  );
   console.log("Admin login: admin@unprompted.test");
 }
 

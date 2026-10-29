@@ -1,9 +1,9 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { assess } from "@/lib/assess";
+import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { hasPurchased } from "@/lib/data";
@@ -75,22 +75,8 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
     license: v.license,
     coverFile,
     status: score.needsReview ? "in_review" : "published",
-    aiPercent: score.percent,
-    aiLow: score.low,
-    aiHigh: score.high,
-    tier: score.tier,
-    processVerified: score.processVerified,
     disclosure: v.disclosure,
-    evidence: result.evidence,
-    analysis: {
-      score,
-      previewSegments: result.preview?.segments ?? [],
-      previewKind: result.preview?.kind ?? null,
-      signals: result.preview?.signals ?? [],
-      media: result.media,
-      sources: result.sources,
-      analyzedAt: new Date().toISOString(),
-    },
+    ...scoreColumns(result),
   });
 
   redirect(`/listing/${slug}?created=1`);
@@ -116,37 +102,4 @@ export async function buyListing(slug: string) {
     await db.update(schema.listings).set({ status: "sold" }).where(eq(schema.listings.id, listing.id));
   }
   redirect(`/listing/${slug}?purchased=1`);
-}
-
-export type FlagState = { ok?: boolean; message?: string } | null;
-
-const FLAG_REASONS = ["undisclosed-ai", "stolen", "misleading", "other"] as const;
-
-export async function flagListing(_prev: FlagState, fd: FormData): Promise<FlagState> {
-  const user = await getCurrentUser();
-  if (!user) return { message: "Log in to report a listing." };
-
-  const listingId = Number(fd.get("listingId"));
-  const reason = String(fd.get("reason") ?? "");
-  const details = String(fd.get("details") ?? "").trim().slice(0, 1000);
-  if (!Number.isInteger(listingId) || !(FLAG_REASONS as readonly string[]).includes(reason)) {
-    return { message: "Pick a reason." };
-  }
-
-  const [existing] = await db
-    .select({ id: schema.flags.id })
-    .from(schema.flags)
-    .where(
-      and(eq(schema.flags.listingId, listingId), eq(schema.flags.reporterId, user.id), eq(schema.flags.status, "open")),
-    )
-    .limit(1);
-  if (existing) return { ok: true, message: "You've already reported this. A moderator will look at it." };
-
-  await db.insert(schema.flags).values({
-    listingId,
-    reporterId: user.id,
-    reason: reason as (typeof FLAG_REASONS)[number],
-    details,
-  });
-  return { ok: true, message: "Thanks. A moderator will review this listing." };
 }

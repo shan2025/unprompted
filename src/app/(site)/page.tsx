@@ -2,9 +2,11 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { GridSkeleton, ListingGrid } from "@/components/ListingCard";
+import { PostGrid, PostGridSkeleton } from "@/components/PostCard";
 import { ScoreCard } from "@/components/Score";
 import { CATEGORIES } from "@/lib/categories";
 import { searchListings } from "@/lib/data";
+import { searchPosts } from "@/lib/journal";
 import { computeScore } from "@/lib/scoring";
 
 // A worked example for the hero: a short story with light AI help on the edit.
@@ -88,6 +90,21 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
+        <div className="mb-10 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-4xl font-light">From the Journal</h2>
+            <p className="mt-2 text-ink-soft">Articles, poems and process notes, shared for free.</p>
+          </div>
+          <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
+            Read more
+          </Link>
+        </div>
+        <Suspense fallback={<PostGridSkeleton count={3} />}>
+          <RecentPosts />
+        </Suspense>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
         <h2 className="text-4xl font-light">Browse by craft</h2>
         <div className="mt-10 grid grid-cols-2 border-l border-t border-line sm:grid-cols-3 lg:grid-cols-5">
           {CATEGORIES.map((c) => (
@@ -155,4 +172,20 @@ async function Recent() {
     );
   }
   return <ListingGrid listings={listings} />;
+}
+
+async function RecentPosts() {
+  await connection();
+  const posts = await searchPosts({ limit: 3 });
+  if (posts.length === 0) {
+    return (
+      <p className="card p-8 text-center text-ink-soft">
+        No posts yet.{" "}
+        <Link href="/journal/new" className="link text-ink">
+          Write the first one.
+        </Link>
+      </p>
+    );
+  }
+  return <PostGrid posts={posts} />;
 }

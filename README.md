@@ -42,7 +42,8 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 - Listing pages with the score card, passage-by-passage highlighting, process evidence, and a locked deliverable that unlocks after purchase
 - Selling: a guided form with stage-by-stage disclosure, evidence links and image upload, plus a **Check my score** preview before publishing
 - Automatic review: listings where detection disagrees with the disclosure are held for a moderator
-- Reporting listings, and a moderator queue to approve or remove listings and resolve reports
+- **Journal** (`/journal`): free posts (articles, poems, art, process notes, ideas) scored exactly like listings, with comments, appreciations, following and a Following feed
+- Reporting listings, posts and comments, and a moderator queue to approve or remove them and resolve reports
 - Buying (**demo checkout**, no payment taken), exclusive licenses that close after one sale, buyer and seller dashboards
 - Embeddable SVG badge for each listing (`/api/badge/<slug>`)
 - Public methodology page at `/standard`

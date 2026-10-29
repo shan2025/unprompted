@@ -2,6 +2,7 @@ import { VISUAL_CATEGORIES, type CategoryId } from "./categories";
 import { scanImageMetadata, type MediaScan } from "./analysis/media";
 import { externalProviders } from "./analysis/providers";
 import { analyzeText, combineAnalyses, detectKind, type TextAnalysis } from "./analysis/text";
+import type { StoredAnalysis } from "./db/schema";
 import { computeScore, type Detection, type Disclosure, type Evidence, type Score } from "./scoring";
 
 export interface AssessmentInput {
@@ -72,4 +73,26 @@ export async function assess(input: AssessmentInput): Promise<Assessment> {
 
   const score = computeScore({ category: input.category, disclosure: input.disclosure, evidence, detections });
   return { score, preview, media, evidence, sources };
+}
+
+/** The columns a listing or post stores from an assessment. */
+export function scoreColumns(result: Assessment) {
+  const { score } = result;
+  return {
+    aiPercent: score.percent,
+    aiLow: score.low,
+    aiHigh: score.high,
+    tier: score.tier,
+    processVerified: score.processVerified,
+    evidence: result.evidence,
+    analysis: {
+      score,
+      previewSegments: result.preview?.segments ?? [],
+      previewKind: result.preview?.kind ?? null,
+      signals: result.preview?.signals ?? [],
+      media: result.media,
+      sources: result.sources,
+      analyzedAt: new Date().toISOString(),
+    } satisfies StoredAnalysis,
+  };
 }

@@ -3,7 +3,18 @@
 import { useState } from "react";
 import type { Segment } from "@/lib/analysis/text";
 
-export function SegmentView({ text, segments, kind }: { text: string; segments: Segment[]; kind: string | null }) {
+export function SegmentView({
+  text,
+  segments,
+  kind,
+  textClass = "text-[16px]",
+}: {
+  text: string;
+  segments: Segment[];
+  kind: string | null;
+  /** Type size for prose; code always uses the mono style. */
+  textClass?: string;
+}) {
   const [show, setShow] = useState(false);
   const flagged = segments.filter((s) => s.ai >= 0.35).length;
   const mono = kind === "code";
@@ -52,7 +63,7 @@ export function SegmentView({ text, segments, kind }: { text: string; segments: 
       )}
       <div
         className={`whitespace-pre-wrap break-words leading-relaxed text-ink ${
-          mono ? "no-scrollbar overflow-x-auto rounded-xl border border-line bg-paper p-4 font-mono text-[13px]" : "text-[16px]"
+          mono ? "no-scrollbar overflow-x-auto rounded-xl border border-line bg-paper p-4 font-mono text-[13px]" : textClass
         }`}
       >
         {nodes}

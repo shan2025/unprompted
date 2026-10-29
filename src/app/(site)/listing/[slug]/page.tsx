@@ -268,7 +268,7 @@ async function ListingView({ params, searchParams }: Props) {
 
           {!isOwner && (
             <div className="px-1">
-              <FlagForm listingId={listing.id} />
+              <FlagForm target="listing" id={listing.id} />
             </div>
           )}
         </aside>
