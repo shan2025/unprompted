@@ -2,6 +2,7 @@
 // from the environment. Runs on every deploy and is safe to repeat: an
 // existing account with that email is promoted, and its password is left alone.
 
+import "./env.mts";
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { closeDb, db, schema } from "../src/lib/db";

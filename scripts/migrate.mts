@@ -1,3 +1,4 @@
+import "./env.mts";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { closeDb, db } from "../src/lib/db";
 
