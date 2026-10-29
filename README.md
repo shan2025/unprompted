@@ -81,6 +81,7 @@ The built-in analyzer is a transparent baseline, not a production detector. Its 
 | Command | |
 | --- | --- |
 | `npm run dev` | Dev server |
+| `npm run dev:supabase` | Dev server against the database in `.env.supabase` (e.g. the live Supabase one) instead of `.env.local` |
 | `npm run build` / `npm start` | Production build and server |
 | `npm test` | Unit tests for the analyzer and scorer |
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint |

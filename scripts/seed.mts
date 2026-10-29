@@ -6,6 +6,7 @@
 //   tsx scripts/seed.mts --deploy Live site: only seeds an empty database, demo accounts get
 //                                 random passwords, and no moderator is created (see ensure-admin).
 
+import "./env.mts";
 import { randomBytes } from "node:crypto";
 import { count } from "drizzle-orm";
 import { assess } from "../src/lib/assess";
