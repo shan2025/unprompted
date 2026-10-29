@@ -118,7 +118,7 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+      className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-[color,background-color,border-color,scale] duration-150 ease-out active:scale-[0.97] ${
         active ? "border-ink bg-ink text-paper" : "border-line text-ink-soft hover:border-ink"
       }`}
     >

@@ -75,10 +75,58 @@ p {
     outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
+
+  /* Tailwind 4 no longer gives buttons a pointer cursor; anything clickable
+     gets one back, and every button sinks slightly while pressed. */
+  button,
+  summary,
+  select,
+  input[type="file"],
+  input[type="checkbox"],
+  input[type="radio"],
+  label:has(> input[type="radio"]),
+  label:has(> input[type="checkbox"]) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  button {
+    transition: scale 120ms ease-out;
+  }
+  /* Full-width list rows (role="option"/"radio") tint instead: shrinking a
+     wide row reads as a jump, not a press. */
+  button:not(:disabled):not([role="option"]):not([role="radio"]):active {
+    scale: 0.97;
+  }
+  label:has(> input[type="radio"]):active {
+    scale: 0.97;
+  }
+  button[role="option"]:active,
+  button[role="radio"]:active {
+    background-color: var(--field);
+  }
+}
+
+/* The native "Choose file" button. Unlayered so it wins over the file:
+   utilities on the inputs. */
+input[type="file"]::file-selector-button {
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    scale 120ms ease-out;
+}
+@media (hover: hover) {
+  input[type="file"]:hover::file-selector-button {
+    background-color: #333;
+  }
+}
+input[type="file"]:active::file-selector-button {
+  scale: 0.97;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-none px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-none px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.08em] transition-[color,background-color,border-color,scale] duration-150 ease-out active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
 }
 @utility btn-primary {
   @apply btn bg-ink text-white hover:bg-[#333];
