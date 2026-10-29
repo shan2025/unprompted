@@ -30,7 +30,7 @@ export function AppreciateButton({
   return (
     <form action={toggleAppreciation.bind(null, slug)}>
       <SubmitButton
-        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+        className={`rounded-full border px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,scale] duration-150 ease-out ${
           appreciated ? "border-accent bg-accent-soft text-accent" : "border-line text-ink-soft hover:border-ink hover:text-ink"
         }`}
         pendingText="…"
