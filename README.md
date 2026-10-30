@@ -47,7 +47,10 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 - Buying (**demo checkout**, no payment taken), exclusive licenses that close after one sale, buyer and seller dashboards
 - Embeddable SVG badge for each listing (`/api/badge/<slug>`)
 - Public methodology page at `/standard`
-- Light and dark mode; mobile layouts
+- Password reset by email (`/forgot-password`), with one-time links that expire after an hour
+- Rate limits on log-in (10 tries per email, 30 per connection, every 15 minutes), sign-up (5 per connection per hour) and password resets
+- A switch to hide all demo listings and posts (`HIDE_DEMO_CONTENT=true`)
+- Light theme; mobile layouts down to 320px wide
 
 ## Not built yet (needed before real launch)
 
@@ -126,6 +129,8 @@ Notes:
 - Supabase pauses free projects after 7 days without traffic. Restore from the dashboard, or upgrade.
 - Badge links use your Vercel address automatically. Set `SITE_URL` once you add a custom domain.
 - The terms, privacy, refunds and contact pages read `LEGAL_NAME`, `CONTACT_EMAIL`, `LEGAL_ADDRESS` and `GRIEVANCE_OFFICER`. Set them once the business is registered, then redeploy. The page text is a starting draft and needs a lawyer's review.
+- **Password-reset emails** need a free [Resend](https://resend.com) account: set `RESEND_API_KEY`, and `EMAIL_FROM` once you've verified your domain in Resend (until then Resend only delivers to your own address). Without a key, emails are printed to the server log when running locally.
+- **Hide the demo content** by setting `HIDE_DEMO_CONTENT=true` and redeploying. Nothing is deleted; remove the variable to bring it back.
 - Vercel's free Hobby plan is for non-commercial use. Move to a paid plan before taking real payments.
 
 ## Screenshots

@@ -15,6 +15,13 @@
       "when": 1793290908547,
       "tag": "0001_journal",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793325119760,
+      "tag": "0002_auth_safety",
+      "breakpoints": true
     }
   ]
 }

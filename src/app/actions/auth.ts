@@ -6,6 +6,7 @@ import { createSession, destroySession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { safeNext } from "@/lib/format";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { clientIp, withinLimit } from "@/lib/rate-limit";
 
 // On success the form does a full page load to `next`, rather than an in-app
 // redirect, so no page remembered from before the login change is reused.
@@ -38,6 +39,9 @@ export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState>
   if (name.length < 1 || name.length > 60) return { error: "Please enter your name.", values };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Enter a valid email address.", values };
   if (password.length < MIN_PASSWORD) return { error: `Use a password of at least ${MIN_PASSWORD} characters.`, values };
+  if (!(await withinLimit(`signup:ip:${await clientIp()}`, 5, 60 * 60))) {
+    return { error: "Too many new accounts from this connection. Try again in an hour.", values };
+  }
 
   const [taken] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
   if (taken) return { error: "That email already has an account. Try logging in.", values };
@@ -53,6 +57,13 @@ export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState>
 export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> {
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
   const password = String(fd.get("password") ?? "");
+
+  // Checked before the password, so guesses are capped whether right or wrong.
+  const ipOk = await withinLimit(`login:ip:${await clientIp()}`, 30, 15 * 60);
+  const emailOk = await withinLimit(`login:email:${email}`, 10, 15 * 60);
+  if (!ipOk || !emailOk) {
+    return { error: "Too many log-in attempts. Wait 15 minutes, or reset your password.", values: { email } };
+  }
 
   const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1);
   if (!user || !(await verifyPassword(password, user.passwordHash))) {

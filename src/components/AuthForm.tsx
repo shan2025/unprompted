@@ -46,7 +46,13 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
           minLength={mode === "signup" ? 8 : undefined}
           required
         />
-        {mode === "signup" && <p className="hint">At least 8 characters.</p>}
+        {mode === "signup" ? (
+          <p className="hint">At least 8 characters.</p>
+        ) : (
+          <Link href="/forgot-password" className="mt-2 inline-block text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
+            Forgot password?
+          </Link>
+        )}
       </div>
       {state?.error && (
         <p role="alert" className="rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">

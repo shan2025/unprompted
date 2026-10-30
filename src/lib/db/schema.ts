@@ -224,6 +224,28 @@ export const uploads = pgTable("uploads", {
   createdAt: createdAt(),
 }).enableRLS();
 
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    // SHA-256 of the emailed token; the token itself is never stored.
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("password_resets_user_idx").on(t.userId)],
+).enableRLS();
+
+// Attempt counters for log-in, sign-up and password resets (see rate-limit.ts).
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+}).enableRLS();
+
 export type User = typeof users.$inferSelect;
 export type Listing = typeof listings.$inferSelect;
 export type Order = typeof orders.$inferSelect;
