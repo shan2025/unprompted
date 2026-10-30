@@ -11,11 +11,16 @@ export function Mark({ className = "h-7 w-7" }: { className?: string }) {
   );
 }
 
-export function Logo() {
+/** `compact` shows only the mark below tablet width, where the header is crowded. */
+export function Logo({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2.5 text-ink">
-      <Mark className="h-7 w-7" />
-      <span className="text-[17px] font-medium uppercase tracking-[0.14em]">Unprompters</span>
+    <span className="inline-flex items-center gap-2 text-ink sm:gap-2.5">
+      <Mark className="h-6 w-6 sm:h-7 sm:w-7" />
+      <span
+        className={`text-[14px] font-medium uppercase tracking-[0.08em] sm:text-[17px] sm:tracking-[0.14em] ${compact ? "max-md:sr-only" : ""}`}
+      >
+        Unprompters
+      </span>
     </span>
   );
 }

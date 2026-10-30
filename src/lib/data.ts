@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, avg, count, desc, eq, ilike, inArray, lte, or, sql, sum } from "drizzle-orm";
 import { isCategory } from "./categories";
+import { hideDemo } from "./demo";
 import { db, schema } from "./db";
 import { TIER_INFO, type Tier } from "./scoring";
 
@@ -55,6 +56,7 @@ export async function searchListings(filters: ListingFilters) {
   if (filters.category && isCategory(filters.category)) where.push(eq(listings.category, filters.category));
   if (filters.maxAi !== undefined) where.push(lte(listings.aiPercent, filters.maxAi));
   if (filters.verified) where.push(eq(listings.processVerified, true));
+  if (hideDemo()) where.push(eq(listings.isDemo, false));
 
   const order = {
     new: [desc(listings.createdAt)],
@@ -79,7 +81,7 @@ export async function getListing(slug: string) {
     .select({ listing: listings, creator: { id: users.id, name: users.name, handle: users.handle, bio: users.bio } })
     .from(listings)
     .innerJoin(users, eq(listings.creatorId, users.id))
-    .where(eq(listings.slug, slug))
+    .where(hideDemo() ? and(eq(listings.slug, slug), eq(listings.isDemo, false)) : eq(listings.slug, slug))
     .limit(1);
   return row ?? null;
 }
@@ -110,7 +112,13 @@ export async function getCreator(handle: string) {
     .select(cardFields)
     .from(listings)
     .innerJoin(users, eq(listings.creatorId, users.id))
-    .where(and(eq(listings.creatorId, creator.id), inArray(listings.status, PUBLIC_STATUSES)))
+    .where(
+      and(
+        eq(listings.creatorId, creator.id),
+        inArray(listings.status, PUBLIC_STATUSES),
+        hideDemo() ? eq(listings.isDemo, false) : undefined,
+      ),
+    )
     .orderBy(desc(listings.createdAt));
 
   const [stats] = await db
@@ -206,7 +214,7 @@ export async function marketStats() {
   const [row] = await db
     .select({ n: count(), avgAi: avg(listings.aiPercent) })
     .from(listings)
-    .where(inArray(listings.status, PUBLIC_STATUSES));
+    .where(and(inArray(listings.status, PUBLIC_STATUSES), hideDemo() ? eq(listings.isDemo, false) : undefined));
   const [creators] = await db.select({ n: sql<number>`count(distinct ${listings.creatorId})::int` }).from(listings);
   return { listings: row?.n ?? 0, avgAi: Math.round(Number(row?.avgAi ?? 0)), creators: creators?.n ?? 0 };
 }

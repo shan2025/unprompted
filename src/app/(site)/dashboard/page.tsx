@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LogoutButton } from "@/components/LogoutButton";
 import { Suspense } from "react";
 import { AiPill } from "@/components/Score";
 import { requireUser } from "@/lib/auth";
@@ -36,9 +37,17 @@ async function Dashboard() {
         <div>
           <p className="eyebrow">Dashboard</p>
           <h1 className="mt-1 text-4xl font-light">Hi, {user.name.split(" ")[0]}</h1>
-          <Link href={`/u/${user.handle}`} className="link mt-1 inline-block text-sm text-ink-soft">
-            View your public profile
-          </Link>
+          <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-ink-soft">
+            <Link href={`/u/${user.handle}`} className="link">
+              View your public profile
+            </Link>
+            {user.role === "admin" && (
+              <Link href="/admin" className="link">
+                Review queue
+              </Link>
+            )}
+            <LogoutButton className="link text-ink-soft hover:text-ink" />
+          </div>
         </div>
         <div className="flex flex-wrap gap-3">
           <Link href="/journal/new" className="btn-ghost">

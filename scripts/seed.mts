@@ -366,6 +366,7 @@ if (DEPLOY) {
   await db.delete(schema.orders);
   await db.delete(schema.listings);
   await db.delete(schema.sessions);
+  await db.delete(schema.rateLimits);
   await db.delete(schema.uploads);
   await db.delete(schema.users);
 }

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { isCategory } from "./categories";
+import { hideDemo } from "./demo";
 import { db, schema } from "./db";
 
 const { posts, postComments, postAppreciations, follows, users, flags } = schema;
@@ -47,6 +48,7 @@ export async function searchPosts(filters: PostFilters) {
   }
   if (filters.category && isCategory(filters.category)) where.push(eq(posts.category, filters.category));
   if (filters.authorId !== undefined) where.push(eq(posts.authorId, filters.authorId));
+  if (hideDemo()) where.push(eq(posts.isDemo, false));
   if (filters.followedBy !== undefined) {
     where.push(
       inArray(
@@ -72,7 +74,7 @@ export async function getPost(slug: string) {
     .select({ post: posts, author: { id: users.id, name: users.name, handle: users.handle, bio: users.bio } })
     .from(posts)
     .innerJoin(users, eq(posts.authorId, users.id))
-    .where(eq(posts.slug, slug))
+    .where(hideDemo() ? and(eq(posts.slug, slug), eq(posts.isDemo, false)) : eq(posts.slug, slug))
     .limit(1);
   return row ?? null;
 }
