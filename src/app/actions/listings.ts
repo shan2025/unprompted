@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
-import { hasPurchased } from "@/lib/data";
 import { parseListingForm, type CreateState, type PreviewState } from "@/lib/listing-form";
 import { saveUpload } from "@/lib/uploads";
 
@@ -86,20 +85,31 @@ export async function buyListing(slug: string) {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/listing/${slug}`)}`);
 
-  const [listing] = await db.select().from(schema.listings).where(eq(schema.listings.slug, slug)).limit(1);
-  if (!listing || listing.status !== "published" || listing.creatorId === user.id) redirect(`/listing/${slug}`);
-  if (await hasPurchased(listing.id, user.id)) redirect(`/listing/${slug}`);
+  // Lock the listing row for the purchase, so two buyers arriving at once
+  // can't both take an exclusive license: the second waits, then sees "sold".
+  const bought = await db.transaction(async (tx) => {
+    const [listing] = await tx
+      .select()
+      .from(schema.listings)
+      .where(eq(schema.listings.slug, slug))
+      .limit(1)
+      .for("update");
+    if (!listing || listing.status !== "published" || listing.creatorId === user.id) return false;
 
-  // Payment goes here. Until a provider is connected, orders are recorded as
-  // demo purchases so the full flow can be exercised (see README).
-  await db.insert(schema.orders).values({
-    listingId: listing.id,
-    buyerId: user.id,
-    amountCents: listing.priceCents,
-    status: "demo",
+    // Payment goes here. Until a provider is connected, orders are recorded as
+    // demo purchases so the full flow can be exercised (see README).
+    const [order] = await tx
+      .insert(schema.orders)
+      .values({ listingId: listing.id, buyerId: user.id, amountCents: listing.priceCents, status: "demo" })
+      // Already bought by this user (orders_listing_buyer_idx).
+      .onConflictDoNothing()
+      .returning({ id: schema.orders.id });
+    if (!order) return false;
+
+    if (listing.license === "exclusive") {
+      await tx.update(schema.listings).set({ status: "sold" }).where(eq(schema.listings.id, listing.id));
+    }
+    return true;
   });
-  if (listing.license === "exclusive") {
-    await db.update(schema.listings).set({ status: "sold" }).where(eq(schema.listings.id, listing.id));
-  }
-  redirect(`/listing/${slug}?purchased=1`);
+  redirect(bought ? `/listing/${slug}?purchased=1` : `/listing/${slug}`);
 }
