@@ -53,12 +53,16 @@ export function Cover({
   return (
     <svg viewBox="0 0 400 300" className={`h-full w-full ${className}`} role={title ? "img" : undefined} aria-hidden={title ? undefined : true} aria-label={title || undefined} preserveAspectRatio="xMidYMid slice">
       <rect width="400" height="300" fill={p.bg} />
-      <Pattern category={category} r={r} ink={p.ink} accent={p.accent} />
+      <Pattern category={category} slug={slug} ink={p.ink} accent={p.accent} />
     </svg>
   );
 }
 
-function Pattern({ category, r, ink, accent }: { category: string; r: () => number; ink: string; accent: string }) {
+function Pattern({ category, slug, ink, accent }: { category: string; slug: string; ink: string; accent: string }) {
+  // Pattern draws from its own copy of the sequence (past the palette pick),
+  // so rendering it twice can never shift the random values.
+  const r = rng(slug);
+  r();
   switch (category) {
     case "writing":
     case "idea": {

@@ -40,7 +40,7 @@ export type Sort = keyof typeof SORTS;
 
 export interface ListingFilters {
   q?: string;
-  category?: string;
+  categories?: string[];
   maxAi?: number;
   verified?: boolean;
   sort?: Sort;
@@ -53,7 +53,8 @@ export async function searchListings(filters: ListingFilters) {
     const term = `%${filters.q.replace(/[%_]/g, "")}%`;
     where.push(or(ilike(listings.title, term), ilike(listings.summary, term), ilike(users.name, term))!);
   }
-  if (filters.category && isCategory(filters.category)) where.push(eq(listings.category, filters.category));
+  const categories = filters.categories?.filter(isCategory) ?? [];
+  if (categories.length) where.push(inArray(listings.category, categories));
   if (filters.maxAi !== undefined) where.push(lte(listings.aiPercent, filters.maxAi));
   if (filters.verified) where.push(eq(listings.processVerified, true));
   if (hideDemo()) where.push(eq(listings.isDemo, false));

@@ -56,29 +56,35 @@ export function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [goal, setGoal] = useState<Goal | null>(null);
-  const [category, setCategory] = useState<CategoryId | null>(null);
+  const [categories, setCategories] = useState<CategoryId[]>([]);
   const [ai, setAi] = useState<string | null>(null);
 
   const steps = [
     { title: "What brings you here?", sub: "We'll set things up around what you want to do." },
     goal === "buy"
-      ? { title: "What are you looking for?", sub: "We'll show you the work that fits." }
+      ? { title: "What are you looking for?", sub: "Pick as many as you like. We'll show you the work that fits." }
       : { title: "What do you make?", sub: "Pick the closest fit. You can list in other categories later." },
     goal === "buy"
       ? { title: "How much AI is okay?", sub: "Every listing shows its AI involvement, so the choice is yours." }
       : { title: "How much AI goes into your work?", sub: "Be honest: it sets the floor of your score." },
   ];
 
-  const ready = [goal !== null, category !== null, ai !== null][step];
+  const ready = [goal !== null, categories.length > 0, ai !== null][step];
   const last = step === steps.length - 1;
+
+  function chooseGoal(v: string) {
+    setGoal(v as Goal);
+    // A listing has one category, so sellers keep only their first pick.
+    if (v === "sell") setCategories((c) => c.slice(0, 1));
+  }
 
   function next() {
     if (!ready) return;
     if (!last) return setStep(step + 1);
     if (goal === "sell") {
-      router.push(`/sell?category=${category}&ai=${ai}`);
+      router.push(`/sell?category=${categories[0]}&ai=${ai}`);
     } else {
-      router.push(`/explore?category=${category}${ai ? `&maxAi=${ai}` : ""}`);
+      router.push(`/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`);
     }
   }
 
@@ -95,7 +101,7 @@ export function Onboarding() {
         </header>
 
         <main className="grid flex-1 content-start gap-10 px-5 pb-12 pt-10 sm:px-12 lg:grid-cols-[minmax(240px,340px)_minmax(0,560px)] lg:gap-16 lg:pt-32">
-          <div key={`q${step}${goal}`} className="rise">
+          <div key={`q${step}`} className="rise">
             <h1 className="text-[30px] font-light leading-tight sm:text-[34px]">{steps[step].title}</h1>
             <p className="mt-3 text-[15px] leading-relaxed text-muted">{steps[step].sub}</p>
             <div className="relative mt-10 h-px w-28 bg-line" aria-hidden="true">
@@ -106,9 +112,9 @@ export function Onboarding() {
             </p>
           </div>
 
-          <div key={`a${step}${goal}`} className="rise">
-            {step === 0 && <Choices options={GOALS} value={goal} onChange={(v) => setGoal(v as Goal)} onPick={next} />}
-            {step === 1 && <CategorySearch value={category} onChange={setCategory} onSubmit={next} />}
+          <div key={`a${step}`} className="rise">
+            {step === 0 && <Choices options={GOALS} value={goal} onChange={chooseGoal} onPick={next} />}
+            {step === 1 && <CategorySearch value={categories} multiple={goal === "buy"} onChange={setCategories} onSubmit={next} />}
             {step === 2 && <Choices options={goal === "buy" ? BUYER_AI : SELLER_AI} value={ai} onChange={setAi} onPick={next} />}
           </div>
         </main>
@@ -128,9 +134,7 @@ export function Onboarding() {
       </div>
 
       <aside className="relative hidden overflow-hidden lg:block">
-        <div key={category ?? "none"} className="fade absolute inset-0">
-          <Cover slug={`start-${category ?? "welcome"}`} category={category ?? "writing"} title="" palette={0} className="h-full" />
-        </div>
+        <CoverPanel category={categories.at(-1) ?? null} />
         <Link
           href="/explore"
           className="absolute right-8 top-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink hover:opacity-60"
@@ -140,6 +144,19 @@ export function Onboarding() {
       </aside>
     </div>
   );
+}
+
+// The new cover fades in over the old one, so the panel never flashes empty.
+function CoverPanel({ category }: { category: CategoryId | null }) {
+  const [layers, setLayers] = useState([{ id: 0, category }]);
+  const top = layers[layers.length - 1];
+  if (top.category !== category) setLayers([top, { id: top.id + 1, category }]);
+
+  return layers.map((layer) => (
+    <div key={layer.id} className="fade absolute inset-0">
+      <Cover slug={`start-${layer.category ?? "welcome"}`} category={layer.category ?? "writing"} title="" palette={0} className="h-full" />
+    </div>
+  ));
 }
 
 function Choices({
@@ -188,21 +205,30 @@ function Choices({
 
 function CategorySearch({
   value,
+  multiple,
   onChange,
   onSubmit,
 }: {
-  value: CategoryId | null;
-  onChange: (id: CategoryId) => void;
+  value: CategoryId[];
+  multiple: boolean;
+  onChange: (ids: CategoryId[]) => void;
   onSubmit: () => void;
 }) {
-  const selected = CATEGORIES.find((c) => c.id === value);
+  const selected = multiple ? undefined : CATEGORIES.find((c) => c.id === value[0]);
   const [query, setQuery] = useState(selected?.label ?? "");
   const [open, setOpen] = useState(!selected);
   const inputRef = useRef<HTMLInputElement>(null);
   const results = useMemo(() => matches(selected && query === selected.label ? "" : query), [query, selected]);
+  // Picking several at once keeps the list in view; a single pick closes it.
+  const listOpen = multiple || open;
 
   function pick(id: CategoryId, label: string) {
-    onChange(id);
+    if (multiple) {
+      onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+      setQuery("");
+      return;
+    }
+    onChange([id]);
     setQuery(label);
     setOpen(false);
   }
@@ -223,7 +249,7 @@ function CategorySearch({
           autoFocus
           autoComplete="off"
           value={query}
-          placeholder="Search for your craft"
+          placeholder={multiple ? "Search categories" : "Search for your craft"}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -232,37 +258,67 @@ function CategorySearch({
           onKeyDown={(e) => {
             if (e.key !== "Enter") return;
             e.preventDefault();
-            if (open && results[0]) pick(results[0].id, results[0].label);
-            else if (value) onSubmit();
+            const first = results[0] ?? { id: "other" as const, label: "Other" };
+            if (multiple ? query.trim() : open) pick(first.id, first.label);
+            else if (value.length) onSubmit();
           }}
           className="h-[72px] w-full bg-transparent text-[18px] text-ink placeholder:text-muted focus:outline-none"
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={listOpen}
           aria-controls="category-list"
         />
       </div>
 
-      {open && (
-        <div id="category-list" role="listbox" className="absolute inset-x-0 top-full z-10 max-h-[340px] overflow-y-auto no-scrollbar bg-white py-4 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.18)]">
-          <p className="px-8 pb-2 text-[13px] font-semibold text-ink-soft">{query.trim() ? "Matches" : "Popular categories"}</p>
+      {listOpen && (
+        <div
+          id="category-list"
+          role="listbox"
+          aria-multiselectable={multiple || undefined}
+          className={
+            multiple
+              ? "max-h-[min(420px,50dvh)] overflow-y-auto no-scrollbar py-4"
+              : "absolute inset-x-0 top-full z-10 max-h-[340px] overflow-y-auto no-scrollbar bg-white py-4 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.18)]"
+          }
+        >
+          <p className="flex justify-between px-8 pb-2 text-[13px] font-semibold text-ink-soft">
+            <span>{query.trim() ? "Matches" : multiple ? "Pick as many as you like" : "Popular categories"}</span>
+            {multiple && value.length > 0 && <span className="font-normal text-muted">{value.length} selected</span>}
+          </p>
           {results.length === 0 && (
             <button type="button" onClick={() => pick("other", "Other")} className="block w-full px-8 py-2.5 text-left text-[18px] text-ink-soft hover:text-ink">
               No exact match. Choose <span className="text-ink">Other</span>
             </button>
           )}
-          {results.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              role="option"
-              aria-selected={value === c.id}
-              onClick={() => pick(c.id, c.label)}
-              className="flex w-full items-baseline justify-between gap-4 px-8 py-2.5 text-left hover:bg-field"
-            >
-              <span className="text-[18px] text-ink-soft">{c.label}</span>
-              <span className="hidden text-xs text-muted sm:block">{c.blurb}</span>
-            </button>
-          ))}
+          {results.map((c) => {
+            const on = value.includes(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="option"
+                aria-selected={on}
+                onClick={() => pick(c.id, c.label)}
+                className="flex w-full items-center justify-between gap-4 px-8 py-2.5 text-left hover:bg-field"
+              >
+                <span className="flex items-center gap-3">
+                  {multiple && (
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? "border-ink bg-ink" : "border-[#bdbdbd]"}`}
+                      aria-hidden="true"
+                    >
+                      {on && (
+                        <svg viewBox="0 0 12 12" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="m2.5 6 2.5 2.5 4.5-5" />
+                        </svg>
+                      )}
+                    </span>
+                  )}
+                  <span className={`text-[18px] ${on ? "text-ink" : "text-ink-soft"}`}>{c.label}</span>
+                </span>
+                <span className="hidden text-xs text-muted sm:block">{c.blurb}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
