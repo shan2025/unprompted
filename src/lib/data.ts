@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, avg, count, desc, eq, ilike, inArray, lte, or, sql, sum } from "drizzle-orm";
 import { isCategory } from "./categories";
+import type { Sort } from "./sorts";
 import { hideDemo } from "./demo";
 import { db, schema } from "./db";
 import { TIER_INFO, type Tier } from "./scoring";
@@ -30,13 +31,7 @@ const cardFields = {
   creatorHandle: users.handle,
 };
 
-export const SORTS = {
-  new: "Newest",
-  "least-ai": "Least AI first",
-  "price-low": "Price: low to high",
-  "price-high": "Price: high to low",
-} as const;
-export type Sort = keyof typeof SORTS;
+export { SORTS, type Sort } from "./sorts";
 
 export interface ListingFilters {
   q?: string;
