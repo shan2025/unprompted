@@ -95,7 +95,11 @@ export interface Score {
 
 export function evidenceStrength(evidence: Evidence[]) {
   let remaining = 1;
-  for (const item of evidence) remaining *= 1 - (EVIDENCE_KINDS[item.kind]?.strength ?? 0);
+  for (const item of evidence) {
+    // A note on its own gives nobody anything to check. C2PA is found in the file itself.
+    if (!item.url && item.kind !== "c2pa") continue;
+    remaining *= 1 - (EVIDENCE_KINDS[item.kind]?.strength ?? 0);
+  }
   return Math.min(0.9, 1 - remaining);
 }
 

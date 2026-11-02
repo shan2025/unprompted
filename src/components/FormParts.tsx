@@ -4,7 +4,7 @@
 // disclosure and evidence steps stay identical in both.
 
 import { useEffect, useRef, useState } from "react";
-import { MAX_EVIDENCE, type FieldErrors, type PreviewResult } from "@/lib/listing-form";
+import { MAX_EVIDENCE, MAX_IMAGE_BYTES, type FieldErrors, type PreviewResult } from "@/lib/listing-form";
 import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Level } from "@/lib/scoring";
 import { ScoreCard } from "./Score";
 import { SegmentView } from "./SegmentView";
@@ -33,6 +33,7 @@ export function Section({ step, title, intro, children }: { step: string; title:
 
 export function ImageField({ errors, hint }: { errors: FieldErrors; hint: string }) {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [tooBig, setTooBig] = useState<string | null>(null);
   useEffect(() => () => void (coverUrl && URL.revokeObjectURL(coverUrl)), [coverUrl]);
 
   return (
@@ -53,11 +54,20 @@ export function ImageField({ errors, hint }: { errors: FieldErrors; hint: string
           className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:font-semibold file:text-paper"
           onChange={(e) => {
             const f = e.target.files?.[0];
+            // Caught here: a file this size would be refused before the server could explain why.
+            if (f && f.size > MAX_IMAGE_BYTES) {
+              setTooBig(`This image is ${(f.size / (1024 * 1024)).toFixed(1)} MB and the limit is 4 MB. Export a smaller copy and try again.`);
+              setCoverUrl(null);
+              e.target.value = "";
+              return;
+            }
+            setTooBig(null);
             setCoverUrl(f ? URL.createObjectURL(f) : null);
           }}
         />
       </div>
       <p className="hint">{hint}</p>
+      {tooBig && <p className="mt-1.5 text-sm font-medium text-heavy">{tooBig}</p>}
       <FieldError errors={errors} name="cover" />
     </div>
   );
@@ -141,6 +151,7 @@ export function EvidenceFields({ errors }: { errors: FieldErrors }) {
           </div>
         ))}
       </div>
+      <p className="hint">Only evidence with a link counts towards your score, so buyers have something to check.</p>
       {rows.length < MAX_EVIDENCE && (
         <button type="button" className="btn-ghost" onClick={() => setRows((r) => [...r, nextRow.current++])}>
           + Add evidence

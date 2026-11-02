@@ -49,12 +49,11 @@ async function ListingView({ params, searchParams }: Props) {
   const user = await getCurrentUser();
   const isOwner = user?.id === listing.creatorId;
   const isAdmin = user?.role === "admin";
-  if ((listing.status === "in_review" || listing.status === "removed") && !isOwner && !isAdmin) notFound();
+  const purchased = user ? await hasPurchased(listing.id, user.id) : false;
+  // Buyers keep what they bought, even after a listing leaves the market.
+  if ((listing.status === "in_review" || listing.status === "removed") && !isOwner && !isAdmin && !purchased) notFound();
 
-  const [purchased, sales] = await Promise.all([
-    user ? hasPurchased(listing.id, user.id) : Promise.resolve(false),
-    salesCount(listing.id),
-  ]);
+  const sales = await salesCount(listing.id);
   const canSeeDeliverable = isOwner || purchased || isAdmin;
   const { analysis } = listing;
   const evidence = listing.evidence;
@@ -93,7 +92,7 @@ async function ListingView({ params, searchParams }: Props) {
 
   return (
     <>
-      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1"} isOwner={isOwner} />
+      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1"} isOwner={isOwner} owned={purchased} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
         <Link href="/explore" className="hover:text-ink">
@@ -277,7 +276,7 @@ async function ListingView({ params, searchParams }: Props) {
   );
 }
 
-function Banners({ status, created, purchased, isOwner }: { status: string; created: boolean; purchased: boolean; isOwner: boolean }) {
+function Banners({ status, created, purchased, isOwner, owned }: { status: string; created: boolean; purchased: boolean; isOwner: boolean; owned: boolean }) {
   const banner = (tone: string, text: React.ReactNode) => (
     <div className={`mb-6 rounded-xl border px-4 py-3 text-sm ${tone}`} role="status">
       {text}
@@ -298,7 +297,14 @@ function Banners({ status, created, purchased, isOwner }: { status: string; crea
       ),
     );
   }
-  if (status === "removed") return banner("border-heavy/40 bg-card text-ink", <><strong>Removed.</strong> This listing is no longer in the market.</>);
+  if (status === "removed") {
+    return banner(
+      "border-heavy/40 bg-card text-ink",
+      <>
+        <strong>Removed.</strong> This listing is no longer in the market.{owned && " You bought it, so you keep access."}
+      </>,
+    );
+  }
   if (created) return banner("border-human/40 bg-card text-ink", <><strong>Your listing is live.</strong> Share the badge below to show your score anywhere.</>);
   if (purchased) return banner("border-human/40 bg-card text-ink", <><strong>It&apos;s yours.</strong> The full work is unlocked below. (Demo purchase, no payment taken.)</>);
   return null;

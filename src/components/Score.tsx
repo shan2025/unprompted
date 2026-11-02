@@ -39,9 +39,9 @@ export function AiPill({ percent, tier, verified }: { percent: number; tier: str
       <span className={`h-2 w-2 rounded-full ${TIER_BG[tier as Tier] ?? "bg-ink"}`} aria-hidden="true" />
       {percent}% AI
       {verified && (
-        <span className="text-human" title="Process verified with evidence">
+        <span className="text-human" title="Process evidence attached by the creator">
           <CheckIcon className="h-3.5 w-3.5" />
-          <span className="sr-only">process verified</span>
+          <span className="sr-only">process evidence attached</span>
         </span>
       )}
     </span>
@@ -170,7 +170,7 @@ export function ScoreCard({ score, evidenceCount }: { score: Score; evidenceCoun
         {score.processVerified ? (
           <>
             <CheckIcon className="h-4 w-4 text-human" />
-            <span className="font-semibold text-human">Process verified</span>
+            <span className="font-semibold text-human">Evidence attached</span>
           </>
         ) : (
           <span className="text-ink-soft">Process evidence: {Math.round(score.evidenceStrength * 100)}% strength</span>

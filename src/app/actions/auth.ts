@@ -6,7 +6,7 @@ import { createSession, destroySession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { safeNext } from "@/lib/format";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { clientIp, withinLimit } from "@/lib/rate-limit";
+import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
 
 // On success the form does a full page load to `next`, rather than an in-app
 // redirect, so no page remembered from before the login change is reused.
@@ -59,9 +59,16 @@ export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> 
   const password = String(fd.get("password") ?? "");
 
   // Checked before the password, so guesses are capped whether right or wrong.
-  const ipOk = await withinLimit(`login:ip:${await clientIp()}`, 30, 15 * 60);
-  const emailOk = await withinLimit(`login:email:${email}`, 10, 15 * 60);
-  if (!ipOk || !emailOk) {
+  // The tight cap is per email and connection, so a stranger guessing can't lock
+  // the owner out. The per-email cap only trips on guesses from many connections.
+  const ip = await clientIp();
+  const pairKey = `login:pair:${email}:${ip}`;
+  if (!(await withinLimit(`login:ip:${ip}`, 30, 15 * 60))) {
+    return { error: "Too many log-in attempts from this connection. Wait 15 minutes.", values: { email } };
+  }
+  const pairOk = await withinLimit(pairKey, 10, 15 * 60);
+  const emailOk = await withinLimit(`login:email:${email}:`, 100, 15 * 60);
+  if (!pairOk || !emailOk) {
     return { error: "Too many log-in attempts. Wait 15 minutes, or reset your password.", values: { email } };
   }
 
@@ -69,6 +76,7 @@ export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> 
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return { error: "That email and password don't match.", values: { email } };
   }
+  await clearLimits(pairKey);
   await createSession(user.id);
   return { next: safeNext(fd.get("next"), "/dashboard") };
 }

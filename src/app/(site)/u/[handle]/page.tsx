@@ -67,7 +67,7 @@ async function Creator({ params }: Props) {
             <dd className="font-display text-3xl font-light">{stats.avgAi === null ? "–" : `${stats.avgAi}%`}</dd>
           </div>
           <div>
-            <dt className="eyebrow">Verified</dt>
+            <dt className="eyebrow">With evidence</dt>
             <dd className="font-display text-3xl font-light">{stats.verified}</dd>
           </div>
           <div>

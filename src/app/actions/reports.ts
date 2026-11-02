@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
+import { withinLimit } from "@/lib/rate-limit";
 
 export type ReportState = { ok?: boolean; message?: string } | null;
 
@@ -29,6 +30,9 @@ export async function submitReport(_prev: ReportState, fd: FormData): Promise<Re
     .where(and(eq(column, id), eq(schema.flags.reporterId, user.id), eq(schema.flags.status, "open")))
     .limit(1);
   if (existing) return { ok: true, message: "You've already reported this. A moderator will look at it." };
+  if (!(await withinLimit(`report:user:${user.id}`, 20, 60 * 60))) {
+    return { message: "You've sent a lot of reports. Try again in an hour." };
+  }
 
   await db.insert(schema.flags).values({
     [TARGETS[target as Target]]: id,

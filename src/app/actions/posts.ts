@@ -8,7 +8,9 @@ import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { safeNext } from "@/lib/format";
+import { UNREADABLE_IMAGE } from "@/lib/listing-form";
 import { MAX_COMMENT, parsePostForm, type PostCreateState, type PostPreviewState } from "@/lib/post-form";
+import { withinLimit } from "@/lib/rate-limit";
 import { saveUpload } from "@/lib/uploads";
 
 function slugify(title: string) {
@@ -23,9 +25,13 @@ function slugify(title: string) {
 
 /** Score a draft post without saving it. */
 export async function previewPostAssessment(fd: FormData): Promise<PostPreviewState> {
-  if (!(await getCurrentUser())) return { ok: false, errors: {}, message: "Your session expired. Log in again." };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, errors: {}, message: "Your session expired. Log in again." };
   const parsed = await parsePostForm(fd, { requireAttestation: false });
   if (!parsed.values) return { ok: false, errors: parsed.errors };
+  if (!(await withinLimit(`preview:user:${user.id}`, 60, 60 * 60))) {
+    return { ok: false, errors: {}, message: "That's a lot of score checks. Try again in an hour." };
+  }
 
   const v = parsed.values;
   const result = await assess({ ...v, preview: v.body, locked: "", image: v.image?.bytes });
@@ -59,7 +65,12 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
     };
   }
 
-  const coverFile = v.image ? await saveUpload(v.image.bytes, v.image.ext) : null;
+  if (!(await withinLimit(`post:user:${user.id}`, 20, 24 * 60 * 60))) {
+    return { message: "You've reached the limit of 20 new posts a day. Try again tomorrow." };
+  }
+
+  const coverFile = v.image ? await saveUpload(v.image.bytes) : null;
+  if (v.image && !coverFile) return { errors: { cover: UNREADABLE_IMAGE }, message: "Some fields need attention." };
   const slug = slugify(v.title);
 
   await db.insert(schema.posts).values({
@@ -132,6 +143,9 @@ export async function addComment(_prev: CommentState, fd: FormData): Promise<Com
 
   const post = await findPublishedPost(slug);
   if (!post) return { message: "Comments are closed on this post." };
+  if (!(await withinLimit(`comment:user:${user.id}`, 10, 5 * 60))) {
+    return { message: "You're commenting very quickly. Wait a few minutes and try again." };
+  }
 
   await db.insert(schema.postComments).values({ postId: post.id, authorId: user.id, body });
   revalidatePath(`/journal/${slug}`);

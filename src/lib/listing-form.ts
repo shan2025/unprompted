@@ -7,6 +7,7 @@ import { EVIDENCE_KINDS, LEVELS, STAGES, type Disclosure, type Evidence, type Ev
 // Stays under the 4.5 MB request limit on Vercel.
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 export const MAX_EVIDENCE = 6;
+export const UNREADABLE_IMAGE = "We couldn't read that image. Try exporting it again as a JPG or PNG.";
 
 export type FieldErrors = Partial<Record<string, string>>;
 
@@ -21,7 +22,7 @@ export interface ParsedListing {
   aiNotes: string;
   disclosure: Disclosure;
   evidence: Evidence[];
-  image: { bytes: Uint8Array; ext: "jpg" | "png" | "webp" | "gif" } | null;
+  image: { bytes: Uint8Array } | null;
 }
 
 export interface PreviewResult {
@@ -88,12 +89,11 @@ export async function parseImage(fd: FormData, errors: FieldErrors): Promise<Par
     return null;
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const ext = sniffImageType(bytes);
-  if (!ext) {
+  if (!sniffImageType(bytes)) {
     errors.cover = "Upload a JPG, PNG, WebP or GIF.";
     return null;
   }
-  return { bytes, ext };
+  return { bytes };
 }
 
 export async function parseListingForm(fd: FormData, { requireAttestation }: { requireAttestation: boolean }) {

@@ -2,10 +2,12 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, schema } from "./db";
+import { makePublicImage } from "./public-image";
 
 // Images are stored in the database, so the app runs on hosts without a
-// persistent disk (Vercel) with nothing extra to set up. Uploads are capped
-// at 4 MB. Move to object storage (S3, R2, Vercel Blob...) if that grows.
+// persistent disk (Vercel) with nothing extra to set up. Only a smaller public
+// copy is kept (public-image.ts). Move to object storage (S3, R2, Vercel Blob...)
+// if that grows.
 const NAME = /^[a-z0-9]{24}\.(?:jpg|png|webp|gif)$/;
 
 export const CONTENT_TYPES = {
@@ -15,9 +17,12 @@ export const CONTENT_TYPES = {
   gif: "image/gif",
 } as const;
 
-export async function saveUpload(bytes: Uint8Array, ext: keyof typeof CONTENT_TYPES) {
-  const name = `${randomBytes(12).toString("hex")}.${ext}`;
-  await db.insert(schema.uploads).values({ name, contentType: CONTENT_TYPES[ext], bytes: Buffer.from(bytes) });
+/** Stores the public copy and returns its name, or null if the image can't be read. */
+export async function saveUpload(original: Uint8Array) {
+  const bytes = await makePublicImage(original);
+  if (!bytes) return null;
+  const name = `${randomBytes(12).toString("hex")}.webp`;
+  await db.insert(schema.uploads).values({ name, contentType: CONTENT_TYPES.webp, bytes });
   return name;
 }
 

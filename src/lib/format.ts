@@ -1,5 +1,10 @@
+/** A price tag: a zero price reads "Free". */
 export function formatPrice(cents: number) {
-  if (cents === 0) return "Free";
+  return cents === 0 ? "Free" : formatMoney(cents);
+}
+
+/** An amount of money, such as a total, where zero is "$0". */
+export function formatMoney(cents: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -22,5 +27,13 @@ export function siteUrl() {
 
 /** Only allow same-site relative redirects. */
 export function safeNext(value: unknown, fallback = "/dashboard") {
-  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : fallback;
+  if (typeof value !== "string" || !value.startsWith("/")) return fallback;
+  // Parsed the way a browser will: "/\evil.com" and "/\t/evil.com" both leave the site.
+  const base = "http://same-site.invalid";
+  try {
+    const url = new URL(value, base);
+    return url.origin === base ? `${url.pathname}${url.search}${url.hash}` : fallback;
+  } catch {
+    return fallback;
+  }
 }

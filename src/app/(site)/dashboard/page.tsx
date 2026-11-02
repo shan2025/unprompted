@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { AiPill } from "@/components/Score";
 import { requireUser } from "@/lib/auth";
 import { getDashboard } from "@/lib/data";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDate, formatMoney, formatPrice } from "@/lib/format";
 import { getMyPosts } from "@/lib/journal";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -62,7 +62,7 @@ async function Dashboard() {
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <Stat label="Listings" value={data.listings.length.toString()} />
         <Stat label="Sales" value={data.sales.count.toString()} />
-        <Stat label="Earned (demo)" value={formatPrice(data.sales.totalCents)} />
+        <Stat label="Earned (demo)" value={formatMoney(data.sales.totalCents)} />
       </div>
 
       <section className="mt-12">

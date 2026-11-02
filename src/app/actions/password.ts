@@ -7,7 +7,7 @@ import { db, schema } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/format";
 import { hashPassword } from "@/lib/password";
-import { clientIp, withinLimit } from "@/lib/rate-limit";
+import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
 
 const { users, sessions, passwordResets } = schema;
 
@@ -67,7 +67,14 @@ export async function resetPassword(_prev: ResetState, fd: FormData): Promise<Re
     .returning({ userId: passwordResets.userId });
   if (!claimed) return { error: "This link has expired or was already used. Ask for a new one." };
 
-  await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, claimed.userId));
+  const [owner] = await db
+    .update(users)
+    .set({ passwordHash: await hashPassword(password) })
+    .where(eq(users.id, claimed.userId))
+    .returning({ email: users.email });
+  // They've proved it's their account, so let the new password work straight away.
+  await clearLimits(`login:pair:${owner.email}:`);
+  await clearLimits(`login:email:${owner.email}:`);
   // Sign out everywhere else and retire any other outstanding links.
   await db.delete(sessions).where(eq(sessions.userId, claimed.userId));
   await db

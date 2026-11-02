@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
-import { parseListingForm, type CreateState, type PreviewState } from "@/lib/listing-form";
+import { parseListingForm, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
+import { withinLimit } from "@/lib/rate-limit";
 import { saveUpload } from "@/lib/uploads";
 
 function slugify(title: string) {
@@ -21,9 +22,13 @@ function slugify(title: string) {
 
 /** Score a draft without saving it, so creators can see the result first. */
 export async function previewAssessment(fd: FormData): Promise<PreviewState> {
-  if (!(await getCurrentUser())) return { ok: false, errors: {}, message: "Your session expired. Log in again." };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, errors: {}, message: "Your session expired. Log in again." };
   const parsed = await parseListingForm(fd, { requireAttestation: false });
   if (!parsed.values) return { ok: false, errors: parsed.errors };
+  if (!(await withinLimit(`preview:user:${user.id}`, 60, 60 * 60))) {
+    return { ok: false, errors: {}, message: "That's a lot of score checks. Try again in an hour." };
+  }
 
   const v = parsed.values;
   const result = await assess({ ...v, image: v.image?.bytes });
@@ -58,7 +63,12 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
     };
   }
 
-  const coverFile = v.image ? await saveUpload(v.image.bytes, v.image.ext) : null;
+  if (!(await withinLimit(`listing:user:${user.id}`, 20, 24 * 60 * 60))) {
+    return { message: "You've reached the limit of 20 new listings a day. Try again tomorrow." };
+  }
+
+  const coverFile = v.image ? await saveUpload(v.image.bytes) : null;
+  if (v.image && !coverFile) return { errors: { cover: UNREADABLE_IMAGE }, message: "Some fields need attention." };
   const slug = slugify(v.title);
 
   await db.insert(schema.listings).values({

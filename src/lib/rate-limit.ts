@@ -21,6 +21,11 @@ export async function withinLimit(key: string, limit: number, windowSeconds: num
   return Number(rows[0]?.count ?? 0) <= limit;
 }
 
+/** Wipes the counters whose keys start with `prefix`. */
+export async function clearLimits(prefix: string) {
+  await db.execute(sql`delete from rate_limits where starts_with(key, ${prefix})`);
+}
+
 /** The visitor's IP address, as reported by the hosting platform. */
 export async function clientIp() {
   const h = await headers();

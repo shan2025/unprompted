@@ -70,7 +70,7 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
 
           <ImageField
             errors={errors}
-            hint="A photo of the work, a sketch, or a cover. For art and photography, upload the original file: we read its metadata for generator tags and Content Credentials."
+            hint="A photo of the work, a sketch, or a cover, up to 4 MB. For art and photography, upload the file you exported: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px."
           />
         </Section>
 

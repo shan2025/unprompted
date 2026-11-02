@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.mts",
     "db:seed": "tsx scripts/seed.mts",
+    "db:clean-uploads": "tsx scripts/clean-uploads.mts",
     "setup": "npm run db:migrate && npm run db:seed",
     "build:deploy": "tsx scripts/migrate.mts && tsx scripts/seed.mts --deploy && tsx scripts/ensure-admin.mts && next build"
   },
@@ -23,7 +24,8 @@
     "postgres": "^3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@next/env": "16.4.3",

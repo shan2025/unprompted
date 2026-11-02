@@ -152,7 +152,7 @@ export function ExploreView({
         </select>
         <label className="flex items-center gap-2 text-sm text-ink-soft sm:col-span-2 lg:col-span-3">
           <input type="checkbox" name="verified" value="1" defaultChecked={fields.verified} className="h-4 w-4 accent-[var(--accent)]" />
-          Only show work with verified process evidence
+          Only show work with process evidence attached
         </label>
         <noscript>
           <button className="btn-primary">Apply</button>

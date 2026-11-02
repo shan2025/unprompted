@@ -38,7 +38,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 
 ## What works today
 
-- Browse, search and filter by category, maximum AI %, and "process verified only"
+- Browse, search and filter by category, maximum AI %, and "process evidence attached"
 - Listing pages with the score card, passage-by-passage highlighting, process evidence, and a locked deliverable that unlocks after purchase
 - Selling: a guided form with stage-by-stage disclosure, evidence links and image upload, plus a **Check my score** preview before publishing
 - Automatic review: listings where detection disagrees with the disclosure are held for a moderator
@@ -48,7 +48,8 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 - Embeddable SVG badge for each listing (`/api/badge/<slug>`)
 - Public methodology page at `/standard`
 - Password reset by email (`/forgot-password`), with one-time links that expire after an hour
-- Rate limits on log-in (10 tries per email, 30 per connection, every 15 minutes), sign-up (5 per connection per hour) and password resets
+- Rate limits on log-in (10 tries per email from one connection, 30 per connection and 100 per email overall, every 15 minutes; a password reset clears them), sign-up (5 per connection per hour), password resets, new listings and posts (20 each per day), comments (10 per 5 minutes), reports and score checks
+- Uploaded images have their metadata removed and are shrunk to 1600px; the originals aren't kept. Buyers keep access to what they bought if a listing is later removed
 - A switch to hide all demo listings and posts (`HIDE_DEMO_CONTENT=true`)
 - Light theme; mobile layouts down to 320px wide
 
@@ -60,7 +61,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 | Detection | Add at least one commercial detector per medium via `src/lib/analysis/providers.ts` |
 | Provenance | Verify C2PA signatures (today we only detect that a manifest exists) |
 | File delivery | Deliverables are text or links; add secure file uploads and downloads |
-| Storage | Images (up to 4 MB) are stored in the database; move to object storage as volume grows (`src/lib/uploads.ts`) |
+| Storage | Public image copies are stored in the database; move to object storage as volume grows (`src/lib/uploads.ts`) |
 | Accounts | Email verification, password reset, seller identity verification, rate limiting |
 | Moderation | Creator appeals UI, edit and relist after review, reputation history |
 | Legal | Terms of service, DMCA process, refund policy (see the research doc) |
@@ -91,6 +92,7 @@ The built-in analyzer is a transparent baseline, not a production detector. Its 
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint |
 | `npm run setup` | Migrate and seed (`db:migrate`, `db:seed` separately) |
 | `npm run db:generate` | Create a migration after editing `src/lib/db/schema.ts` |
+| `npm run db:clean-uploads` | Strip metadata from and shrink images uploaded before this was automatic. Overwrites them, so it can't be undone |
 | `npm run build:deploy` | What Vercel runs: migrate, seed an empty database, ensure the moderator, build |
 
 ## Stack

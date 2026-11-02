@@ -101,7 +101,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
 
           <ImageField
             errors={errors}
-            hint="For art, photos and design this is the work itself. We read its metadata for generator tags and Content Credentials. Upload the original file, not a screenshot."
+            hint="Up to 4 MB. Upload the file you exported, not a screenshot: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px, so link the full-resolution file under “What the buyer gets”."
           />
         </Section>
 

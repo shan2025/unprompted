@@ -15,11 +15,34 @@ describe("computeScore", () => {
     const proven = computeScore({
       category: "writing",
       disclosure: NONE,
-      evidence: [{ kind: "drafts" }, { kind: "timelapse" }, { kind: "version-history" }],
+      evidence: [
+        { kind: "drafts", url: "https://example.com/1" },
+        { kind: "timelapse", url: "https://example.com/2" },
+        { kind: "version-history", url: "https://example.com/3" },
+      ],
       detections: [],
     });
     expect(proven.high).toBeLessThan(bare.high);
     expect(proven.processVerified).toBe(true);
+  });
+
+  it("gives no credit for evidence that is only a note", () => {
+    const s = computeScore({
+      category: "writing",
+      disclosure: NONE,
+      evidence: [
+        { kind: "timelapse", note: "trust me" },
+        { kind: "recording", note: "trust me" },
+        { kind: "version-history", note: "trust me" },
+      ],
+      detections: [],
+    });
+    expect(s.evidenceStrength).toBe(0);
+    expect(s.processVerified).toBe(false);
+  });
+
+  it("still counts Content Credentials found in the file", () => {
+    expect(evidenceStrength([{ kind: "c2pa", note: "Found in the uploaded file" }])).toBe(0.35);
   });
 
   it("turns disclosure into a weighted percentage", () => {
@@ -64,7 +87,10 @@ describe("computeScore", () => {
     const proven = computeScore({
       category: "writing",
       disclosure: NONE,
-      evidence: [{ kind: "timelapse" }, { kind: "recording" }],
+      evidence: [
+        { kind: "timelapse", url: "https://example.com/1" },
+        { kind: "recording", url: "https://example.com/2" },
+      ],
       detections,
     });
     expect(proven.percent).toBeLessThan(bare.percent);
@@ -98,7 +124,7 @@ describe("computeScore", () => {
 describe("helpers", () => {
   it("caps evidence strength", () => {
     expect(evidenceStrength([])).toBe(0);
-    const many = Array.from({ length: 20 }, () => ({ kind: "timelapse" as const }));
+    const many = Array.from({ length: 20 }, () => ({ kind: "timelapse" as const, url: "https://example.com" }));
     expect(evidenceStrength(many)).toBe(0.9);
   });
 
