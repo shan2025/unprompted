@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeScore, evidenceStrength, tierFor, type Disclosure } from "@/lib/scoring";
+import { assess } from "@/lib/assess";
+import { computeScore, evidenceStrength, METADATA_SOURCE, tierFor, type Disclosure } from "@/lib/scoring";
 
 const NONE: Disclosure = { ideation: "none", creation: "none", refinement: "none", assets: "none" };
 
@@ -118,6 +119,50 @@ describe("computeScore", () => {
     expect(s.percent).toBeGreaterThan(50);
     // Strong metadata evidence gives a usefully narrow range, not 0-100.
     expect(s.high - s.low).toBeLessThan(60);
+  });
+});
+
+describe("metadata that contradicts the disclosure", () => {
+  const taggedAssets = [{ stage: "assets" as const, share: 1, confidence: 0.9, source: METADATA_SOURCE }];
+
+  it.each(["writing", "poetry", "music", "code"] as const)("sends a tagged cover claimed as No AI to review in %s", (category) => {
+    const s = computeScore({ category, disclosure: NONE, evidence: [], detections: taggedAssets });
+    expect(s.needsReview).toBe(true);
+    expect(s.notes.join(" ")).toContain("metadata");
+  });
+
+  it("lets a disclosed AI cover through", () => {
+    const s = computeScore({ category: "writing", disclosure: { ...NONE, assets: "generated" }, evidence: [], detections: taggedAssets });
+    expect(s.needsReview).toBe(false);
+  });
+
+  it("doesn't treat a small text-scan gap the same way", () => {
+    const s = computeScore({
+      category: "writing",
+      disclosure: NONE,
+      evidence: [],
+      detections: [{ stage: "assets", share: 1, confidence: 0.9, source: "builtin-text" }],
+    });
+    expect(s.needsReview).toBe(false);
+  });
+});
+
+describe("assess", () => {
+  const tagged = new TextEncoder().encode("Exif Software: Midjourney");
+  const base = { category: "writing" as const, disclosure: NONE, evidence: [], image: tagged, locked: "" };
+  const makingIt = (r: Awaited<ReturnType<typeof assess>>) => r.score.stages.find((s) => s.stage === "creation")!;
+
+  it("treats an image with no text as the work itself", async () => {
+    const r = await assess({ ...base, preview: "" });
+    expect(makingIt(r).detected).toBe(1);
+    expect(r.score.percent).toBeGreaterThan(50);
+    expect(r.score.needsReview).toBe(true);
+  });
+
+  it("treats an image beside text as a supporting asset", async () => {
+    const r = await assess({ ...base, preview: "The kettle broke on a Tuesday, so I boiled water in the saucepan with the bad handle." });
+    expect(r.score.stages.find((s) => s.stage === "assets")!.detected).toBe(1);
+    expect(r.score.needsReview).toBe(true);
   });
 });
 

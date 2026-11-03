@@ -69,6 +69,8 @@ export const TIER_INFO: Record<Tier, { label: string; range: string; blurb: stri
 export const MAX_DISCLOSED = 0.5;
 /** Detector disagreement (in weighted points) that sends a listing to review. */
 export const REVIEW_THRESHOLD = 0.12;
+/** Detection source for what a file says about itself, such as a generator tag. */
+export const METADATA_SOURCE = "metadata";
 
 export interface StageScore {
   stage: Stage;
@@ -124,6 +126,7 @@ export function computeScore(input: {
   let point = 0;
   let discrepancy = 0;
   let maxConfidence = 0;
+  let contradicted = false;
 
   const stages = STAGES.map((stage): StageScore => {
     const d = LEVEL_INFO[input.disclosure[stage]].value;
@@ -132,6 +135,10 @@ export function computeScore(input: {
     let effective = d;
 
     if (found.length) {
+      // "No AI" against a file that says it's AI goes to a person, however little
+      // the stage counts towards the score.
+      if (d === 0 && found.some((x) => x.source === METADATA_SOURCE && x.share > 0)) contradicted = true;
+
       // Pool several detectors: confidence-weighted share, combined confidence.
       const confSum = found.reduce((n, x) => n + x.confidence, 0);
       detected = found.reduce((n, x) => n + x.share * x.confidence, 0) / confSum;
@@ -156,11 +163,12 @@ export function computeScore(input: {
   const low = Math.min(percent, Math.max(Math.round(disclosed * 100), Math.round((point - uncertainty) * 100)));
   const high = Math.min(100, Math.max(percent, Math.round((point + uncertainty) * 100)));
 
-  const needsReview = discrepancy >= REVIEW_THRESHOLD;
+  const needsReview = contradicted || discrepancy >= REVIEW_THRESHOLD;
   const blocked = disclosed > MAX_DISCLOSED;
 
   if (blocked) notes.push("Disclosed AI use is above the 50% limit for new listings.");
-  if (needsReview) notes.push("Automated analysis found noticeably more AI than was disclosed, so a person will review this listing.");
+  if (contradicted) notes.push("The file's metadata says AI was used where the disclosure says it wasn't, so a person will review this.");
+  else if (needsReview) notes.push("Automated analysis found noticeably more AI than was disclosed, so a person will review this listing.");
   else if (discrepancy > 0.03) notes.push("Automated analysis found slightly more AI than was disclosed. The estimate includes that.");
   if (!hasDetection) notes.push("Nothing in this listing could be scanned automatically, so the range is wider.");
   if (E >= 0.5) notes.push("Strong process evidence narrows the range.");

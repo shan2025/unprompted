@@ -8,7 +8,7 @@ Each listing gets an **AI-involvement estimate**, for example *"3% Â· likely 2â€
 2. **Automated analysis.** Text, poetry and code are scanned passage by passage for machine-writing patterns. Images are scanned for generator tags, IPTC "trained algorithmic media" markers and C2PA Content Credentials. Scans can only *raise* an estimate, in proportion to their confidence.
 3. **Process evidence.** Drafts, time-lapses and commit history narrow the range and are shown publicly.
 
-When a scan disagrees strongly with a disclosure, the listing goes to a **human review queue** instead of going live. Read [docs/RESEARCH.md](docs/RESEARCH.md) for why it works this way: AI detectors are not reliable enough to issue verdicts.
+When a scan disagrees strongly with a disclosure, or a file's metadata says AI was used at a stage disclosed as "No AI", the listing goes to a **human review queue** instead of going live. Read [docs/RESEARCH.md](docs/RESEARCH.md) for why it works this way: AI detectors are not reliable enough to issue verdicts.
 
 ![Home page](docs/screenshots/home.jpg)
 
@@ -42,7 +42,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 - Listing pages with the score card, passage-by-passage highlighting, process evidence, and a locked deliverable that unlocks after purchase
 - Selling: a guided form with stage-by-stage disclosure, evidence links and image upload, plus a **Check my score** preview before publishing
 - Automatic review: listings where detection disagrees with the disclosure are held for a moderator
-- **Journal** (`/journal`): free posts (articles, poems, art, process notes, ideas) scored exactly like listings, with comments, appreciations, following and a Following feed
+- **Journal** (`/journal`): free posts (articles, poems, art, process notes, ideas) scored exactly like listings, with comments, appreciations, following and a Following feed. Authors and moderators can delete a post for good
 - Reporting listings, posts and comments, and a moderator queue to approve or remove them and resolve reports
 - Buying (**demo checkout**, no payment taken), exclusive licenses that close after one sale, buyer and seller dashboards
 - Embeddable SVG badge for each listing (`/api/badge/<slug>`)

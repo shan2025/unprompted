@@ -167,8 +167,9 @@ export default function StandardPage() {
       <H2 id="disputes">Reviews &amp; disputes</H2>
       <ul className="mt-4 list-inside list-disc space-y-2 leading-relaxed text-ink-soft">
         <li>
-          If automated checks find substantially more AI than disclosed, the listing is held for review instead of going
-          live. The creator sees why and can add evidence.
+          If automated checks find substantially more AI than disclosed, or a file&apos;s metadata says AI was used at a stage
+          disclosed as &ldquo;No AI&rdquo;, the listing is held for review instead of going live. The creator sees why and
+          can add evidence.
         </li>
         <li>Anyone signed in can report a listing. Reports go to moderators, never straight to removal.</li>
         <li>

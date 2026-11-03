@@ -153,6 +153,27 @@ export async function addComment(_prev: CommentState, fd: FormData): Promise<Com
   return { ok: true, key: Date.now() };
 }
 
+/** Authors can delete their own posts for good; moderators can delete any. Comments, appreciations and reports go with it. */
+export async function deletePost(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const [post] = await db
+    .select({ id: schema.posts.id, authorId: schema.posts.authorId, coverFile: schema.posts.coverFile })
+    .from(schema.posts)
+    .where(eq(schema.posts.slug, String(fd.get("slug") ?? "")))
+    .limit(1);
+  if (!post || (post.authorId !== user.id && user.role !== "admin")) return;
+
+  await db.transaction(async (tx) => {
+    await tx.delete(schema.posts).where(eq(schema.posts.id, post.id));
+    // Uploads have public addresses, so the image has to go too.
+    if (post.coverFile) await tx.delete(schema.uploads).where(eq(schema.uploads.name, post.coverFile));
+  });
+  revalidatePath("/journal");
+  redirect(post.authorId === user.id ? "/dashboard" : "/journal");
+}
+
 /** Authors can remove their own comments; moderators can remove any. */
 export async function removeComment(fd: FormData) {
   const user = await getCurrentUser();

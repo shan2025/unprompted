@@ -3,7 +3,7 @@ import { scanImageMetadata, type MediaScan } from "./analysis/media";
 import { externalProviders } from "./analysis/providers";
 import { analyzeText, combineAnalyses, detectKind, type TextAnalysis } from "./analysis/text";
 import type { StoredAnalysis } from "./db/schema";
-import { computeScore, type Detection, type Disclosure, type Evidence, type Score } from "./scoring";
+import { computeScore, METADATA_SOURCE, type Detection, type Disclosure, type Evidence, type Score } from "./scoring";
 
 export interface AssessmentInput {
   category: CategoryId;
@@ -52,11 +52,12 @@ export async function assess(input: AssessmentInput): Promise<Assessment> {
 
   let media: MediaScan | null = null;
   if (input.image && input.image.byteLength > 0) {
-    const stage = VISUAL_CATEGORIES.includes(input.category) ? "creation" : "assets";
+    // With no text alongside it, the image is the work whatever the category.
+    const stage = VISUAL_CATEGORIES.includes(input.category) || !fullText ? "creation" : "assets";
     media = scanImageMetadata(input.image);
     sources.push("Image metadata scan (IPTC, C2PA, EXIF, generator tags)");
-    if (media.aiSignal === "strong") detections.push({ stage, share: 1, confidence: 0.9, source: "metadata" });
-    if (media.aiSignal === "partial") detections.push({ stage, share: 0.5, confidence: 0.8, source: "metadata" });
+    if (media.aiSignal === "strong") detections.push({ stage, share: 1, confidence: 0.9, source: METADATA_SOURCE });
+    if (media.aiSignal === "partial") detections.push({ stage, share: 0.5, confidence: 0.8, source: METADATA_SOURCE });
     if (media.c2pa && media.aiSignal === "none" && !evidence.some((e) => e.kind === "c2pa")) {
       evidence.push({ kind: "c2pa", note: "Found in the uploaded file (signature not yet verified)" });
     }
