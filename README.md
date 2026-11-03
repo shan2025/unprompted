@@ -128,6 +128,7 @@ Notes:
 - On the live site, demo accounts get random passwords, so nobody can log into them. There is no shared demo login.
 - All tables have row-level security turned on with no policies. The app connects as the database owner; Supabase's public data API can't read anything.
 - `npm run db:seed` (which wipes data) refuses to run against any database that isn't on your own machine.
+- `vercel.json` only builds `main`, so branches get no preview links. To turn previews on, give them their own database first: every build runs migrations and seeding, so a preview must never point at the production `DATABASE_URL`.
 - `vercel.json` runs the server in Mumbai (`bom1`), next to the Supabase database. If you move the database to another region, change `regions` to match, or every page waits on a round trip across the world.
 - Supabase pauses free projects after 7 days without traffic. Restore from the dashboard, or upgrade.
 - Badge links use your Vercel address automatically. Set `SITE_URL` once you add a custom domain.
