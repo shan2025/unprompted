@@ -44,7 +44,8 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 - Automatic review: listings where detection disagrees with the disclosure are held for a moderator
 - **Journal** (`/journal`): free posts (articles, poems, art, process notes, ideas) scored exactly like listings, with comments, appreciations, following and a Following feed. Authors and moderators can delete a post for good
 - Reporting listings, posts and comments, and a moderator queue to approve or remove them and resolve reports
-- Buying (**demo checkout**, no payment taken), exclusive licenses that close after one sale, buyer and seller dashboards
+- Buying through **seller payment links**: buyers pay the seller directly (Razorpay, PayPal, Stripe, Instamojo, PayU, Cashfree or UPI), then send a payment reference. The seller marks the order paid, which unlocks the work. Unprompters never touches the money. Free listings unlock at once, and seeded demo listings keep a demo checkout
+- Exclusive licenses that close after one sale, and are reserved while a seller checks a payment; buyer and seller dashboards
 - Embeddable SVG badge for each listing (`/api/badge/<slug>`)
 - Public methodology page at `/standard`
 - Password reset by email (`/forgot-password`), with one-time links that expire after an hour
@@ -57,7 +58,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 
 | Area | What's needed |
 | --- | --- |
-| Payments | Replace the demo order in `src/app/actions/listings.ts` (`buyListing`) with Stripe Connect or a merchant-of-record |
+| Payments | Take payment on the platform, so sales don't rely on sellers confirming them by hand: Razorpay checkout, then Route (see `docs/GO-TO-MARKET.md`) |
 | Detection | Add at least one commercial detector per medium via `src/lib/analysis/providers.ts` |
 | Provenance | Verify C2PA signatures (today we only detect that a manifest exists) |
 | File delivery | Deliverables are text or links; add secure file uploads and downloads |

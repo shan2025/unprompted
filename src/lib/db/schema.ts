@@ -72,6 +72,8 @@ export const listings = pgTable(
     priceCents: integer("price_cents").notNull(),
     license: text("license").notNull(),
     coverFile: text("cover_file"),
+    // Where buyers pay the seller directly. Empty on free and demo listings.
+    paymentUrl: text("payment_url"),
     status: text("status", { enum: ["published", "in_review", "sold", "removed"] })
       .notNull()
       .default("published"),
@@ -100,8 +102,12 @@ export const orders = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     amountCents: integer("amount_cents").notNull(),
-    // "demo" until a payment provider is connected; see README.
-    status: text("status", { enum: ["demo", "paid", "refunded"] }).notNull(),
+    // Buyers pay sellers directly, so we can't see the money. An order is "pending"
+    // from the buyer saying they've paid until the seller marks it "paid" or
+    // "declined". Free listings are "paid" at once; seeded demo listings are "demo".
+    status: text("status", { enum: ["demo", "pending", "paid", "declined", "refunded"] }).notNull(),
+    // What the buyer gave the seller to find the payment, such as a transaction ID.
+    paymentReference: text("payment_reference").notNull().default(""),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("orders_listing_buyer_idx").on(t.listingId, t.buyerId), index("orders_buyer_idx").on(t.buyerId)],

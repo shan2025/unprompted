@@ -2,6 +2,7 @@ import { isCategory, isLicense, type CategoryId, type LicenseId } from "./catego
 import { sniffImageType } from "./analysis/media";
 import type { MediaScan } from "./analysis/media";
 import type { ContentKind, Segment } from "./analysis/text";
+import { PAYMENT_LINK_HELP, parsePaymentLink } from "./payment-link";
 import { EVIDENCE_KINDS, LEVELS, STAGES, type Disclosure, type Evidence, type EvidenceKind, type Level, type Score } from "./scoring";
 
 // Stays under the 4.5 MB request limit on Vercel.
@@ -18,6 +19,7 @@ export interface ParsedListing {
   preview: string;
   locked: string;
   priceCents: number;
+  paymentUrl: string | null;
   license: LicenseId;
   aiNotes: string;
   disclosure: Disclosure;
@@ -123,6 +125,12 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
     errors.price = "Enter a price from 0 to 10,000.";
   }
 
+  const paymentLink = str(fd, "paymentUrl");
+  const paymentUrl = paymentLink ? parsePaymentLink(paymentLink) : null;
+  if (paymentLink && !paymentUrl) errors.paymentUrl = PAYMENT_LINK_HELP;
+  // Only needed to publish, so a score can be checked before the link is ready.
+  else if (requireAttestation && !paymentLink && price > 0) errors.paymentUrl = "Add a payment link so buyers can pay you.";
+
   const license = str(fd, "license");
   if (!isLicense(license)) errors.license = "Pick a license.";
 
@@ -147,6 +155,7 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
     preview,
     locked,
     priceCents: Math.round(price * 100),
+    paymentUrl: price > 0 ? paymentUrl : null,
     license: license as LicenseId,
     aiNotes,
     disclosure,

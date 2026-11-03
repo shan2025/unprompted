@@ -5,13 +5,15 @@ import { Suspense } from "react";
 import { buyListing } from "@/app/actions/listings";
 import { Cover } from "@/components/Cover";
 import { FlagForm } from "@/components/FlagForm";
+import { ClaimPaymentForm, PaymentLinkForm } from "@/components/PaymentForms";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
 import { SubmitButton } from "@/components/SubmitButton";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryLabel, LICENSES, licenseLabel } from "@/lib/categories";
-import { getListing, hasPurchased, salesCount } from "@/lib/data";
+import { getListing, getOrderStatus, hasPendingOrder, salesCount } from "@/lib/data";
 import { formatDate, formatPrice, plural, siteUrl } from "@/lib/format";
+import { paymentProvider, upiId } from "@/lib/payment-link";
 import { EVIDENCE_KINDS, TIER_INFO, type Tier } from "@/lib/scoring";
 
 type Props = {
@@ -49,11 +51,18 @@ async function ListingView({ params, searchParams }: Props) {
   const user = await getCurrentUser();
   const isOwner = user?.id === listing.creatorId;
   const isAdmin = user?.role === "admin";
-  const purchased = user ? await hasPurchased(listing.id, user.id) : false;
-  // Buyers keep what they bought, even after a listing leaves the market.
-  if ((listing.status === "in_review" || listing.status === "removed") && !isOwner && !isAdmin && !purchased) notFound();
+  const orderStatus = user ? await getOrderStatus(listing.id, user.id) : null;
+  const purchased = orderStatus === "paid" || orderStatus === "demo";
+  // Buyers keep what they bought, even after a listing leaves the market. Anyone
+  // waiting on a seller keeps sight of the listing they've paid for too.
+  if ((listing.status === "in_review" || listing.status === "removed") && !isOwner && !isAdmin && !purchased && orderStatus !== "pending") notFound();
 
-  const sales = await salesCount(listing.id);
+  const [sales, reserved] = await Promise.all([
+    salesCount(listing.id),
+    listing.license === "exclusive" && orderStatus !== "pending" ? hasPendingOrder(listing.id) : Promise.resolve(false),
+  ]);
+  const instantBuy = listing.priceCents === 0 || listing.isDemo;
+  const upi = listing.paymentUrl && upiId(listing.paymentUrl);
   const canSeeDeliverable = isOwner || purchased || isAdmin;
   const { analysis } = listing;
   const evidence = listing.evidence;
@@ -70,20 +79,51 @@ async function ListingView({ params, searchParams }: Props) {
       <p className="mt-1 text-sm text-ink-soft">{licenseLabel(listing.license)}</p>
       <div className="mt-4">
         {isOwner ? (
-          <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">This is your listing.</p>
+          <>
+            <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">This is your listing.</p>
+            {listing.priceCents > 0 && !listing.isDemo && <PaymentLinkForm slug={listing.slug} current={listing.paymentUrl} />}
+          </>
         ) : purchased ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm font-semibold text-human">You own this. It&apos;s unlocked below.</p>
+        ) : orderStatus === "pending" ? (
+          <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">
+            <strong className="text-ink">Waiting for {creator.name}.</strong> They&apos;re checking your payment, and the work unlocks here as soon as they confirm it.
+          </p>
         ) : listing.status === "sold" ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Sold. This was an exclusive listing.</p>
         ) : listing.status !== "published" ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Not available while under review.</p>
-        ) : (
+        ) : instantBuy ? (
           <form action={buyListing.bind(null, listing.slug)}>
             <SubmitButton className="btn-accent w-full py-3 text-[15px]" pendingText="Processing…">
               {listing.priceCents === 0 ? "Get it free" : `Buy for ${formatPrice(listing.priceCents)}`}
             </SubmitButton>
-            <p className="mt-2 text-center text-xs text-muted">Demo checkout: no card is charged.</p>
+            {listing.priceCents > 0 && <p className="mt-2 text-center text-xs text-muted">Demo listing: no money changes hands.</p>}
           </form>
+        ) : !listing.paymentUrl ? (
+          <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">The seller hasn&apos;t added a way to pay yet.</p>
+        ) : reserved ? (
+          <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Reserved. The seller is checking another buyer&apos;s payment for this exclusive listing, so please don&apos;t pay yet.</p>
+        ) : !user ? (
+          <Link href={`/login?next=${encodeURIComponent(`/listing/${listing.slug}`)}`} className="btn-accent block w-full py-3 text-center text-[15px]">
+            Log in to buy
+          </Link>
+        ) : (
+          <div className="space-y-4">
+            {orderStatus === "declined" && (
+              <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm text-ink">The seller couldn&apos;t confirm your last payment. If you did pay, check your reference and send it again.</p>
+            )}
+            <div>
+              <a href={listing.paymentUrl} target="_blank" rel="nofollow noopener noreferrer" className="btn-accent block w-full py-3 text-center text-[15px]">
+                Pay {formatPrice(listing.priceCents)} with {paymentProvider(listing.paymentUrl)}
+              </a>
+              {upi && <p className="mt-2 text-center text-xs text-muted">On a computer? Pay from your UPI app to {upi}.</p>}
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                You pay the seller directly. Unprompters doesn&apos;t handle or hold the money. Check the amount before you pay.
+              </p>
+            </div>
+            <ClaimPaymentForm slug={listing.slug} />
+          </div>
         )}
       </div>
     </div>
@@ -92,7 +132,7 @@ async function ListingView({ params, searchParams }: Props) {
 
   return (
     <>
-      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1"} isOwner={isOwner} owned={purchased} />
+      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1"} claimed={query.claimed === "1"} isDemo={listing.isDemo} isOwner={isOwner} owned={purchased} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
         <Link href="/explore" className="hover:text-ink">
@@ -276,7 +316,23 @@ async function ListingView({ params, searchParams }: Props) {
   );
 }
 
-function Banners({ status, created, purchased, isOwner, owned }: { status: string; created: boolean; purchased: boolean; isOwner: boolean; owned: boolean }) {
+function Banners({
+  status,
+  created,
+  purchased,
+  claimed,
+  isDemo,
+  isOwner,
+  owned,
+}: {
+  status: string;
+  created: boolean;
+  purchased: boolean;
+  claimed: boolean;
+  isDemo: boolean;
+  isOwner: boolean;
+  owned: boolean;
+}) {
   const banner = (tone: string, text: React.ReactNode) => (
     <div className={`mb-6 rounded-xl border px-4 py-3 text-sm ${tone}`} role="status">
       {text}
@@ -306,7 +362,8 @@ function Banners({ status, created, purchased, isOwner, owned }: { status: strin
     );
   }
   if (created) return banner("border-human/40 bg-card text-ink", <><strong>Your listing is live.</strong> Share the badge below to show your score anywhere.</>);
-  if (purchased) return banner("border-human/40 bg-card text-ink", <><strong>It&apos;s yours.</strong> The full work is unlocked below. (Demo purchase, no payment taken.)</>);
+  if (claimed && !owned) return banner("border-human/40 bg-card text-ink", <><strong>The seller&apos;s been told.</strong> The work unlocks here once they&apos;ve checked your payment.</>);
+  if (purchased) return banner("border-human/40 bg-card text-ink", <><strong>It&apos;s yours.</strong> The full work is unlocked below.{isDemo && " (Demo purchase, no payment taken.)"}</>);
   return null;
 }
 

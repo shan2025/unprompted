@@ -81,8 +81,12 @@ export default function PrivacyPage() {
             <strong className="text-ink">Supabase</strong>: stores the database, in Mumbai, India.
           </li>
           <li>
-            A <strong className="text-ink">payment provider</strong>, once paid checkout is switched on, to process
-            payments.
+            The <strong className="text-ink">seller you buy from</strong>: when you tell them you&apos;ve paid, they see your
+            name, profile handle and the payment reference you give them. Never your email address.
+          </li>
+          <li>
+            The <strong className="text-ink">payment provider</strong> a seller uses. You pay through their link, so that
+            provider and the seller handle your payment details under their own policies. We never see them.
           </li>
         </List>
         <p>

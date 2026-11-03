@@ -11,6 +11,9 @@ const { listings, users, orders, flags } = schema;
 // Listings anyone can see. "in_review" and "removed" are owner/admin only.
 const PUBLIC_STATUSES = ["published", "sold"] as const;
 
+// Orders that count as sales and unlock the work.
+export const COMPLETED_ORDERS = ["demo", "paid"] as const;
+
 const cardFields = {
   id: listings.id,
   slug: listings.slug,
@@ -82,17 +85,30 @@ export async function getListing(slug: string) {
   return row ?? null;
 }
 
-export async function hasPurchased(listingId: number, userId: number) {
+export async function getOrderStatus(listingId: number, userId: number) {
+  const [row] = await db
+    .select({ status: orders.status })
+    .from(orders)
+    .where(and(eq(orders.listingId, listingId), eq(orders.buyerId, userId)))
+    .limit(1);
+  return row?.status ?? null;
+}
+
+/** True when an exclusive listing is spoken for while its seller checks a payment. */
+export async function hasPendingOrder(listingId: number) {
   const [row] = await db
     .select({ id: orders.id })
     .from(orders)
-    .where(and(eq(orders.listingId, listingId), eq(orders.buyerId, userId)))
+    .where(and(eq(orders.listingId, listingId), eq(orders.status, "pending")))
     .limit(1);
   return Boolean(row);
 }
 
 export async function salesCount(listingId: number) {
-  const [row] = await db.select({ n: count() }).from(orders).where(eq(orders.listingId, listingId));
+  const [row] = await db
+    .select({ n: count() })
+    .from(orders)
+    .where(and(eq(orders.listingId, listingId), inArray(orders.status, COMPLETED_ORDERS)));
   return row?.n ?? 0;
 }
 
@@ -121,7 +137,7 @@ export async function getCreator(handle: string) {
     .select({ sales: count(orders.id) })
     .from(orders)
     .innerJoin(listings, eq(orders.listingId, listings.id))
-    .where(eq(listings.creatorId, creator.id));
+    .where(and(eq(listings.creatorId, creator.id), inArray(orders.status, COMPLETED_ORDERS)));
 
   const avgAi = items.length ? Math.round(items.reduce((n, l) => n + l.aiPercent, 0) / items.length) : null;
   return {
@@ -144,7 +160,7 @@ export async function getDashboard(userId: number) {
       createdAt: listings.createdAt,
       // Explicit table names: without a join drizzle leaves columns unqualified,
       // so "listing_id" = "id" would compare two columns of orders.
-      sales: sql<number>`(select count(*)::int from orders o where o.listing_id = "listings"."id")`,
+      sales: sql<number>`(select count(*)::int from orders o where o.listing_id = "listings"."id" and o.status in ('demo', 'paid'))`,
     })
     .from(listings)
     .where(eq(listings.creatorId, userId))
@@ -154,13 +170,31 @@ export async function getDashboard(userId: number) {
     .select({ total: sum(orders.amountCents), n: count(orders.id) })
     .from(orders)
     .innerJoin(listings, eq(orders.listingId, listings.id))
-    .where(eq(listings.creatorId, userId));
+    .where(and(eq(listings.creatorId, userId), inArray(orders.status, COMPLETED_ORDERS)));
+
+  const waiting = await db
+    .select({
+      id: orders.id,
+      amountCents: orders.amountCents,
+      reference: orders.paymentReference,
+      createdAt: orders.createdAt,
+      slug: listings.slug,
+      title: listings.title,
+      buyerName: users.name,
+      buyerHandle: users.handle,
+    })
+    .from(orders)
+    .innerJoin(listings, eq(orders.listingId, listings.id))
+    .innerJoin(users, eq(orders.buyerId, users.id))
+    .where(and(eq(listings.creatorId, userId), eq(orders.status, "pending")))
+    .orderBy(asc(orders.createdAt));
 
   const purchases = await db
     .select({
       slug: listings.slug,
       title: listings.title,
       amountCents: orders.amountCents,
+      status: orders.status,
       createdAt: orders.createdAt,
       creatorName: users.name,
     })
@@ -173,6 +207,7 @@ export async function getDashboard(userId: number) {
   return {
     listings: mine,
     sales: { count: revenue?.n ?? 0, totalCents: Number(revenue?.total ?? 0) },
+    waiting,
     purchases,
   };
 }

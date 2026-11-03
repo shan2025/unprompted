@@ -46,6 +46,10 @@ export default function TermsPage() {
           </li>
           <li>The listing doesn&apos;t break any law or anyone else&apos;s rights (copyright, trademark, privacy).</li>
           <li>You will deliver what the listing describes to buyers who pay for it.</li>
+          <li>
+            Your payment link is your own and charges the listed price. You&apos;ll check payments honestly, and you&apos;re
+            responsible for refunds and for any tax on your sales.
+          </li>
         </List>
         <p>
           Work that discloses more than 50% AI involvement can&apos;t be listed. Misrepresenting how much AI you used is a
@@ -73,9 +77,11 @@ export default function TermsPage() {
             &ldquo;Exclusive transfer&rdquo; listings are sold once; the seller agrees not to sell or license that work again.
           </li>
           <li>
-            Paid checkout is being introduced in stages. Until it is live, purchases on the site are marked as demo purchases
-            and no money is taken. See our <Link href="/refunds" className="link text-ink">refund policy</Link>.
+            You pay the seller directly, through the seller&apos;s own payment link. {SITE.name} doesn&apos;t process, receive or
+            hold the money, and the sale is between you and the seller. The seller unlocks the work after checking your
+            payment. See our <Link href="/refunds" className="link text-ink">refund policy</Link>.
           </li>
+          <li>Listings marked DEMO are examples. No money changes hands for them.</li>
         </List>
       </Section>
 

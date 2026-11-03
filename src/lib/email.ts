@@ -17,14 +17,23 @@ export async function sendEmail(message: { to: string; subject: string; text: st
     return false;
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, ...message }),
-  });
-  if (!res.ok) {
-    console.error(`[email] Resend rejected "${message.subject}": ${res.status} ${await res.text()}`);
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, ...message }),
+    });
+    if (!res.ok) {
+      console.error(`[email] Resend rejected "${message.subject}": ${res.status} ${await res.text()}`);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`[email] Couldn't reach Resend for "${message.subject}":`, error);
     return false;
   }
-  return true;
+}
+
+export function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }

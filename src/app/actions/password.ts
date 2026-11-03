@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { createSession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { escapeHtml, sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/format";
 import { hashPassword } from "@/lib/password";
 import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
@@ -84,8 +84,4 @@ export async function resetPassword(_prev: ResetState, fd: FormData): Promise<Re
 
   await createSession(claimed.userId);
   return { next: "/dashboard" };
-}
-
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }

@@ -74,6 +74,18 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
           </div>
 
           <div>
+            <label htmlFor="paymentUrl" className="label">
+              Payment link
+            </label>
+            <input id="paymentUrl" name="paymentUrl" className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" />
+            <p className="hint">
+              Needed if you charge. Buyers pay you directly through this link, and Unprompters takes no cut. Use Razorpay, PayPal,
+              Stripe, Instamojo, PayU, Cashfree or UPI, and set it to charge the price above.
+            </p>
+            <FieldError errors={errors} name="paymentUrl" />
+          </div>
+
+          <div>
             <label htmlFor="summary" className="label">
               Short description
             </label>

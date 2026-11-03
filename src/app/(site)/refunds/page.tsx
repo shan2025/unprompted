@@ -19,15 +19,19 @@ export default function RefundsPage() {
         </p>
       }
     >
-      <Section title="Right now">
+      <Section title="Who refunds you">
         <p>
-          Paid checkout isn&apos;t live yet. Purchases currently made on the site are demo purchases: no money is taken, so
-          there is nothing to refund. This policy will apply as soon as paid checkout is switched on.
+          You pay the seller directly through their payment link, so {SITE.name} never receives or holds your money. Refunds
+          come from the seller. We can&apos;t issue them ourselves, but we can step in if a seller doesn&apos;t follow this
+          policy, including removing their listings and closing their account. Your payment provider may also offer its own
+          protection.
         </p>
+        <p>Listings marked DEMO are examples. No money changes hands for them, so there is nothing to refund.</p>
       </Section>
 
-      <Section title="When you'll get a full refund">
+      <Section title="When sellers must give a full refund">
         <List>
+          <li>You paid, and the seller didn&apos;t unlock the work or declined your order</li>
           <li>The work was never delivered, or the download or link doesn&apos;t work and the seller doesn&apos;t fix it within 3 days</li>
           <li>What you received is materially different from the listing</li>
           <li>
@@ -56,14 +60,15 @@ export default function RefundsPage() {
 
       <Section title="How to ask for a refund">
         <p>
-          Email <ContactLine /> within 7 days of purchase with your order details and what went wrong. We&apos;ll respond
-          within 2 business days. Approved refunds go back to the original payment method within 5 to 7 business days of
-          approval; your bank may take longer to show it.
+          Ask the seller first, using the contact details on your payment receipt. If they don&apos;t sort it out, email{" "}
+          <ContactLine /> within 7 days of purchase with your order details, your payment reference and what went wrong.
+          We&apos;ll respond within 2 business days and take it up with the seller. Sellers should return refunds to the
+          original payment method within 5 to 7 business days; your bank may take longer to show it.
         </p>
       </Section>
 
       <Section title="Cancellations by the seller">
-        <p>If a seller can&apos;t deliver, the order is cancelled and you get a full refund automatically.</p>
+        <p>If a seller can&apos;t deliver, they must cancel the order and give you a full refund.</p>
       </Section>
     </LegalPage>
   );

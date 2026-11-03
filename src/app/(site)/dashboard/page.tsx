@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { reviewOrder } from "@/app/actions/listings";
 import { LogoutButton } from "@/components/LogoutButton";
 import { Suspense } from "react";
 import { AiPill } from "@/components/Score";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireUser } from "@/lib/auth";
 import { getDashboard } from "@/lib/data";
 import { formatDate, formatMoney, formatPrice } from "@/lib/format";
@@ -62,8 +64,45 @@ async function Dashboard() {
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <Stat label="Listings" value={data.listings.length.toString()} />
         <Stat label="Sales" value={data.sales.count.toString()} />
-        <Stat label="Earned (demo)" value={formatMoney(data.sales.totalCents)} />
+        <Stat label="Earned" value={formatMoney(data.sales.totalCents)} />
       </div>
+
+      {data.waiting.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-2xl font-normal">Orders waiting for you</h2>
+          <p className="mt-1 text-sm text-ink-soft">Check the money arrived before you mark an order as paid. That unlocks the work for the buyer, and it can&apos;t be undone.</p>
+          <ul className="mt-4 space-y-3">
+            {data.waiting.map((o) => (
+              <li key={o.id} className="card flex flex-wrap items-center justify-between gap-4 p-4">
+                <div className="min-w-0">
+                  <Link href={`/listing/${o.slug}`} className="font-semibold hover:text-accent">
+                    {o.title}
+                  </Link>
+                  <p className="text-sm text-ink-soft">
+                    {formatPrice(o.amountCents)} from{" "}
+                    <Link href={`/u/${o.buyerHandle}`} className="link">
+                      {o.buyerName}
+                    </Link>{" "}
+                    · {formatDate(o.createdAt)}
+                  </p>
+                  <p className="mt-1 break-words text-sm text-ink-soft">
+                    Payment reference: <strong className="text-ink">{o.reference}</strong>
+                  </p>
+                </div>
+                <form action={reviewOrder} className="flex items-center gap-3">
+                  <input type="hidden" name="id" value={o.id} />
+                  <SubmitButton className="btn-primary px-5 py-2" name="decision" value="paid" pendingText="Saving…">
+                    Mark as paid
+                  </SubmitButton>
+                  <SubmitButton className="btn-ghost px-5 py-2" name="decision" value="declined" pendingText="Saving…">
+                    Decline
+                  </SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-12">
         <h2 className="text-2xl font-normal">Your listings</h2>
@@ -172,6 +211,8 @@ async function Dashboard() {
                     <span className="text-xs text-muted">
                       by {p.creatorName} · {formatDate(p.createdAt)}
                     </span>
+                    {p.status === "pending" && <span className="block text-xs font-semibold text-assist">Waiting for the seller to confirm</span>}
+                    {p.status === "declined" && <span className="block text-xs font-semibold text-heavy">Payment not confirmed</span>}
                   </span>
                   <span className="text-sm font-semibold">{formatPrice(p.amountCents)}</span>
                 </Link>
