@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
 import { safeNext } from "@/lib/format";
 import { AuthForm } from "./AuthForm";
 
@@ -8,6 +10,9 @@ export async function AuthPageForm({
   mode: "login" | "signup";
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const next = (await searchParams).next;
-  return <AuthForm mode={mode} next={safeNext(Array.isArray(next) ? next[0] : next, "")} />;
+  const param = (await searchParams).next;
+  const next = safeNext(Array.isArray(param) ? param[0] : param, "");
+  // Already logged in, including when a login has just set the session cookie.
+  if (await getCurrentUser()) redirect(next || "/dashboard");
+  return <AuthForm mode={mode} next={next} />;
 }
