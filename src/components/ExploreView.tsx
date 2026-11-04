@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useTransition } from "react";
-import { CATEGORIES, categoryLabel, type CategoryId } from "@/lib/categories";
+import { CATEGORIES, type CategoryId } from "@/lib/categories";
 import { SORTS, type Sort } from "@/lib/sorts";
 
 const AI_LIMITS = [
@@ -13,13 +13,8 @@ const AI_LIMITS = [
   ["50", "Up to 50%"],
 ] as const;
 
-type Filters = { categories: CategoryId[]; more: boolean };
+type Filters = { categories: CategoryId[] };
 type Fields = { q: string; maxAi: string; sort: Sort; verified: boolean };
-
-function listLabels(ids: CategoryId[]) {
-  const labels = ids.map(categoryLabel);
-  return labels.length < 2 ? labels.join("") : `${labels.slice(0, -1).join(", ")} & ${labels.at(-1)}`;
-}
 
 function toQuery(f: Filters & Fields) {
   const qs = new URLSearchParams();
@@ -28,7 +23,6 @@ function toQuery(f: Filters & Fields) {
   if (f.maxAi) qs.set("maxAi", f.maxAi);
   if (f.sort !== "new") qs.set("sort", f.sort);
   if (f.verified) qs.set("verified", "1");
-  if (f.more) qs.set("more", "1");
   const query = qs.toString();
   return query ? `/explore?${query}` : "/explore";
 }
@@ -47,7 +41,7 @@ export function ExploreView({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(filters);
-  const { categories, more } = shown;
+  const { categories } = shown;
   const formRef = useRef<HTMLFormElement>(null);
   const typing = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -102,13 +96,11 @@ export function ExploreView({
       {props.children}
     </Chip>
   );
-  const others = CATEGORIES.filter((c) => !categories.includes(c.id));
 
   return (
     <>
       <div className="mb-8">
-        <p className="eyebrow">Explore</p>
-        <h1 className="mt-1 text-4xl font-light">{categories.length ? listLabels(categories) : "Everything"}</h1>
+        <h1 className="text-4xl font-light">Explore</h1>
       </div>
 
       <form
@@ -160,73 +152,14 @@ export function ExploreView({
       </form>
 
       <div className="mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        {categories.length === 0 ? (
-          <>
-            {chip({ categories: [], more: false }, { active: true, children: "All" })}
-            {CATEGORIES.map((c) => chip({ categories: [c.id], more: false }, { k: c.id, children: c.label }))}
-          </>
-        ) : (
-          <>
-            {categories.map((id) =>
-              chip(
-                { categories: categories.filter((c) => c !== id), more },
-                {
-                  k: id,
-                  active: true,
-                  label: `Remove ${categoryLabel(id)}`,
-                  children: (
-                    <>
-                      {categoryLabel(id)}
-                      <span aria-hidden="true" className="ml-1.5 opacity-70">
-                        ×
-                      </span>
-                    </>
-                  ),
-                },
-              ),
-            )}
-            {more
-              ? others.map((c) =>
-                  chip(
-                    { categories: [...categories, c.id], more: true },
-                    {
-                      k: c.id,
-                      label: `Add ${c.label}`,
-                      children: (
-                        <>
-                          <span aria-hidden="true" className="mr-1">
-                            +
-                          </span>
-                          {c.label}
-                        </>
-                      ),
-                    },
-                  ),
-                )
-              : others.length > 0 &&
-                chip(
-                  { categories, more: true },
-                  {
-                    children: (
-                      <>
-                        <span aria-hidden="true" className="mr-1">
-                          +
-                        </span>
-                        More categories
-                      </>
-                    ),
-                  },
-                )}
-            <Link
-              href={hrefFor({ categories: [], more: false })}
-              onClick={(e) => go({ categories: [], more: false }, e)}
-              scroll={false}
-              className="shrink-0 self-center whitespace-nowrap px-2 text-sm text-muted hover:text-ink"
-            >
-              Show everything
-            </Link>
-          </>
-        )}
+        {chip({ categories: [] }, { active: categories.length === 0, children: "All" })}
+        {CATEGORIES.map((c) => {
+          const on = categories.includes(c.id);
+          return chip(
+            { categories: on ? categories.filter((id) => id !== c.id) : [...categories, c.id] },
+            { k: c.id, active: on, children: c.label },
+          );
+        })}
       </div>
 
       <div aria-busy={pending} className={`transition-opacity duration-200 ${pending ? "opacity-50" : ""}`}>

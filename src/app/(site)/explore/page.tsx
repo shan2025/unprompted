@@ -28,7 +28,9 @@ function one(v: string | string[] | undefined) {
 // Categories arrive as a comma-separated list: ?category=writing,poetry
 function parseCategories(v: string | string[] | undefined): CategoryId[] {
   const ids = (Array.isArray(v) ? v : [v ?? ""]).flatMap((s) => s.split(","));
-  return CATEGORY_IDS.filter((id) => ids.includes(id));
+  const picked = CATEGORY_IDS.filter((id) => ids.includes(id));
+  // Every category picked is the same as no filter.
+  return picked.length === CATEGORY_IDS.length ? [] : picked;
 }
 
 async function Results({ searchParams }: { searchParams: Promise<Params> }) {
@@ -40,12 +42,11 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const sortRaw = one(params.sort) ?? "new";
   const sort: Sort = sortRaw in SORTS ? (sortRaw as Sort) : "new";
   const verified = one(params.verified) === "1";
-  const more = one(params.more) === "1";
 
   const listings = await searchListings({ q, categories, maxAi, sort, verified });
 
   return (
-    <ExploreView filters={{ categories, more }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified }}>
+    <ExploreView filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified }}>
       <p className="mb-4 text-sm text-muted">
         {listings.length === 0 ? "No listings match." : `${listings.length} ${listings.length === 1 ? "listing" : "listings"}`}
       </p>
