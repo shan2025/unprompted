@@ -4,12 +4,80 @@
 // disclosure and evidence steps stay identical in both.
 
 import { useEffect, useRef, useState } from "react";
-import { MAX_EVIDENCE, MAX_IMAGE_BYTES, type FieldErrors, type PreviewResult } from "@/lib/listing-form";
+import { MAX_EVIDENCE, MAX_FILES_BYTES, MAX_IMAGE_BYTES, type FieldErrors, type PreviewResult } from "@/lib/listing-form";
+import { MAX_PUBLIC_EDGE } from "@/lib/public-image-size";
 import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Level } from "@/lib/scoring";
 import { ScoreCard } from "./Score";
 import { SegmentView } from "./SegmentView";
 
 const EVIDENCE_OPTIONS = Object.entries(EVIDENCE_KINDS).filter(([k]) => k !== "c2pa");
+
+/** Caught here: a request this size would be refused before the server could explain why. */
+export function filesTooBigMessage(data: FormData) {
+  let total = 0;
+  for (const value of data.values()) if (value instanceof File) total += value.size;
+  if (total <= MAX_FILES_BYTES) return null;
+  return `Your image and evidence files add up to ${(total / (1024 * 1024)).toFixed(1)} MB and the limit is 4 MB. Use a smaller file, or link to it instead.`;
+}
+
+/** Shrinks a photo in the browser, so one straight from a phone fits the shared limit. */
+async function shrinkImage(file: File) {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_PUBLIC_EDGE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("No canvas");
+  // JPEG has no transparency, and would otherwise turn it black.
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) throw new Error("No image");
+  return new File([blob], `${file.name.replace(/\.[^.]*$/, "")}.jpg`, { type: "image/jpeg" });
+}
+
+function EvidenceFileField({ row }: { row: number }) {
+  const [problem, setProblem] = useState<string | null>(null);
+
+  async function choose(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    setProblem(null);
+    if (!file) return;
+    try {
+      if (file.type === "application/pdf") {
+        if (file.size > MAX_FILES_BYTES) throw new Error(`This PDF is ${(file.size / (1024 * 1024)).toFixed(1)} MB and the limit is 4 MB. Link to it instead.`);
+        return;
+      }
+      if (!file.type.startsWith("image/")) throw new Error("Upload an image or a PDF. For anything else, such as video, paste a link.");
+      const smaller = await shrinkImage(file).catch(() => {
+        throw new Error("We couldn't read that image. Try exporting it again as a JPG or PNG.");
+      });
+      const files = new DataTransfer();
+      files.items.add(smaller);
+      input.files = files.files;
+    } catch (e) {
+      input.value = "";
+      setProblem((e as Error).message);
+    }
+  }
+
+  return (
+    <div>
+      <input
+        name={`evidence_file_${row}`}
+        type="file"
+        accept="image/*,application/pdf"
+        aria-label="Evidence file from your device"
+        className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:font-semibold file:text-paper"
+        onChange={(e) => void choose(e.target)}
+      />
+      {problem && <p className="mt-1.5 text-sm font-medium text-heavy">{problem}</p>}
+    </div>
+  );
+}
 
 export function FieldError({ errors, name }: { errors: FieldErrors; name: string }) {
   if (!errors[name]) return null;
@@ -137,7 +205,9 @@ export function EvidenceFields({ errors }: { errors: FieldErrors }) {
               ))}
             </select>
             <div className="grid gap-2">
-              <input name="evidence_url" className="field" placeholder="https://… (repo, video, drive folder)" aria-label="Evidence link" />
+              <input type="hidden" name="evidence_row" value={row} />
+              <EvidenceFileField row={row} />
+              <input name="evidence_url" className="field" placeholder="Or paste a link (repo, video, drive folder)" aria-label="Evidence link" />
               <input name="evidence_note" className="field" placeholder="What it shows" aria-label="Evidence note" maxLength={300} />
             </div>
             <button
@@ -151,7 +221,10 @@ export function EvidenceFields({ errors }: { errors: FieldErrors }) {
           </div>
         ))}
       </div>
-      <p className="hint">Only evidence with a link counts towards your score, so buyers have something to check.</p>
+      <p className="hint">
+        Only evidence with a file or link counts towards your score, so people have something to check. Upload images or PDFs: anyone can open
+        them, and they share a 4 MB limit with your image (photos are shrunk to fit). For video, paste a link.
+      </p>
       {rows.length < MAX_EVIDENCE && (
         <button type="button" className="btn-ghost" onClick={() => setRows((r) => [...r, nextRow.current++])}>
           + Add evidence

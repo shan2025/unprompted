@@ -1,17 +1,17 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { safeNext } from "@/lib/format";
-import { UNREADABLE_IMAGE } from "@/lib/listing-form";
+import { UNREADABLE_EVIDENCE, UNREADABLE_IMAGE } from "@/lib/listing-form";
 import { MAX_COMMENT, parsePostForm, type PostCreateState, type PostPreviewState } from "@/lib/post-form";
 import { withinLimit } from "@/lib/rate-limit";
-import { saveUpload } from "@/lib/uploads";
+import { deleteUploads, saveEvidenceFiles, saveUpload } from "@/lib/uploads";
 
 function slugify(title: string) {
   const base = title
@@ -71,6 +71,11 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
 
   const coverFile = v.image ? await saveUpload(v.image.bytes) : null;
   if (v.image && !coverFile) return { errors: { cover: UNREADABLE_IMAGE }, message: "Some fields need attention." };
+  const evidence = await saveEvidenceFiles(result.evidence, v.evidenceFiles);
+  if (!evidence) {
+    if (coverFile) await deleteUploads([coverFile]);
+    return { errors: { evidence: UNREADABLE_EVIDENCE }, message: "Some fields need attention." };
+  }
   const slug = slugify(v.title);
 
   await db.insert(schema.posts).values({
@@ -85,6 +90,7 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
     status: result.score.needsReview ? "in_review" : "published",
     disclosure: v.disclosure,
     ...scoreColumns(result),
+    evidence,
   });
 
   redirect(`/journal/${slug}?created=1`);
@@ -160,16 +166,17 @@ export async function deletePost(fd: FormData) {
   if (!user) return;
 
   const [post] = await db
-    .select({ id: schema.posts.id, authorId: schema.posts.authorId, coverFile: schema.posts.coverFile })
+    .select({ id: schema.posts.id, authorId: schema.posts.authorId, coverFile: schema.posts.coverFile, evidence: schema.posts.evidence })
     .from(schema.posts)
     .where(eq(schema.posts.slug, String(fd.get("slug") ?? "")))
     .limit(1);
   if (!post || (post.authorId !== user.id && user.role !== "admin")) return;
 
+  // Uploads have public addresses, so the image and evidence files have to go too.
+  const files = [post.coverFile, ...post.evidence.map((e) => e.file)].filter((name) => name != null);
   await db.transaction(async (tx) => {
     await tx.delete(schema.posts).where(eq(schema.posts.id, post.id));
-    // Uploads have public addresses, so the image has to go too.
-    if (post.coverFile) await tx.delete(schema.uploads).where(eq(schema.uploads.name, post.coverFile));
+    if (files.length) await tx.delete(schema.uploads).where(inArray(schema.uploads.name, files));
   });
   revalidatePath("/journal");
   redirect(post.authorId === user.id ? "/dashboard" : "/journal");

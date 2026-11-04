@@ -7,10 +7,22 @@ import { EVIDENCE_KINDS, LEVELS, STAGES, type Disclosure, type Evidence, type Ev
 
 // Stays under the 4.5 MB request limit on Vercel.
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+/** The cover and evidence files travel in one request, so they share this limit. */
+export const MAX_FILES_BYTES = MAX_IMAGE_BYTES;
 export const MAX_EVIDENCE = 6;
 export const UNREADABLE_IMAGE = "We couldn't read that image. Try exporting it again as a JPG or PNG.";
+export const UNREADABLE_EVIDENCE = "We couldn't read one of your evidence images. Try exporting it again as a JPG or PNG.";
+/** Stands in for an evidence file's name until it's saved at publish, so the score counts it. */
+const UNSAVED_FILE = "unsaved";
 
 export type FieldErrors = Partial<Record<string, string>>;
+
+export interface EvidenceFile {
+  /** Position of the evidence item this file belongs to. */
+  index: number;
+  bytes: Uint8Array;
+  pdf: boolean;
+}
 
 export interface ParsedListing {
   title: string;
@@ -24,6 +36,7 @@ export interface ParsedListing {
   aiNotes: string;
   disclosure: Disclosure;
   evidence: Evidence[];
+  evidenceFiles: EvidenceFile[];
   image: { bytes: Uint8Array } | null;
 }
 
@@ -60,27 +73,45 @@ export function parseDisclosure(fd: FormData, errors: FieldErrors) {
   return disclosure;
 }
 
-export function parseEvidence(fd: FormData, errors: FieldErrors) {
+export function isPdf(bytes: Uint8Array) {
+  return new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-";
+}
+
+export async function parseEvidence(fd: FormData, errors: FieldErrors) {
   const kinds = fd.getAll("evidence_kind").map(String);
+  const rows = fd.getAll("evidence_row").map(String);
   const urls = fd.getAll("evidence_url").map((v) => String(v).trim());
   const notes = fd.getAll("evidence_note").map((v) => String(v).trim());
   const evidence: Evidence[] = [];
-  kinds.forEach((kind, i) => {
+  const files: EvidenceFile[] = [];
+  for (const [i, kind] of kinds.entries()) {
     const url = urls[i] ?? "";
     const note = (notes[i] ?? "").slice(0, 300);
-    if (!url && !note) return;
+    // Named by row, because a row with no file can't be relied on to keep its place in a list.
+    const upload = fd.get(`evidence_file_${rows[i]}`);
+    const file = upload instanceof File && upload.size > 0 ? upload : null;
+    if (!url && !note && !file) continue;
     if (!(kind in EVIDENCE_KINDS) || kind === "c2pa") {
       errors.evidence = "Choose what each piece of evidence is.";
-      return;
+      continue;
     }
     if (url && !/^https?:\/\/\S+\.\S+/.test(url)) {
       errors.evidence = "Evidence links must start with http:// or https://";
-      return;
+      continue;
     }
-    evidence.push({ kind: kind as EvidenceKind, ...(url && { url }), ...(note && { note }) });
-  });
+    if (file) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const pdf = isPdf(bytes);
+      if (!pdf && !sniffImageType(bytes)) {
+        errors.evidence = "Evidence files must be a JPG, PNG, WebP, GIF or PDF.";
+        continue;
+      }
+      files.push({ index: evidence.length, bytes, pdf });
+    }
+    evidence.push({ kind: kind as EvidenceKind, ...(url && { url }), ...(file && { file: UNSAVED_FILE }), ...(note && { note }) });
+  }
   if (evidence.length > MAX_EVIDENCE) errors.evidence = `Attach at most ${MAX_EVIDENCE} pieces of evidence.`;
-  return evidence;
+  return { evidence, files };
 }
 
 export async function parseImage(fd: FormData, errors: FieldErrors): Promise<ParsedImage> {
@@ -135,7 +166,7 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
   if (!isLicense(license)) errors.license = "Pick a license.";
 
   const disclosure = parseDisclosure(fd, errors);
-  const evidence = parseEvidence(fd, errors);
+  const { evidence, files: evidenceFiles } = await parseEvidence(fd, errors);
   const image = await parseImage(fd, errors);
 
   if (!preview && !locked && !image && !errors.cover) {
@@ -160,6 +191,7 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
     aiNotes,
     disclosure,
     evidence,
+    evidenceFiles,
     image,
   };
   return { values };

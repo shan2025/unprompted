@@ -9,6 +9,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ name: s
       "Content-Type": file.type,
       "Cache-Control": "public, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
+      // A PDF is stored as the creator sent it, so it downloads rather than opening on our origin.
+      ...(file.type === "application/pdf" && { "Content-Disposition": "attachment", "Content-Security-Policy": "sandbox" }),
     },
   });
 }

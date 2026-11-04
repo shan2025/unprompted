@@ -1,5 +1,5 @@
 import { isCategory, type CategoryId } from "./categories";
-import { parseDisclosure, parseEvidence, parseImage, str, type FieldErrors, type ParsedImage, type PreviewResult } from "./listing-form";
+import { parseDisclosure, parseEvidence, parseImage, str, type EvidenceFile, type FieldErrors, type ParsedImage, type PreviewResult } from "./listing-form";
 import type { Disclosure, Evidence } from "./scoring";
 
 export const MAX_BODY = 50_000;
@@ -13,6 +13,7 @@ export interface ParsedPost {
   aiNotes: string;
   disclosure: Disclosure;
   evidence: Evidence[];
+  evidenceFiles: EvidenceFile[];
   image: ParsedImage;
 }
 
@@ -38,7 +39,7 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
   if (aiNotes.length > 1000) errors.aiNotes = "Keep this under 1,000 characters.";
 
   const disclosure = parseDisclosure(fd, errors);
-  const evidence = parseEvidence(fd, errors);
+  const { evidence, files: evidenceFiles } = await parseEvidence(fd, errors);
   const image = await parseImage(fd, errors);
 
   if (!body && !image && !errors.cover) errors.body = "Write something or add an image.";
@@ -49,6 +50,6 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
 
   if (Object.keys(errors).length) return { errors };
 
-  const values: ParsedPost = { title, subtitle, category: category as CategoryId, body, aiNotes, disclosure, evidence, image };
+  const values: ParsedPost = { title, subtitle, category: category as CategoryId, body, aiNotes, disclosure, evidence, evidenceFiles, image };
   return { values };
 }

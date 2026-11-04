@@ -9,10 +9,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { escapeHtml, sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/format";
-import { parseListingForm, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
+import { parseListingForm, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
 import { PAYMENT_LINK_HELP, parsePaymentLink } from "@/lib/payment-link";
 import { withinLimit } from "@/lib/rate-limit";
-import { saveUpload } from "@/lib/uploads";
+import { deleteUploads, saveEvidenceFiles, saveUpload } from "@/lib/uploads";
 
 function slugify(title: string) {
   const base = title
@@ -73,6 +73,11 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
 
   const coverFile = v.image ? await saveUpload(v.image.bytes) : null;
   if (v.image && !coverFile) return { errors: { cover: UNREADABLE_IMAGE }, message: "Some fields need attention." };
+  const evidence = await saveEvidenceFiles(result.evidence, v.evidenceFiles);
+  if (!evidence) {
+    if (coverFile) await deleteUploads([coverFile]);
+    return { errors: { evidence: UNREADABLE_EVIDENCE }, message: "Some fields need attention." };
+  }
   const slug = slugify(v.title);
 
   await db.insert(schema.listings).values({
@@ -91,6 +96,7 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
     status: score.needsReview ? "in_review" : "published",
     disclosure: v.disclosure,
     ...scoreColumns(result),
+    evidence,
   });
 
   redirect(`/listing/${slug}?created=1`);

@@ -1,9 +1,11 @@
 import sharp from "sharp";
+import { MAX_PUBLIC_EDGE } from "./public-image-size";
+
+export { MAX_PUBLIC_EDGE };
 
 // What the public sees of an uploaded image: small enough that it isn't the
 // full-resolution work, and with all metadata (GPS, camera serial, name) gone.
 // Metadata is scanned from the original before this runs. The original isn't kept.
-export const MAX_PUBLIC_EDGE = 1600;
 
 /** The public copy as WebP, or null if the bytes aren't a readable image. */
 export async function makePublicImage(bytes: Uint8Array) {

@@ -5,7 +5,7 @@ import { createPost, previewPostAssessment } from "@/app/actions/posts";
 import { CATEGORIES } from "@/lib/categories";
 import type { FieldErrors } from "@/lib/listing-form";
 import type { PostPreviewState } from "@/lib/post-form";
-import { DisclosureFields, EvidenceFields, FieldError, ImageField, ScorePreview, Section } from "./FormParts";
+import { DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
 export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -13,13 +13,21 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
   const [preview, setPreview] = useState<PostPreviewState | null>(null);
   const [checking, startChecking] = useTransition();
   const [, startPublishing] = useTransition();
+  const [tooBig, setTooBig] = useState<string | null>(null);
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
-  const message = createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
+  const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
+
+  function fitsLimit(data: FormData) {
+    const problem = filesTooBigMessage(data);
+    setTooBig(problem);
+    return !problem;
+  }
 
   function check() {
     if (!formRef.current) return;
     const data = new FormData(formRef.current);
+    if (!fitsLimit(data)) return;
     startChecking(async () => setPreview(await previewPostAssessment(data)));
   }
 
@@ -27,6 +35,7 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
     // Submitting manually keeps the fields filled in if validation fails.
     e.preventDefault();
     const data = new FormData(e.currentTarget);
+    if (!fitsLimit(data)) return;
     startPublishing(() => createAction(data));
   }
 

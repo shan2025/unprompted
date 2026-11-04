@@ -17,7 +17,7 @@ export function DeletePostButton({ slug }: { slug: string }) {
   return (
     <form action={deletePost} className="space-y-3" role="group" aria-label="Confirm deleting this post">
       <input type="hidden" name="slug" value={slug} />
-      <p className="text-sm leading-relaxed text-ink-soft">This deletes the post, its image, comments and appreciations for good.</p>
+      <p className="text-sm leading-relaxed text-ink-soft">This deletes the post, its image and evidence files, comments and appreciations for good.</p>
       <div className="flex items-center gap-4">
         <SubmitButton className="text-sm font-semibold text-heavy hover:underline" pendingText="Deleting…">
           Yes, delete it

@@ -5,7 +5,7 @@ import { createListing, previewAssessment } from "@/app/actions/listings";
 import { CATEGORIES, LICENSES } from "@/lib/categories";
 import type { FieldErrors, PreviewState } from "@/lib/listing-form";
 import type { Level } from "@/lib/scoring";
-import { DisclosureFields, EvidenceFields, FieldError, ImageField, ScorePreview, Section } from "./FormParts";
+import { DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
 export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: string; defaultAi?: Level }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -13,13 +13,21 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [checking, startChecking] = useTransition();
   const [, startPublishing] = useTransition();
+  const [tooBig, setTooBig] = useState<string | null>(null);
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
-  const message = createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
+  const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
+
+  function fitsLimit(data: FormData) {
+    const problem = filesTooBigMessage(data);
+    setTooBig(problem);
+    return !problem;
+  }
 
   function check() {
     if (!formRef.current) return;
     const data = new FormData(formRef.current);
+    if (!fitsLimit(data)) return;
     startChecking(async () => setPreview(await previewAssessment(data)));
   }
 
@@ -28,6 +36,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
     // in if validation fails.
     e.preventDefault();
     const data = new FormData(e.currentTarget);
+    if (!fitsLimit(data)) return;
     startPublishing(() => createAction(data));
   }
 

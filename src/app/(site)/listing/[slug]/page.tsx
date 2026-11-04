@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { buyListing } from "@/app/actions/listings";
 import { Cover } from "@/components/Cover";
+import { EvidenceSource } from "@/components/EvidenceSource";
 import { FlagForm } from "@/components/FlagForm";
 import { ClaimPaymentForm, PaymentLinkForm } from "@/components/PaymentForms";
 import { ScoreCard } from "@/components/Score";
@@ -221,17 +222,13 @@ async function ListingView({ params, searchParams }: Props) {
                 {evidence.map((e, i) => (
                   <li key={i} className="card flex flex-col gap-1 p-4">
                     <span className="text-sm font-semibold">{EVIDENCE_KINDS[e.kind]?.label ?? e.kind}</span>
-                    {e.url && (
-                      <a href={e.url} target="_blank" rel="nofollow ugc noopener noreferrer" className="link break-all text-sm text-ink-soft">
-                        {e.url}
-                      </a>
-                    )}
+                    <EvidenceSource evidence={e} />
                     {e.note && <span className="text-sm text-muted">{e.note}</span>}
                   </li>
                 ))}
               </ul>
             )}
-            <p className="mt-3 text-xs text-muted">Evidence links are supplied by the creator. Check them yourself, and report anything that doesn&apos;t add up.</p>
+            <p className="mt-3 text-xs text-muted">Evidence is supplied by the creator. Check it yourself, and report anything that doesn&apos;t add up.</p>
           </section>
 
           <section className="mt-10">

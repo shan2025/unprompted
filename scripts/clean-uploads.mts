@@ -2,7 +2,7 @@
 // and shrinks them, in place. It can't be undone, because the originals are
 // overwritten. Images that are already clean are left alone, so it's safe to re-run.
 import "./env.mts";
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import sharp from "sharp";
 import { closeDb, db, schema } from "../src/lib/db";
 import { makePublicImage, MAX_PUBLIC_EDGE } from "../src/lib/public-image";
@@ -11,7 +11,8 @@ const { uploads } = schema;
 let cleaned = 0;
 let unreadable = 0;
 
-const rows = await db.select({ name: uploads.name }).from(uploads);
+// PDFs aren't images, so there's nothing here to clean.
+const rows = await db.select({ name: uploads.name }).from(uploads).where(ne(uploads.contentType, "application/pdf"));
 for (const { name } of rows) {
   const [row] = await db.select({ bytes: uploads.bytes }).from(uploads).where(eq(uploads.name, name)).limit(1);
   const meta = await sharp(row.bytes).metadata().catch(() => null);

@@ -6,6 +6,7 @@ import { removeComment } from "@/app/actions/posts";
 import { CommentForm } from "@/components/CommentForm";
 import { Cover } from "@/components/Cover";
 import { DeletePostButton } from "@/components/DeletePostButton";
+import { EvidenceSource } from "@/components/EvidenceSource";
 import { FlagForm } from "@/components/FlagForm";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
@@ -130,11 +131,7 @@ async function PostView({ params, searchParams }: Props) {
                 {evidence.map((e, i) => (
                   <li key={i} className="card flex flex-col gap-1 p-4">
                     <span className="text-sm font-semibold">{EVIDENCE_KINDS[e.kind]?.label ?? e.kind}</span>
-                    {e.url && (
-                      <a href={e.url} target="_blank" rel="nofollow ugc noopener noreferrer" className="link break-all text-sm text-ink-soft">
-                        {e.url}
-                      </a>
-                    )}
+                    <EvidenceSource evidence={e} />
                     {e.note && <span className="text-sm text-muted">{e.note}</span>}
                   </li>
                 ))}

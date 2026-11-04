@@ -137,10 +137,10 @@ export default function StandardPage() {
         ))}
       </ul>
       <p className="mt-4 leading-relaxed text-ink-soft">
-        Only evidence with a link counts, because a note alone gives nobody anything to check. Strengths combine with
+        Only evidence with a file or link counts, because a note alone gives nobody anything to check. Strengths combine with
         diminishing returns, up to 90%. At 50% or more a listing is marked{" "}
         <strong className="text-human">Evidence attached</strong>. That means the creator supplied it, not that we checked
-        it, so open the links before you rely on them. Evidence also softens detector suspicion. That&apos;s deliberate: a
+        it, so open it before you rely on it. Evidence also softens detector suspicion. That&apos;s deliberate: a
         time-lapse of someone painting outweighs a pattern-matcher.
       </p>
 

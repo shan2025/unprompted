@@ -30,7 +30,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="text-ink">What you list:</strong> titles, descriptions, previews, the work you deliver to
-            buyers, images, your AI disclosure, process evidence links and notes.
+            buyers, images, your AI disclosure, process evidence files, links and notes.
           </li>
           <li>
             <strong className="text-ink">Activity on the site:</strong> purchases, reports you file, and the review history
