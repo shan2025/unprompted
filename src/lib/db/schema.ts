@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   handle: text("handle").notNull().unique(),
   bio: text("bio").notNull().default(""),
+  avatarFile: text("avatar_file"),
   role: text("role", { enum: ["member", "admin"] }).notNull().default("member"),
   createdAt: createdAt(),
 }).enableRLS();

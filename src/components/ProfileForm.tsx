@@ -2,12 +2,28 @@
 
 import { useActionState } from "react";
 import { updateProfile } from "@/app/actions/profile";
+import { Avatar } from "./Avatar";
 
-export function ProfileForm({ name, bio }: { name: string; bio: string }) {
+export function ProfileForm({ name, bio, avatarFile }: { name: string; bio: string; avatarFile: string | null }) {
   const [state, action, pending] = useActionState(updateProfile, null);
 
   return (
     <form action={action} className="space-y-4">
+      <div>
+        <label htmlFor="avatar" className="label">
+          Profile photo
+        </label>
+        <div className="flex items-center gap-4">
+          <Avatar name={name} file={avatarFile} className="h-16 w-16 shrink-0 text-2xl" />
+          <input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="min-w-0 text-sm" />
+        </div>
+        <p className="hint">A JPG, PNG, WebP or GIF, up to 4 MB.</p>
+        {avatarFile && (
+          <label className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
+            <input type="checkbox" name="removeAvatar" /> Remove my photo
+          </label>
+        )}
+      </div>
       <div>
         <label htmlFor="name" className="label">
           Name

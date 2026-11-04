@@ -14,6 +14,7 @@ export interface SessionUser {
   name: string;
   handle: string;
   email: string;
+  avatarFile: string | null;
   role: "member" | "admin";
 }
 
@@ -51,6 +52,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       name: schema.users.name,
       handle: schema.users.handle,
       email: schema.users.email,
+      avatarFile: schema.users.avatarFile,
       role: schema.users.role,
     })
     .from(schema.sessions)

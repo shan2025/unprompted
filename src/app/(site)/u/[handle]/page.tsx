@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { Avatar } from "@/components/Avatar";
 import { GridSkeleton, ListingGrid } from "@/components/ListingCard";
 import { PostGrid } from "@/components/PostCard";
 import { FollowButton } from "@/components/Social";
@@ -46,7 +47,10 @@ async function Creator({ params }: Props) {
       <div className="grid gap-8 border-b border-line pb-10 md:grid-cols-[1fr_auto] md:items-end">
         <div>
           <p className="eyebrow">Creator</p>
-          <h1 className="mt-1 text-5xl font-light">{creator.name}</h1>
+          <div className="mt-2 flex items-center gap-5">
+            <Avatar name={creator.name} file={creator.avatarFile} className="h-20 w-20 shrink-0 text-3xl" />
+            <h1 className="min-w-0 break-words text-5xl font-light">{creator.name}</h1>
+          </div>
           <p className="mt-1 text-muted">
             @{creator.handle} · joined {formatDate(creator.createdAt)}
           </p>
@@ -55,6 +59,11 @@ async function Creator({ params }: Props) {
             <strong className="text-ink">{counts.following}</strong> following
           </p>
           {creator.bio && <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-soft">{creator.bio}</p>}
+          {isSelf && (
+            <Link href="/dashboard/profile" className="btn-ghost mt-5 inline-flex px-5 py-2">
+              Edit profile
+            </Link>
+          )}
           {!isSelf && (
             <div className="mt-5">
               <FollowButton handle={creator.handle} following={following} returnTo={`/u/${creator.handle}`} />

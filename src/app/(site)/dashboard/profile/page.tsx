@@ -23,5 +23,5 @@ export default function EditProfilePage() {
 async function EditProfile() {
   const user = await requireUser("/dashboard/profile");
   const [row] = await db.select({ bio: schema.users.bio }).from(schema.users).where(eq(schema.users.id, user.id)).limit(1);
-  return <ProfileForm name={user.name} bio={row?.bio ?? ""} />;
+  return <ProfileForm name={user.name} bio={row?.bio ?? ""} avatarFile={user.avatarFile} />;
 }

@@ -67,7 +67,7 @@ async function UserMenu() {
       <Link href="/sell" className="btn-primary px-5 py-3">
         Sell
       </Link>
-      <AccountMenu name={user.name} handle={user.handle} isAdmin={user.role === "admin"} />
+      <AccountMenu name={user.name} handle={user.handle} avatarFile={user.avatarFile} isAdmin={user.role === "admin"} />
     </div>
   );
 }
