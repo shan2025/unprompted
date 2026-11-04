@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { CATEGORIES, type CategoryId } from "@/lib/categories";
 import { Cover } from "./Cover";
 import { Logo } from "./Logo";
@@ -55,33 +55,39 @@ function matches(query: string) {
 export function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [goal, setGoal] = useState<Goal | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [categories, setCategories] = useState<CategoryId[]>([]);
   const [ai, setAi] = useState<string | null>(null);
+  // Choosing both follows the seller questions: those answers prefill the listing.
+  const selling = goals.includes("sell");
 
   const steps = [
-    { title: "What brings you here?", sub: "We'll set things up around what you want to do." },
-    goal === "buy"
-      ? { title: "What are you looking for?", sub: "Pick as many as you like. We'll show you the work that fits." }
-      : { title: "What do you make?", sub: "Pick the closest fit. You can list in other categories later." },
-    goal === "buy"
-      ? { title: "How much AI is okay?", sub: "Every listing shows its AI involvement, so the choice is yours." }
-      : { title: "How much AI goes into your work?", sub: "Be honest: it sets the floor of your score." },
+    { title: "What brings you here?", sub: "Pick one or both. We'll set things up around what you want to do." },
+    selling
+      ? { title: "What do you make?", sub: "Pick as many as you like. We'll start your first listing in the first one." }
+      : { title: "What are you looking for?", sub: "Pick as many as you like. We'll show you the work that fits." },
+    selling
+      ? { title: "How much AI goes into your work?", sub: "Be honest: it sets the floor of your score." }
+      : { title: "How much AI is okay?", sub: "Every listing shows its AI involvement, so the choice is yours." },
   ];
 
-  const ready = [goal !== null, categories.length > 0, ai !== null][step];
+  const ready = [goals.length > 0, categories.length > 0, ai !== null][step];
   const last = step === steps.length - 1;
 
-  function chooseGoal(v: string) {
-    setGoal(v as Goal);
-    // A listing has one category, so sellers keep only their first pick.
-    if (v === "sell") setCategories((c) => c.slice(0, 1));
+  function toggleGoal(v: string) {
+    const goal = v as Goal;
+    const nextGoals = goals.includes(goal) ? goals.filter((g) => g !== goal) : [...goals, goal];
+    const nextSelling = nextGoals.includes("sell");
+    setGoals(nextGoals);
+    // The AI question has different answers for sellers and buyers.
+    if (nextSelling !== selling) setAi(null);
   }
 
   function next() {
     if (!ready) return;
     if (!last) return setStep(step + 1);
-    if (goal === "sell") {
+    if (selling) {
+      // A listing has one category, so the form starts with the first pick.
       router.push(`/sell?category=${categories[0]}&ai=${ai}`);
     } else {
       router.push(`/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`);
@@ -113,9 +119,9 @@ export function Onboarding() {
           </div>
 
           <div key={`a${step}`} className="rise">
-            {step === 0 && <Choices options={GOALS} value={goal} onChange={chooseGoal} onPick={next} />}
-            {step === 1 && <CategorySearch value={categories} multiple={goal === "buy"} onChange={setCategories} onSubmit={next} />}
-            {step === 2 && <Choices options={goal === "buy" ? BUYER_AI : SELLER_AI} value={ai} onChange={setAi} onPick={next} />}
+            {step === 0 && <Choices options={GOALS} value={goals} onChange={toggleGoal} />}
+            {step === 1 && <CategorySearch value={categories} onChange={setCategories} onSubmit={next} />}
+            {step === 2 && <Choices options={selling ? SELLER_AI : BUYER_AI} value={ai} onChange={setAi} onPick={next} />}
           </div>
         </main>
 
@@ -159,6 +165,7 @@ function CoverPanel({ category }: { category: CategoryId | null }) {
   ));
 }
 
+// An array value makes these checkboxes; a single value makes them radios.
 function Choices({
   options,
   value,
@@ -166,31 +173,39 @@ function Choices({
   onPick,
 }: {
   options: { id: string; label: string; hint: string }[];
-  value: string | null;
+  value: string | string[] | null;
   onChange: (id: string) => void;
-  onPick: () => void;
+  onPick?: () => void;
 }) {
+  const multiple = Array.isArray(value);
   return (
-    <div role="radiogroup" className="divide-y divide-line border-y border-line">
+    <div role={multiple ? "group" : "radiogroup"} className="divide-y divide-line border-y border-line">
       {options.map((o) => {
-        const selected = value === o.id;
+        const selected = multiple ? value.includes(o.id) : value === o.id;
         return (
           <button
             key={o.id}
             type="button"
-            role="radio"
+            role={multiple ? "checkbox" : "radio"}
             aria-checked={selected}
             onClick={() => onChange(o.id)}
             onDoubleClick={onPick}
             className="group flex w-full items-start gap-4 py-5 text-left"
           >
             <span
-              className={`mt-1.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+              className={`mt-1.5 flex h-4 w-4 shrink-0 items-center justify-center border ${multiple ? "" : "rounded-full"} ${
                 selected ? "border-ink bg-ink" : "border-[#bdbdbd] group-hover:border-ink"
               }`}
               aria-hidden="true"
             >
-              {selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+              {selected &&
+                (multiple ? (
+                  <svg viewBox="0 0 12 12" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="m2.5 6 2.5 2.5 4.5-5" />
+                  </svg>
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                ))}
             </span>
             <span>
               <span className={`block text-[19px] ${selected ? "text-ink" : "text-ink-soft group-hover:text-ink"}`}>{o.label}</span>
@@ -205,32 +220,19 @@ function Choices({
 
 function CategorySearch({
   value,
-  multiple,
   onChange,
   onSubmit,
 }: {
   value: CategoryId[];
-  multiple: boolean;
   onChange: (ids: CategoryId[]) => void;
   onSubmit: () => void;
 }) {
-  const selected = multiple ? undefined : CATEGORIES.find((c) => c.id === value[0]);
-  const [query, setQuery] = useState(selected?.label ?? "");
-  const [open, setOpen] = useState(!selected);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const results = useMemo(() => matches(selected && query === selected.label ? "" : query), [query, selected]);
-  // Picking several at once keeps the list in view; a single pick closes it.
-  const listOpen = multiple || open;
+  const [query, setQuery] = useState("");
+  const results = useMemo(() => matches(query), [query]);
 
-  function pick(id: CategoryId, label: string) {
-    if (multiple) {
-      onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
-      setQuery("");
-      return;
-    }
-    onChange([id]);
-    setQuery(label);
-    setOpen(false);
+  function pick(id: CategoryId) {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+    setQuery("");
   }
 
   return (
@@ -244,92 +246,64 @@ function CategorySearch({
           <path d="m20 20-3.5-3.5" strokeLinecap="round" />
         </svg>
         <input
-          ref={inputRef}
           id="category-search"
           autoFocus
           autoComplete="off"
           value={query}
-          placeholder={multiple ? "Search categories" : "Search for your craft"}
-          onFocus={() => setOpen(true)}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
+          placeholder="Search categories"
+          onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key !== "Enter") return;
             e.preventDefault();
-            const first = results[0] ?? { id: "other" as const, label: "Other" };
-            if (multiple ? query.trim() : open) pick(first.id, first.label);
+            if (query.trim()) pick(results[0]?.id ?? "other");
             else if (value.length) onSubmit();
           }}
           className="h-[72px] w-full bg-transparent text-[18px] text-ink placeholder:text-muted focus:outline-none"
           role="combobox"
-          aria-expanded={listOpen}
+          aria-expanded
           aria-controls="category-list"
         />
       </div>
 
-      {listOpen && (
-        <div
-          id="category-list"
-          role="listbox"
-          aria-multiselectable={multiple || undefined}
-          className={
-            multiple
-              ? "max-h-[min(420px,50dvh)] overflow-y-auto no-scrollbar py-4"
-              : "absolute inset-x-0 top-full z-10 max-h-[340px] overflow-y-auto no-scrollbar bg-white py-4 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.18)]"
-          }
-        >
-          <p className="flex justify-between px-8 pb-2 text-[13px] font-semibold text-ink-soft">
-            <span>{query.trim() ? "Matches" : multiple ? "Pick as many as you like" : "Popular categories"}</span>
-            {multiple && value.length > 0 && <span className="font-normal text-muted">{value.length} selected</span>}
-          </p>
-          {results.length === 0 && (
-            <button type="button" onClick={() => pick("other", "Other")} className="block w-full px-8 py-2.5 text-left text-[18px] text-ink-soft hover:text-ink">
-              No exact match. Choose <span className="text-ink">Other</span>
-            </button>
-          )}
-          {results.map((c) => {
-            const on = value.includes(c.id);
-            return (
-              <button
-                key={c.id}
-                type="button"
-                role="option"
-                aria-selected={on}
-                onClick={() => pick(c.id, c.label)}
-                className="flex w-full items-center justify-between gap-4 px-8 py-2.5 text-left hover:bg-field"
-              >
-                <span className="flex items-center gap-3">
-                  {multiple && (
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? "border-ink bg-ink" : "border-[#bdbdbd]"}`}
-                      aria-hidden="true"
-                    >
-                      {on && (
-                        <svg viewBox="0 0 12 12" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="m2.5 6 2.5 2.5 4.5-5" />
-                        </svg>
-                      )}
-                    </span>
-                  )}
-                  <span className={`text-[18px] ${on ? "text-ink" : "text-ink-soft"}`}>{c.label}</span>
-                </span>
-                <span className="hidden text-xs text-muted sm:block">{c.blurb}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {selected && !open && (
-        <p className="mt-5 text-sm text-muted">
-          {selected.blurb}.{" "}
-          <button type="button" className="link text-ink" onClick={() => (setOpen(true), inputRef.current?.focus())}>
-            Change
-          </button>
+      <div id="category-list" role="listbox" aria-multiselectable className="max-h-[min(420px,50dvh)] overflow-y-auto no-scrollbar py-4">
+        <p className="flex justify-between px-8 pb-2 text-[13px] font-semibold text-ink-soft">
+          <span>{query.trim() ? "Matches" : "Pick as many as you like"}</span>
+          {value.length > 0 && <span className="font-normal text-muted">{value.length} selected</span>}
         </p>
-      )}
+        {results.length === 0 && (
+          <button type="button" onClick={() => pick("other")} className="block w-full px-8 py-2.5 text-left text-[18px] text-ink-soft hover:text-ink">
+            No exact match. Choose <span className="text-ink">Other</span>
+          </button>
+        )}
+        {results.map((c) => {
+          const on = value.includes(c.id);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              role="option"
+              aria-selected={on}
+              onClick={() => pick(c.id)}
+              className="flex w-full items-center justify-between gap-4 px-8 py-2.5 text-left hover:bg-field"
+            >
+              <span className="flex items-center gap-3">
+                <span
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? "border-ink bg-ink" : "border-[#bdbdbd]"}`}
+                  aria-hidden="true"
+                >
+                  {on && (
+                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="m2.5 6 2.5 2.5 4.5-5" />
+                    </svg>
+                  )}
+                </span>
+                <span className={`text-[18px] ${on ? "text-ink" : "text-ink-soft"}`}>{c.label}</span>
+              </span>
+              <span className="hidden text-xs text-muted sm:block">{c.blurb}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
