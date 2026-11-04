@@ -1,0 +1,1 @@
+ALTER TABLE "posts" ADD COLUMN "subtitle" text DEFAULT '' NOT NULL;

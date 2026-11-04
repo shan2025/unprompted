@@ -43,6 +43,15 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
           </div>
 
           <div>
+            <label htmlFor="subtitle" className="label">
+              Subtitle <span className="font-normal text-muted">(optional)</span>
+            </label>
+            <input id="subtitle" name="subtitle" className="field" maxLength={160} />
+            <p className="hint">One line that tells readers what this is about.</p>
+            <FieldError errors={errors} name="subtitle" />
+          </div>
+
+          <div>
             <label htmlFor="category" className="label">
               Category
             </label>

@@ -7,6 +7,7 @@ export const MAX_COMMENT = 2_000;
 
 export interface ParsedPost {
   title: string;
+  subtitle: string;
   category: CategoryId;
   body: string;
   aiNotes: string;
@@ -23,6 +24,9 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
 
   const title = str(fd, "title");
   if (title.length < 3 || title.length > 100) errors.title = "Use 3 to 100 characters.";
+
+  const subtitle = str(fd, "subtitle");
+  if (subtitle.length > 160) errors.subtitle = "Keep the subtitle under 160 characters.";
 
   const category = str(fd, "category");
   if (!isCategory(category)) errors.category = "Pick a category.";
@@ -45,6 +49,6 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
 
   if (Object.keys(errors).length) return { errors };
 
-  const values: ParsedPost = { title, category: category as CategoryId, body, aiNotes, disclosure, evidence, image };
+  const values: ParsedPost = { title, subtitle, category: category as CategoryId, body, aiNotes, disclosure, evidence, image };
   return { values };
 }

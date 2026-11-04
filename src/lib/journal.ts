@@ -18,7 +18,7 @@ const cardFields = {
   slug: posts.slug,
   title: posts.title,
   category: posts.category,
-  excerpt: sql<string>`left(${posts.body}, 280)`,
+  excerpt: sql<string>`coalesce(nullif(${posts.subtitle}, ''), left(${posts.body}, 280))`,
   coverFile: posts.coverFile,
   aiPercent: posts.aiPercent,
   tier: posts.tier,
@@ -44,7 +44,7 @@ export async function searchPosts(filters: PostFilters) {
   const where = [eq(posts.status, "published")];
   if (filters.q) {
     const term = `%${filters.q.replace(/[%_]/g, "")}%`;
-    where.push(or(ilike(posts.title, term), ilike(posts.body, term), ilike(users.name, term))!);
+    where.push(or(ilike(posts.title, term), ilike(posts.subtitle, term), ilike(posts.body, term), ilike(users.name, term))!);
   }
   if (filters.category && isCategory(filters.category)) where.push(eq(posts.category, filters.category));
   if (filters.authorId !== undefined) where.push(eq(posts.authorId, filters.authorId));

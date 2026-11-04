@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!row || row.post.status !== "published") return { title: "Journal" };
   return {
     title: row.post.title,
-    description: `${row.post.aiPercent}% AI · ${TIER_INFO[row.post.tier as Tier]?.label}. ${row.post.body.slice(0, 200)}`,
+    description: `${row.post.aiPercent}% AI · ${TIER_INFO[row.post.tier as Tier]?.label}. ${row.post.subtitle || row.post.body.slice(0, 200)}`,
   };
 }
 
@@ -79,6 +79,7 @@ async function PostView({ params, searchParams }: Props) {
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <article className="min-w-0">
           <h1 className="text-4xl font-light leading-tight sm:text-5xl">{post.title}</h1>
+          {post.subtitle && <p className="mt-3 text-xl leading-relaxed text-ink-soft">{post.subtitle}</p>}
           <p className="mt-3 text-ink-soft">
             by{" "}
             <Link href={`/u/${author.handle}`} className="link font-semibold text-ink">
@@ -159,8 +160,10 @@ async function PostView({ params, searchParams }: Props) {
                     {user && (user.id === c.authorId || isAdmin) && (
                       <form action={removeComment}>
                         <input type="hidden" name="id" value={c.id} />
-                        <SubmitButton className="text-xs font-medium text-muted hover:text-heavy" pendingText="Removing…">
-                          Remove
+                        <SubmitButton className="text-base opacity-60 hover:opacity-100" pendingText="…">
+                          <span role="img" aria-label="Remove comment" title="Remove comment">
+                            🗑️
+                          </span>
                         </SubmitButton>
                       </form>
                     )}

@@ -77,6 +77,7 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
     slug,
     authorId: user.id,
     title: v.title,
+    subtitle: v.subtitle,
     category: v.category,
     body: v.body,
     aiNotes: v.aiNotes,

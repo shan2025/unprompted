@@ -64,8 +64,7 @@ async function UserMenu() {
         </Link>
       )}
       <Link href="/dashboard" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
-        <span className="hidden sm:inline">@{user.handle}</span>
-        <span className="sm:hidden">You</span>
+        Profile
       </Link>
       <LogoutButton className="hidden text-[13px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink lg:block" />
       <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
