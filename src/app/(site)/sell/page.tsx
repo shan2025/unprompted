@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { SellForm } from "@/components/SellForm";
 import { requireUser } from "@/lib/auth";
@@ -15,6 +16,12 @@ export default function SellPage({ searchParams }: Props) {
       <p className="mt-3 max-w-2xl text-lg text-ink-soft">
         Tell buyers what it is, where AI was and wasn&apos;t involved, and show how you made it. You&apos;ll see your score
         before anything is published.
+      </p>
+      <p className="mt-3 text-ink-soft">
+        Not ready to sell?{" "}
+        <Link href="/explore" className="link font-semibold text-ink">
+          Skip this and explore other people&apos;s work
+        </Link>
       </p>
       <div className="mt-10">
         <Suspense fallback={<div className="card h-96 animate-pulse" />}>
