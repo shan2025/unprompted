@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { AccountMenu } from "./AccountMenu";
 import { Logo } from "./Logo";
-import { LogoutButton } from "./LogoutButton";
 
 // Phones get the essentials; the rest appear as the screen widens. Anything
 // hidden here is also reachable from the dashboard or the footer.
@@ -58,16 +58,7 @@ async function UserMenu() {
 
   return (
     <div className="flex items-center gap-3.5 whitespace-nowrap sm:gap-6">
-      {user.role === "admin" && (
-        <Link href="/admin" className="hidden text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 xl:inline">
-          Review queue
-        </Link>
-      )}
-      <Link href="/dashboard" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
-        Profile
-      </Link>
-      <LogoutButton className="hidden text-[13px] font-semibold uppercase tracking-[0.08em] text-muted hover:text-ink lg:block" />
-      <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
+      <Link href="/journal"className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
         Journal
       </Link>
       <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 lg:inline-flex">
@@ -76,6 +67,7 @@ async function UserMenu() {
       <Link href="/sell" className="btn-primary px-5 py-3">
         Sell
       </Link>
+      <AccountMenu name={user.name} handle={user.handle} isAdmin={user.role === "admin"} />
     </div>
   );
 }
