@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { removeComment } from "@/app/actions/posts";
+import { Avatar } from "@/components/Avatar";
 import { CommentForm } from "@/components/CommentForm";
 import { Cover } from "@/components/Cover";
 import { DeletePostButton } from "@/components/DeletePostButton";
@@ -144,27 +145,33 @@ async function PostView({ params, searchParams }: Props) {
             {activity.comments.length === 0 && <p className="mt-3 text-ink-soft">No comments yet.</p>}
             <ul className="mt-4 space-y-4">
               {activity.comments.map((c) => (
-                <li key={c.id} className="card p-4">
-                  <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                    <Link href={`/u/${c.authorHandle}`} className="font-semibold hover:text-accent">
-                      {c.authorName}
-                    </Link>
-                    {c.authorId === post.authorId && <span className="text-xs font-semibold text-accent">Author</span>}
-                    <span className="text-muted">· {formatDate(c.createdAt)}</span>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap break-words leading-relaxed text-ink">{c.body}</p>
-                  <div className="mt-2 flex items-center gap-4">
-                    {user && (user.id === c.authorId || isAdmin) && (
-                      <form action={removeComment}>
-                        <input type="hidden" name="id" value={c.id} />
-                        <SubmitButton className="text-base opacity-60 hover:opacity-100" pendingText="…">
-                          <span role="img" aria-label="Remove comment" title="Remove comment">
-                            🗑️
-                          </span>
-                        </SubmitButton>
-                      </form>
-                    )}
-                    {user && user.id !== c.authorId && <FlagForm target="comment" id={c.id} compact />}
+                <li key={c.id} className="card flex gap-3 p-4">
+                  {/* The name beside it is the same link, so this one stays out of the tab order. */}
+                  <Link href={`/u/${c.authorHandle}`} tabIndex={-1} aria-hidden="true" className="shrink-0">
+                    <Avatar name={c.authorName} file={c.authorAvatarFile} className="h-10 w-10 text-sm" />
+                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                      <Link href={`/u/${c.authorHandle}`} className="font-semibold hover:text-accent">
+                        {c.authorName}
+                      </Link>
+                      {c.authorId === post.authorId && <span className="text-xs font-semibold text-accent">Author</span>}
+                      <span className="text-muted">· {formatDate(c.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed text-ink">{c.body}</p>
+                    <div className="mt-2 flex items-center gap-4">
+                      {user && (user.id === c.authorId || isAdmin) && (
+                        <form action={removeComment}>
+                          <input type="hidden" name="id" value={c.id} />
+                          <SubmitButton className="text-base opacity-60 hover:opacity-100" pendingText="…">
+                            <span role="img" aria-label="Remove comment" title="Remove comment">
+                              🗑️
+                            </span>
+                          </SubmitButton>
+                        </form>
+                      )}
+                      {user && user.id !== c.authorId && <FlagForm target="comment" id={c.id} compact />}
+                    </div>
                   </div>
                 </li>
               ))}

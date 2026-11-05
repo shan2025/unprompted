@@ -97,6 +97,7 @@ export async function getPostActivity(postId: number, viewerId: number | null) {
         authorId: postComments.authorId,
         authorName: users.name,
         authorHandle: users.handle,
+        authorAvatarFile: users.avatarFile,
       })
       .from(postComments)
       .innerJoin(users, eq(postComments.authorId, users.id))
