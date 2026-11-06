@@ -42,7 +42,7 @@ export function PostCard({ post }: { post: PostCardData }) {
             {post.authorName} · {formatDate(post.createdAt)}
           </p>
           <div className="mt-2 flex items-center gap-4 text-xs font-semibold text-ink-soft">
-            <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} />
+            <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} />
             <span className="ml-auto inline-flex items-center gap-1" title="Appreciations">
               <HeartIcon className="h-3.5 w-3.5" />
               {post.appreciations}

@@ -33,7 +33,8 @@ export function TierStamp({ tier, size = "md" }: { tier: string; size?: "sm" | "
 }
 
 /** Small "3% AI" label for cards and tables. */
-export function AiPill({ percent, tier, verified }: { percent: number; tier: string; verified?: boolean }) {
+/** `unscanned` marks work no scan could check (video), so the number is only the creator's word. */
+export function AiPill({ percent, tier, verified, unscanned }: { percent: number; tier: string; verified?: boolean; unscanned?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
       <span className={`h-2 w-2 rounded-full ${TIER_BG[tier as Tier] ?? "bg-ink"}`} aria-hidden="true" />
@@ -44,9 +45,17 @@ export function AiPill({ percent, tier, verified }: { percent: number; tier: str
           <span className="sr-only">process evidence attached</span>
         </span>
       )}
+      {unscanned && (
+        <span className="font-medium text-muted" title="Video can't be scanned for AI. This is the creator's own disclosure.">
+          · not scanned
+        </span>
+      )}
     </span>
   );
 }
+
+const UNSCANNED_NOTE =
+  "Self-reported. Video can't be scanned for AI, so this rests on the creator's disclosure and any process evidence. Report it if something doesn't add up.";
 
 export function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -120,13 +129,14 @@ function levelFor(value: number) {
   return LEVELS.find((l) => LEVEL_INFO[l].value === value) ?? "none";
 }
 
-export function ScoreCard({ score, evidenceCount }: { score: Score; evidenceCount?: number }) {
+export function ScoreCard({ score, evidenceCount, unscanned }: { score: Score; evidenceCount?: number; unscanned?: boolean }) {
   return (
     <div className="card p-5">
       <div className="flex items-start justify-between gap-3">
         <span className="eyebrow">AI involvement</span>
         <TierStamp tier={score.tier} />
       </div>
+      {unscanned && <p className="mt-2 rounded-lg bg-paper px-3 py-2 text-xs leading-relaxed text-ink-soft">{UNSCANNED_NOTE}</p>}
 
       <div className="mt-2 flex items-baseline gap-3">
         <span className={`font-display text-5xl font-light tracking-tight ${tierColor(score.tier)}`}>{score.percent}%</span>

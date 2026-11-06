@@ -1,11 +1,12 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
+import { CLAIM_HOLD_DAYS, claimHoldCutoff } from "@/lib/data";
 import { db, schema } from "@/lib/db";
 import { escapeHtml, sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/format";
@@ -175,20 +176,33 @@ export async function claimPayment(_prev: PaymentState, fd: FormData): Promise<P
       return { message: "This listing isn't available to buy." };
     }
     if (listing.license === "exclusive") {
+      // A claim the seller hasn't answered in CLAIM_HOLD_DAYS stops holding the listing.
       const [other] = await tx
         .select({ id: schema.orders.id })
         .from(schema.orders)
-        .where(and(eq(schema.orders.listingId, listing.id), eq(schema.orders.status, "pending")))
+        .where(
+          and(
+            eq(schema.orders.listingId, listing.id),
+            eq(schema.orders.status, "pending"),
+            ne(schema.orders.buyerId, user.id),
+            gt(schema.orders.createdAt, claimHoldCutoff()),
+          ),
+        )
         .limit(1);
-      if (other) return { message: "Someone else is already waiting on this exclusive listing. If you've paid, ask the seller for a refund." };
+      if (other) {
+        return {
+          message: `Someone else is already waiting on this exclusive listing. If the seller hasn't confirmed it within ${CLAIM_HOLD_DAYS} days, you can try again. If you've paid, ask the seller for a refund.`,
+        };
+      }
     }
     const [order] = await tx
       .insert(schema.orders)
       .values({ listingId: listing.id, buyerId: user.id, amountCents: listing.priceCents, status: "pending", paymentReference: reference })
-      // A declined buyer can try again. Anything else already stands.
+      // A declined buyer can try again. Anything else already stands. The claim's
+      // date restarts, since it's what the hold on an exclusive listing counts from.
       .onConflictDoUpdate({
         target: [schema.orders.listingId, schema.orders.buyerId],
-        set: { status: "pending", amountCents: listing.priceCents, paymentReference: reference },
+        set: { status: "pending", amountCents: listing.priceCents, paymentReference: reference, createdAt: new Date() },
         setWhere: eq(schema.orders.status, "declined"),
       })
       .returning({ id: schema.orders.id });
@@ -235,12 +249,38 @@ export async function reviewOrder(fd: FormData) {
       .returning({ buyerId: schema.orders.buyerId });
     if (!order) return null;
 
-    if (decision === "paid" && listing.license === "exclusive" && listing.status === "published") {
-      await tx.update(schema.listings).set({ status: "sold" }).where(eq(schema.listings.id, listing.id));
+    // An exclusive listing goes to the buyer whose payment the seller confirms.
+    // Anyone else still waiting on it is turned down, so nobody waits forever.
+    let outbid: number[] = [];
+    if (decision === "paid" && listing.license === "exclusive") {
+      if (listing.status === "published") {
+        await tx.update(schema.listings).set({ status: "sold" }).where(eq(schema.listings.id, listing.id));
+      }
+      const others = await tx
+        .update(schema.orders)
+        .set({ status: "declined" })
+        .where(and(eq(schema.orders.listingId, listing.id), eq(schema.orders.status, "pending")))
+        .returning({ buyerId: schema.orders.buyerId });
+      outbid = others.map((o) => o.buyerId);
     }
-    return { buyerId: order.buyerId, title: listing.title, slug: listing.slug };
+    return { buyerId: order.buyerId, title: listing.title, slug: listing.slug, outbid };
   });
   if (!result) return;
+
+  if (result.outbid.length) {
+    const others = await db.select({ email: schema.users.email }).from(schema.users).where(inArray(schema.users.id, result.outbid));
+    for (const other of others) {
+      await notify(
+        other.email,
+        `"${result.title}" was sold to someone else`,
+        [
+          `"${result.title}" was an exclusive listing, and the seller confirmed another buyer's payment first.`,
+          "If you paid for it, contact the seller for a refund. If they don't respond, contact us.",
+        ],
+        `/listing/${result.slug}`,
+      );
+    }
+  }
 
   const [buyer] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, result.buyerId)).limit(1);
   if (buyer) {

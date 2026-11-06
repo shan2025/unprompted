@@ -132,7 +132,7 @@ async function PostView({ params, searchParams }: Props) {
 
           {/* On small screens the score follows the writing, so reading comes first. */}
           <div className="mt-10 lg:hidden">
-            <ScoreCard score={analysis.score} evidenceCount={evidence.length} />
+            <ScoreCard score={analysis.score} evidenceCount={evidence.length} unscanned={Boolean(post.videoUrl)} />
           </div>
 
           <div className="mt-10 flex flex-wrap items-center gap-3 border-y border-line py-4">
@@ -217,7 +217,7 @@ async function PostView({ params, searchParams }: Props) {
 
         <aside className="space-y-5">
           <div className="hidden lg:block">
-            <ScoreCard score={analysis.score} evidenceCount={evidence.length} />
+            <ScoreCard score={analysis.score} evidenceCount={evidence.length} unscanned={Boolean(post.videoUrl)} />
           </div>
 
           <div className="card p-5">

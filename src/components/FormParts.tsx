@@ -155,7 +155,16 @@ export function DisclosureFields({ errors, defaultAi }: { errors: FieldErrors; d
                 title={LEVEL_INFO[level].hint}
                 className="cursor-pointer rounded-lg border border-line px-3 py-2 text-center text-sm font-medium text-ink-soft transition-colors hover:border-ink has-checked:border-ink has-checked:bg-ink has-checked:text-paper"
               >
-                <input type="radio" name={`disclosure_${stage}`} value={level} defaultChecked={level === (stage === "creation" ? (defaultAi ?? "none") : "none")} className="sr-only" />
+                {/* Nothing is picked for the creator: an honest disclosure has to be an
+                    answer, not a default. Only the making stage is filled in, and only
+                    from what they told us on /start. */}
+                <input
+                  type="radio"
+                  name={`disclosure_${stage}`}
+                  value={level}
+                  defaultChecked={stage === "creation" && level === defaultAi}
+                  className="sr-only"
+                />
                 {LEVEL_INFO[level].label}
               </label>
             ))}

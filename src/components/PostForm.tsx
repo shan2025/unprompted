@@ -14,6 +14,7 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
   const [checking, startChecking] = useTransition();
   const [, startPublishing] = useTransition();
   const [tooBig, setTooBig] = useState<string | null>(null);
+  const [hasVideo, setHasVideo] = useState(false);
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
   const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
@@ -90,9 +91,32 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
             <label htmlFor="videoUrl" className="label">
               Video link <span className="font-normal text-muted">(optional)</span>
             </label>
-            <input id="videoUrl" name="videoUrl" type="url" inputMode="url" className="field" maxLength={300} placeholder="https://www.youtube.com/watch?v=…" />
-            <p className="hint">A YouTube or Vimeo link plays right on your post. We can&apos;t scan video for AI, so your disclosure and process evidence carry the score.</p>
+            <input
+              id="videoUrl"
+              name="videoUrl"
+              type="url"
+              inputMode="url"
+              className="field"
+              maxLength={300}
+              placeholder="https://www.youtube.com/watch?v=…"
+              onChange={(e) => setHasVideo(e.target.value.trim() !== "")}
+            />
+            <p className="hint">
+              A YouTube or Vimeo link of a video you made plays right on your post. We can&apos;t scan video for AI, so your
+              post is marked &ldquo;video not scanned&rdquo; and your disclosure and process evidence carry the score.
+            </p>
             <FieldError errors={errors} name="videoUrl" />
+            {(hasVideo || errors.ownVideo) && (
+              <>
+                <label className="mt-3 flex items-start gap-3 text-sm">
+                  <input type="checkbox" name="ownVideo" className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+                  <span>
+                    This video is my own work. I&apos;m not sharing someone else&apos;s film, clip or channel.
+                  </span>
+                </label>
+                <FieldError errors={errors} name="ownVideo" />
+              </>
+            )}
           </div>
 
           <ImageField

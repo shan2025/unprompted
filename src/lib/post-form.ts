@@ -53,6 +53,11 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
   if (requireAttestation && fd.get("attest") !== "on") {
     errors.attest = "Please confirm your disclosure is accurate.";
   }
+  // Video can't be scanned, so anyone could embed someone else's film and score
+  // it 0%. At the least, the person posting has to say it's theirs.
+  if (requireAttestation && videoUrl && fd.get("ownVideo") !== "on") {
+    errors.ownVideo = "Confirm the video is your own work, or remove the link.";
+  }
 
   if (Object.keys(errors).length) return { errors };
 

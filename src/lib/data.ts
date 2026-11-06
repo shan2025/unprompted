@@ -119,12 +119,23 @@ export async function getOrderStatus(listingId: number, userId: number) {
   return row?.status ?? null;
 }
 
-/** True when an exclusive listing is spoken for while its seller checks a payment. */
+/**
+ * How long a buyer's payment claim holds an exclusive listing for them. A seller
+ * who never answers would otherwise keep it off the market for good; after this,
+ * other buyers can claim it too, and whichever claim the seller confirms wins.
+ */
+export const CLAIM_HOLD_DAYS = 7;
+
+export function claimHoldCutoff() {
+  return new Date(Date.now() - CLAIM_HOLD_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/** True when an exclusive listing is spoken for while its seller checks a recent payment. */
 export async function hasPendingOrder(listingId: number) {
   const [row] = await db
     .select({ id: orders.id })
     .from(orders)
-    .where(and(eq(orders.listingId, listingId), eq(orders.status, "pending")))
+    .where(and(eq(orders.listingId, listingId), eq(orders.status, "pending"), gt(orders.createdAt, claimHoldCutoff())))
     .limit(1);
   return Boolean(row);
 }
