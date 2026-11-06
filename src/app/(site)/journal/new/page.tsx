@@ -30,6 +30,6 @@ async function Gate({ searchParams }: Props) {
   const query = await searchParams;
   const raw = Array.isArray(query.category) ? query.category[0] : query.category;
   const category = isCategory(raw) ? raw : undefined;
-  await requireUser(category ? `/journal/new?category=${category}` : "/journal/new");
+  await requireUser(category ? `/journal/new?category=${category}` : "/journal/new", { newcomers: true });
   return <PostForm defaultCategory={category} />;
 }

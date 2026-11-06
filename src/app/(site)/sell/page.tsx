@@ -46,6 +46,6 @@ async function Gate({ searchParams }: Props) {
   const qs = new URLSearchParams();
   if (prefill.category) qs.set("category", prefill.category);
   if (prefill.ai) qs.set("ai", prefill.ai);
-  await requireUser(qs.size ? `/sell?${qs}` : "/sell");
+  await requireUser(qs.size ? `/sell?${qs}` : "/sell", { newcomers: true });
   return <SellForm defaultCategory={prefill.category} defaultAi={prefill.ai} />;
 }

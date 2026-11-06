@@ -54,7 +54,8 @@ function matches(query: string) {
   );
 }
 
-export function Onboarding() {
+/** New people finish by creating an account; anyone already signed in goes straight on. */
+export function Onboarding({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -88,12 +89,10 @@ export function Onboarding() {
   function next() {
     if (!ready) return;
     if (!last) return setStep(step + 1);
-    if (selling) {
-      // A listing has one category, so the form starts with the first pick.
-      router.push(`/sell?category=${categories[0]}&ai=${ai}`);
-    } else {
-      router.push(`/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`);
-    }
+    // A listing has one category, so the form starts with the first pick.
+    const destination = selling ? `/sell?category=${categories[0]}&ai=${ai}` : `/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`;
+    // New people create their account next, then land where their answers point.
+    router.push(signedIn ? destination : `/signup?next=${encodeURIComponent(destination)}`);
   }
 
   return (
@@ -103,9 +102,16 @@ export function Onboarding() {
           <Link href="/" aria-label="Unprompters home">
             <Logo />
           </Link>
-          <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 lg:hidden">
-            I&apos;m just browsing
-          </Link>
+          <div className="flex items-center gap-5 sm:gap-8">
+            {!signedIn && (
+              <Link href="/login" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
+                I have an account
+              </Link>
+            )}
+            <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 lg:hidden">
+              I&apos;m just browsing
+            </Link>
+          </div>
         </header>
 
         <main className="grid flex-1 content-start gap-10 px-5 pb-12 pt-10 sm:px-12 lg:grid-cols-[minmax(240px,340px)_minmax(0,560px)] lg:gap-16 lg:pt-32">

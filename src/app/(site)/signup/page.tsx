@@ -8,7 +8,7 @@ export default function SignupPage({ searchParams }: { searchParams: Promise<Rec
   return (
     <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
       <h1 className="text-4xl font-light">Join Unprompters</h1>
-      <p className="mt-2 text-ink-soft">One account to buy and sell.</p>
+      <p className="mt-2 text-ink-soft">One account to explore, share and sell.</p>
       <div className="card mt-8 p-6">
         <Suspense fallback={<div className="h-96" />}>
           <AuthPageForm mode="signup" searchParams={searchParams} />

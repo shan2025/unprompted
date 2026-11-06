@@ -63,9 +63,14 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   return row ?? null;
 });
 
-export async function requireUser(next: string) {
+/**
+ * The signed-in user, or a redirect to log in. Pages people usually reach before
+ * they have an account (sharing or selling for the first time) set `newcomers`
+ * to send them to sign-up instead; that page links to log in for everyone else.
+ */
+export async function requireUser(next: string, { newcomers = false }: { newcomers?: boolean } = {}) {
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  if (!user) redirect(`/${newcomers ? "signup" : "login"}?next=${encodeURIComponent(next)}`);
   return user;
 }
 
