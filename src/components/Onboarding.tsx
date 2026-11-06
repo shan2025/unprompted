@@ -255,6 +255,7 @@ function CategorySearch({
 }) {
   const [query, setQuery] = useState("");
   const results = useMemo(() => matches(query), [query]);
+  const allShown = results.length > 0 && results.every((c) => value.includes(c.id));
 
   function pick(id: CategoryId) {
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
@@ -292,10 +293,29 @@ function CategorySearch({
       </div>
 
       <div id="category-list" role="listbox" aria-multiselectable className="max-h-[min(420px,50dvh)] overflow-y-auto no-scrollbar py-4">
-        <p className="flex justify-between px-8 pb-2 text-[13px] font-semibold text-ink-soft">
+        <div className="flex items-center justify-between gap-4 px-8 pb-2 text-[13px] font-semibold text-ink-soft">
           <span>{query.trim() ? "Matches" : "Pick as many as you like"}</span>
-          {value.length > 0 && <span className="font-normal text-muted">{value.length} selected</span>}
-        </p>
+          <span className="flex shrink-0 items-center gap-4 whitespace-nowrap">
+            {value.length > 0 && <span className="font-normal text-muted">{value.length} selected</span>}
+            {results.length > 0 && (
+              // Covers what's on screen: every category, or just the search matches.
+              // Picks already made stay first, since the first one starts the listing.
+              <button
+                type="button"
+                onClick={() =>
+                  onChange(
+                    allShown
+                      ? value.filter((v) => !results.some((c) => c.id === v))
+                      : [...value, ...results.map((c) => c.id).filter((id) => !value.includes(id))],
+                  )
+                }
+                className="font-semibold text-ink underline underline-offset-4 hover:no-underline"
+              >
+                {allShown ? "Clear all" : "Select all"}
+              </button>
+            )}
+          </span>
+        </div>
         {results.length === 0 && (
           <button type="button" onClick={() => pick("other")} className="block w-full px-8 py-2.5 text-left text-[18px] text-ink-soft hover:text-ink">
             No exact match. Choose <span className="text-ink">Other</span>
