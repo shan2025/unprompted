@@ -28,8 +28,26 @@ export function ProfileForm({
   const [preview, setPreview] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
-  const [photoSave, setPhotoSave] = useState(false);
+  // Which photo change the save in flight is for: a new photo, a removal, or neither.
+  const [photoSave, setPhotoSave] = useState<"new" | "remove" | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
+  // The photo menu closes on a click elsewhere or on Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const away = (e: PointerEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [menuOpen]);
   // The form keeps its fields between saves, so once a photo is saved, empty the
   // file picker: a later Save changes shouldn't upload the same photo again.
   useEffect(() => {
@@ -56,7 +74,7 @@ export function ProfileForm({
       files.items.add(smaller);
       input.files = files.files;
       setPreview(URL.createObjectURL(smaller));
-      setPhotoSave(true);
+      setPhotoSave("new");
       formRef.current?.requestSubmit();
     } catch (e) {
       input.value = "";
@@ -71,53 +89,90 @@ export function ProfileForm({
   const showPreview = preview && busy;
   const photoStatus = preparing
     ? "Preparing your photo…"
-    : pending && photoSave
-      ? "Saving your photo…"
-      : photoSave && state?.saved && state.photoSaved
-        ? "Photo saved."
-        : photoSave && state?.saved
-          ? "That photo didn't come through. Try choosing it again."
-          : null;
+    : pending && photoSave === "remove"
+      ? "Removing your photo…"
+      : pending && photoSave
+        ? "Saving your photo…"
+        : photoSave === "remove" && state?.saved
+          ? "Photo removed."
+          : photoSave && state?.saved && state.photoSaved
+            ? "Photo saved."
+            : photoSave && state?.saved
+              ? "That photo didn't come through. Try choosing it again."
+              : null;
+
+  function pickPhoto() {
+    setMenuOpen(false);
+    fileRef.current?.click();
+  }
 
   return (
     <form
       ref={formRef}
       action={action}
       onSubmit={(e) => {
-        // A press of Save changes is a full save, not a photo save.
-        if ((e.nativeEvent as SubmitEvent).submitter) setPhotoSave(false);
+        // Remove photo is a photo save; a press of Save changes is a full save.
+        const submitter = (e.nativeEvent as SubmitEvent).submitter;
+        if (submitter) setPhotoSave(submitter.getAttribute("name") === "removeAvatar" ? "remove" : null);
+        setMenuOpen(false);
         keepFields(action)(e);
       }}
     >
       <div className="flex flex-wrap items-center gap-5 border-b border-line pb-6">
-        {showPreview ? (
-          // eslint-disable-next-line @next/next/no-img-element -- a local preview of the photo being saved
-          <img src={preview} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" />
-        ) : (
-          <Avatar name={name} file={avatarFile} className="h-20 w-20 shrink-0 text-3xl" />
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <label htmlFor="avatar" className={`btn-ghost cursor-pointer px-5 py-2 ${busy ? "pointer-events-none opacity-60" : ""}`}>
-              {avatarFile ? "Change photo" : "Add a photo"}
-            </label>
-            <input
-              id="avatar"
-              name="avatar"
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              // Never disabled: a disabled field is left out of the form, photo and all.
-              onChange={(e) => void choose(e.target)}
-            />
-            {avatarFile && !busy && (
-              <label className="flex items-center gap-2 text-sm text-ink-soft">
-                <input type="checkbox" name="removeAvatar" /> Remove photo
-              </label>
+        {/* Like Instagram: the pencil on the photo opens a menu to change or remove it. */}
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => (avatarFile ? setMenuOpen((o) => !o) : pickPhoto())}
+            aria-label={avatarFile ? "Edit profile photo" : "Add a profile photo"}
+            aria-haspopup={avatarFile ? "menu" : undefined}
+            aria-expanded={avatarFile ? menuOpen : undefined}
+            className="group relative block rounded-full disabled:opacity-60"
+          >
+            {showPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element -- a local preview of the photo being saved
+              <img src={preview} alt="" className="h-20 w-20 rounded-full object-cover" />
+            ) : (
+              <Avatar name={name} file={avatarFile} className="h-20 w-20 text-3xl" />
             )}
-          </div>
-          <p className="hint mt-2" role="status">
-            {photoStatus ?? "Any photo from your phone or computer. It saves as soon as you choose it."}
+            <span className="absolute -bottom-0.5 -right-0.5 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-ink text-white transition-transform group-hover:scale-110">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </span>
+          </button>
+          {menuOpen && avatarFile && (
+            <div role="menu" className="absolute left-0 top-full z-20 mt-2 w-52 overflow-hidden border border-line bg-white text-sm shadow-lg">
+              <button type="button" role="menuitem" onClick={pickPhoto} className="block w-full px-4 py-3 text-left font-medium hover:bg-black/5">
+                Upload a new photo
+              </button>
+              <button
+                type="submit"
+                role="menuitem"
+                name="removeAvatar"
+                value="on"
+                className="block w-full border-t border-line px-4 py-3 text-left font-medium text-heavy hover:bg-black/5"
+              >
+                Remove photo
+              </button>
+            </div>
+          )}
+          <input
+            ref={fileRef}
+            id="avatar"
+            name="avatar"
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            tabIndex={-1}
+            // Never disabled: a disabled field is left out of the form, photo and all.
+            onChange={(e) => void choose(e.target)}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="hint mt-0" role="status">
+            {photoStatus ?? (avatarFile ? "Tap the pencil to change or remove your photo." : "Tap the pencil to add a photo. It saves as soon as you choose it.")}
           </p>
           {problem && (
             <p role="alert" className="mt-1.5 text-sm font-medium text-heavy">
