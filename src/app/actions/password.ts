@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { createSession } from "@/lib/auth";
+import { homePath } from "@/lib/data";
 import { db, schema } from "@/lib/db";
 import { escapeHtml, sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/format";
@@ -83,5 +84,5 @@ export async function resetPassword(_prev: ResetState, fd: FormData): Promise<Re
     .where(and(eq(passwordResets.userId, claimed.userId), isNull(passwordResets.usedAt)));
 
   await createSession(claimed.userId);
-  return { next: "/dashboard" };
+  return { next: await homePath(claimed.userId) };
 }

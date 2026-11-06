@@ -53,12 +53,12 @@ export function Cover({
   return (
     <svg viewBox="0 0 400 300" className={`h-full w-full ${className}`} role={title ? "img" : undefined} aria-hidden={title ? undefined : true} aria-label={title || undefined} preserveAspectRatio="xMidYMid slice">
       <rect width="400" height="300" fill={p.bg} />
-      <Pattern category={category} slug={slug} ink={p.ink} accent={p.accent} />
+      <Pattern category={category} slug={slug} ink={p.ink} accent={p.accent} bg={p.bg} />
     </svg>
   );
 }
 
-function Pattern({ category, slug, ink, accent }: { category: string; slug: string; ink: string; accent: string }) {
+function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: string; ink: string; accent: string; bg: string }) {
   // Pattern draws from its own copy of the sequence (past the palette pick),
   // so rendering it twice can never shift the random values.
   const r = rng(slug);
@@ -142,6 +142,40 @@ function Pattern({ category, slug, ink, accent }: { category: string; slug: stri
             <circle key={rad} cx={cx} cy={cy} r={rad} fill="none" stroke={i === 3 ? accent : ink} strokeOpacity={i === 3 ? 1 : 0.45} strokeWidth={i === 3 ? 4 : 2} />
           ))}
           <rect x="24" y="24" width="352" height="252" fill="none" stroke={ink} strokeOpacity="0.3" strokeWidth="2" strokeDasharray="2 8" />
+        </>
+      );
+    }
+    case "film": {
+      return (
+        <>
+          <rect x="40" y="60" width="320" height="180" fill={ink} fillOpacity="0.85" />
+          {Array.from({ length: 11 }, (_, i) => (
+            <g key={i}>
+              <rect x={50 + i * 28} y="68" width="14" height="10" rx="2" fill={bg} />
+              <rect x={50 + i * 28} y="222" width="14" height="10" rx="2" fill={bg} />
+            </g>
+          ))}
+          <path d={`M${180 + r() * 8} 118 v64 l54 -32 z`} fill={accent} />
+        </>
+      );
+    }
+    case "crafts": {
+      return (
+        <>
+          {Array.from({ length: 9 }, (_, row) =>
+            Array.from({ length: 13 }, (_, col) => (
+              <rect
+                key={`${row}-${col}`}
+                x={32 + col * 26}
+                y={36 + row * 26}
+                width="22"
+                height="22"
+                rx="3"
+                fill={(row + col) % 4 === 0 ? accent : ink}
+                fillOpacity={(row + col) % 4 === 0 ? 0.75 : (row + col) % 2 === 0 ? 0.3 : 0.12}
+              />
+            )),
+          )}
         </>
       );
     }

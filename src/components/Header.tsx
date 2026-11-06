@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { isCreator } from "@/lib/data";
 import { AccountMenu } from "./AccountMenu";
 import { Logo } from "./Logo";
 
@@ -56,18 +57,31 @@ async function UserMenu() {
     );
   }
 
+  // People here to explore don't see posting tools until they've shared something.
+  // The account menu keeps a way in for when they do.
+  const creator = await isCreator(user.id);
+
   return (
     <div className="flex items-center gap-3.5 whitespace-nowrap sm:gap-6">
-      <Link href="/journal"className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
+      {!creator && (
+        <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
+          Explore
+        </Link>
+      )}
+      <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
         Journal
       </Link>
-      <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 lg:inline-flex">
-        Write
-      </Link>
-      <Link href="/sell" className="btn-primary px-5 py-3">
-        Sell
-      </Link>
-      <AccountMenu name={user.name} handle={user.handle} avatarFile={user.avatarFile} isAdmin={user.role === "admin"} />
+      {creator && (
+        <>
+          <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 lg:inline-flex">
+            Share
+          </Link>
+          <Link href="/sell" className="btn-primary px-5 py-3">
+            Sell
+          </Link>
+        </>
+      )}
+      <AccountMenu name={user.name} handle={user.handle} avatarFile={user.avatarFile} isAdmin={user.role === "admin"} creator={creator} />
     </div>
   );
 }

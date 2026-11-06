@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { buyListing } from "@/app/actions/listings";
+import { AskCreator } from "@/components/AskCreator";
 import { Cover } from "@/components/Cover";
 import { EvidenceSource } from "@/components/EvidenceSource";
 import { FlagForm } from "@/components/FlagForm";
+import { JsonLd } from "@/components/JsonLd";
 import { ClaimPaymentForm, PaymentLinkForm } from "@/components/PaymentForms";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
@@ -25,10 +27,14 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const row = await getListing(slug);
-  if (!row || row.listing.status === "in_review" || row.listing.status === "removed") return { title: "Listing" };
+  if (!row || row.listing.status === "in_review" || row.listing.status === "removed") return { title: "Listing", robots: { index: false } };
+  const description = `${row.listing.aiPercent}% AI · ${TIER_INFO[row.listing.tier as Tier]?.label}. ${row.listing.summary}`;
   return {
     title: row.listing.title,
-    description: `${row.listing.aiPercent}% AI · ${TIER_INFO[row.listing.tier as Tier]?.label}. ${row.listing.summary}`,
+    description,
+    alternates: { canonical: `/listing/${row.listing.slug}` },
+    robots: row.listing.isDemo ? { index: false } : undefined,
+    openGraph: { siteName: "Unprompters", title: row.listing.title, description, type: "website" },
   };
 }
 
@@ -133,6 +139,25 @@ async function ListingView({ params, searchParams }: Props) {
 
   return (
     <>
+      {(listing.status === "published" || listing.status === "sold") && !listing.isDemo && (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: listing.title,
+            description: listing.summary,
+            url: `${siteUrl()}/listing/${listing.slug}`,
+            brand: { "@type": "Person", name: creator.name },
+            offers: {
+              "@type": "Offer",
+              price: (listing.priceCents / 100).toFixed(2),
+              priceCurrency: "USD",
+              availability: listing.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+              url: `${siteUrl()}/listing/${listing.slug}`,
+            },
+          }}
+        />
+      )}
       <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1"} claimed={query.claimed === "1"} isDemo={listing.isDemo} isOwner={isOwner} owned={purchased} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
@@ -290,6 +315,10 @@ async function ListingView({ params, searchParams }: Props) {
             <p className="text-sm text-muted">@{creator.handle}</p>
             {creator.bio && <p className="mt-2 text-sm leading-relaxed text-ink-soft">{creator.bio}</p>}
           </div>
+
+          {(listing.status === "published" || listing.status === "sold") && !isOwner && !listing.isDemo && (
+            <AskCreator target="listing" slug={listing.slug} creatorName={creator.name} loginHref={user ? undefined : `/login?next=${encodeURIComponent(`/listing/${listing.slug}`)}`} />
+          )}
 
           {listing.status === "published" || listing.status === "sold" ? (
             <div className="card p-5">

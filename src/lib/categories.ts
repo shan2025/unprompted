@@ -9,8 +9,10 @@ export const CATEGORIES = [
   { id: "photography", label: "Photography", blurb: "Prints, series and stock" },
   { id: "design", label: "Design", blurb: "Logos, type, UI kits and patterns" },
   { id: "music", label: "Music & audio", blurb: "Tracks, stems, samples and scores" },
+  { id: "film", label: "Film & video", blurb: "Films, shorts, documentaries and edits" },
+  { id: "crafts", label: "Handicrafts", blurb: "Pottery, weaving, woodwork and handmade goods" },
   { id: "idea", label: "Ideas", blurb: "Concepts, plots, product and business ideas" },
-  { id: "other", label: "Other", blurb: "Anything else made by hand" },
+  { id: "other", label: "Other", blurb: "Anything else people make" },
 ] as const;
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -36,12 +38,14 @@ export const STAGE_WEIGHTS: Record<CategoryId, Record<Stage, number>> = {
   photography: { ideation: 0.1, creation: 0.6, refinement: 0.25, assets: 0.05 },
   design: { ideation: 0.2, creation: 0.55, refinement: 0.15, assets: 0.1 },
   music: { ideation: 0.15, creation: 0.6, refinement: 0.15, assets: 0.1 },
+  film: { ideation: 0.15, creation: 0.55, refinement: 0.2, assets: 0.1 },
+  crafts: { ideation: 0.15, creation: 0.7, refinement: 0.1, assets: 0.05 },
   idea: { ideation: 0.55, creation: 0.25, refinement: 0.1, assets: 0.1 },
   other: { ideation: 0.2, creation: 0.5, refinement: 0.15, assets: 0.15 },
 };
 
 // Categories where an uploaded image is the work itself rather than a cover.
-export const VISUAL_CATEGORIES: CategoryId[] = ["art", "photography", "design"];
+export const VISUAL_CATEGORIES: CategoryId[] = ["art", "photography", "design", "crafts"];
 
 export const LICENSES = [
   { id: "personal", label: "Personal use", blurb: "Buyer may use it privately." },

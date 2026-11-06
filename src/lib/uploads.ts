@@ -59,6 +59,17 @@ export async function deleteUploads(names: string[]) {
   if (names.length) await db.delete(schema.uploads).where(inArray(schema.uploads.name, names));
 }
 
+/** Runs `save`; if it fails, removes the files stored for it so none are left unused. */
+export async function saveWithUploads(names: (string | null | undefined)[], save: () => Promise<unknown>) {
+  try {
+    await save();
+  } catch (error) {
+    // Report why the save failed, even if the cleanup fails too.
+    await deleteUploads(names.filter((name) => typeof name === "string")).catch(() => {});
+    throw error;
+  }
+}
+
 export async function readUpload(name: string) {
   if (!NAME.test(name)) return null;
   const [row] = await db.select().from(schema.uploads).where(eq(schema.uploads.name, name)).limit(1);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useTransition } from "react";
 import { CATEGORIES, type CategoryId } from "@/lib/categories";
+import { isShow, SHOWS, type Show } from "@/lib/show";
 import { SORTS, type Sort } from "@/lib/sorts";
 
 const AI_LIMITS = [
@@ -14,7 +15,7 @@ const AI_LIMITS = [
 ] as const;
 
 type Filters = { categories: CategoryId[] };
-type Fields = { q: string; maxAi: string; sort: Sort; verified: boolean };
+type Fields = { q: string; maxAi: string; sort: Sort; verified: boolean; show: Show };
 
 function toQuery(f: Filters & Fields) {
   const qs = new URLSearchParams();
@@ -23,6 +24,7 @@ function toQuery(f: Filters & Fields) {
   if (f.maxAi) qs.set("maxAi", f.maxAi);
   if (f.sort !== "new") qs.set("sort", f.sort);
   if (f.verified) qs.set("verified", "1");
+  if (f.show !== "all") qs.set("show", f.show);
   const query = qs.toString();
   return query ? `/explore?${query}` : "/explore";
 }
@@ -47,7 +49,7 @@ export function ExploreView({
 
   // When the URL changes some other way (Back, Forward), make the fields match
   // it, without touching the search box while a typed search is waiting.
-  const { q, maxAi, sort, verified } = fields;
+  const { q, maxAi, sort, verified, show } = fields;
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
@@ -56,18 +58,21 @@ export function ExploreView({
     el("maxAi").value = maxAi;
     el("sort").value = sort;
     (el("verified") as HTMLInputElement).checked = verified;
-  }, [q, maxAi, sort, verified]);
+    el("show").value = show;
+  }, [q, maxAi, sort, verified, show]);
 
   // What the form shows right now, which may be ahead of the URL.
   function liveFields(): Fields {
     if (!formRef.current) return fields;
     const data = new FormData(formRef.current);
     const sort = String(data.get("sort") ?? "new");
+    const show = data.get("show");
     return {
       q: String(data.get("q") ?? "").trim(),
       maxAi: String(data.get("maxAi") ?? ""),
       sort: sort in SORTS ? (sort as Sort) : "new",
       verified: data.get("verified") === "1",
+      show: isShow(show) ? show : "all",
     };
   }
 
@@ -101,13 +106,14 @@ export function ExploreView({
     <>
       <div className="mb-8">
         <h1 className="text-4xl font-light">Explore</h1>
+        <p className="mt-2 max-w-2xl text-ink-soft">Read, watch and buy work made by people. Every piece shows how much AI was involved.</p>
       </div>
 
       <form
         ref={formRef}
         action="/explore"
         role="search"
-        className="card mb-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr]"
+        className="card mb-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]"
         onSubmit={(e) => {
           e.preventDefault();
           apply(shown);
@@ -122,12 +128,19 @@ export function ExploreView({
           name="q"
           type="search"
           defaultValue={fields.q}
-          placeholder="Search titles, descriptions, creators"
+          placeholder="Search work and creators"
           className="field sm:col-span-2 lg:col-span-1"
           aria-label="Search"
           enterKeyHint="search"
         />
         {categories.length > 0 && <input type="hidden" name="category" value={categories.join(",")} />}
+        <select name="show" defaultValue={fields.show} className="field" aria-label="What to show">
+          {Object.entries(SHOWS).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
         <select name="maxAi" defaultValue={fields.maxAi} className="field" aria-label="Maximum AI involvement">
           {AI_LIMITS.map(([v, l]) => (
             <option key={v} value={v}>
@@ -142,7 +155,7 @@ export function ExploreView({
             </option>
           ))}
         </select>
-        <label className="flex items-center gap-2 text-sm text-ink-soft sm:col-span-2 lg:col-span-3">
+        <label className="flex items-center gap-2 text-sm text-ink-soft sm:col-span-2 lg:col-span-4">
           <input type="checkbox" name="verified" value="1" defaultChecked={fields.verified} className="h-4 w-4 accent-[var(--accent)]" />
           Only show work with process evidence attached
         </label>

@@ -7,5 +7,5 @@ export const SITE = {
   contactEmail: process.env.CONTACT_EMAIL ?? "hello@unprompters.com",
   address: process.env.LEGAL_ADDRESS ?? "India",
   grievanceOfficer: process.env.GRIEVANCE_OFFICER ?? "The founder of Unprompters",
-  lastUpdated: "25 October 2026",
+  lastUpdated: "5 November 2026",
 };

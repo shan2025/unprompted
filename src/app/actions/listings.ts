@@ -12,7 +12,7 @@ import { siteUrl } from "@/lib/format";
 import { parseListingForm, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
 import { PAYMENT_LINK_HELP, parsePaymentLink } from "@/lib/payment-link";
 import { withinLimit } from "@/lib/rate-limit";
-import { deleteUploads, saveEvidenceFiles, saveUpload } from "@/lib/uploads";
+import { deleteUploads, saveEvidenceFiles, saveUpload, saveWithUploads } from "@/lib/uploads";
 
 function slugify(title: string) {
   const base = title
@@ -80,24 +80,26 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
   }
   const slug = slugify(v.title);
 
-  await db.insert(schema.listings).values({
-    slug,
-    creatorId: user.id,
-    title: v.title,
-    category: v.category,
-    summary: v.summary,
-    preview: v.preview,
-    locked: v.locked,
-    aiNotes: v.aiNotes,
-    priceCents: v.priceCents,
-    paymentUrl: v.paymentUrl,
-    license: v.license,
-    coverFile,
-    status: score.needsReview ? "in_review" : "published",
-    disclosure: v.disclosure,
-    ...scoreColumns(result),
-    evidence,
-  });
+  await saveWithUploads([coverFile, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
+    db.insert(schema.listings).values({
+      slug,
+      creatorId: user.id,
+      title: v.title,
+      category: v.category,
+      summary: v.summary,
+      preview: v.preview,
+      locked: v.locked,
+      aiNotes: v.aiNotes,
+      priceCents: v.priceCents,
+      paymentUrl: v.paymentUrl,
+      license: v.license,
+      coverFile,
+      status: score.needsReview ? "in_review" : "published",
+      disclosure: v.disclosure,
+      ...scoreColumns(result),
+      evidence,
+    }),
+  );
 
   redirect(`/listing/${slug}?created=1`);
 }

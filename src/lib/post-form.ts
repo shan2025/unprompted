@@ -1,6 +1,7 @@
 import { isCategory, type CategoryId } from "./categories";
 import { parseDisclosure, parseEvidence, parseImage, str, type EvidenceFile, type FieldErrors, type ParsedImage, type PreviewResult } from "./listing-form";
 import type { Disclosure, Evidence } from "./scoring";
+import { parseVideoLink, VIDEO_LINK_HELP } from "./video";
 
 export const MAX_BODY = 50_000;
 export const MAX_COMMENT = 2_000;
@@ -10,6 +11,7 @@ export interface ParsedPost {
   subtitle: string;
   category: CategoryId;
   body: string;
+  videoUrl: string | null;
   aiNotes: string;
   disclosure: Disclosure;
   evidence: Evidence[];
@@ -35,6 +37,10 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
   const body = str(fd, "body");
   if (body.length > MAX_BODY) errors.body = "Keep the post under 50,000 characters.";
 
+  const videoLink = str(fd, "videoUrl");
+  const videoUrl = videoLink ? parseVideoLink(videoLink) : null;
+  if (videoLink && !videoUrl) errors.videoUrl = VIDEO_LINK_HELP;
+
   const aiNotes = str(fd, "aiNotes");
   if (aiNotes.length > 1000) errors.aiNotes = "Keep this under 1,000 characters.";
 
@@ -42,7 +48,7 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
   const { evidence, files: evidenceFiles } = await parseEvidence(fd, errors);
   const image = await parseImage(fd, errors);
 
-  if (!body && !image && !errors.cover) errors.body = "Write something or add an image.";
+  if (!body && !image && !videoLink && !errors.cover) errors.body = "Write something, or add a video or an image.";
 
   if (requireAttestation && fd.get("attest") !== "on") {
     errors.attest = "Please confirm your disclosure is accurate.";
@@ -50,6 +56,6 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
 
   if (Object.keys(errors).length) return { errors };
 
-  const values: ParsedPost = { title, subtitle, category: category as CategoryId, body, aiNotes, disclosure, evidence, evidenceFiles, image };
+  const values: ParsedPost = { title, subtitle, category: category as CategoryId, body, videoUrl, aiNotes, disclosure, evidence, evidenceFiles, image };
   return { values };
 }

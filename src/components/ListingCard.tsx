@@ -24,6 +24,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
         <div className="flex items-center gap-2">
           <span className="eyebrow">{categoryLabel(listing.category)}</span>
           {listing.isDemo && <span className="rounded bg-line/70 px-1.5 text-[10px] font-semibold text-muted">DEMO</span>}
+          {listing.priceCents > 0 && listing.status !== "sold" && <span className="ml-auto text-xs font-medium text-muted">For sale</span>}
         </div>
         <h3 className="mt-1.5 text-lg font-medium leading-snug text-ink group-hover:text-accent">{listing.title}</h3>
         <p className="mt-1 text-sm text-muted">by {listing.creatorName}</p>

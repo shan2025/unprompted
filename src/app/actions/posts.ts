@@ -11,7 +11,7 @@ import { safeNext } from "@/lib/format";
 import { UNREADABLE_EVIDENCE, UNREADABLE_IMAGE } from "@/lib/listing-form";
 import { MAX_COMMENT, parsePostForm, type PostCreateState, type PostPreviewState } from "@/lib/post-form";
 import { withinLimit } from "@/lib/rate-limit";
-import { deleteUploads, saveEvidenceFiles, saveUpload } from "@/lib/uploads";
+import { deleteUploads, saveEvidenceFiles, saveUpload, saveWithUploads } from "@/lib/uploads";
 
 function slugify(title: string) {
   const base = title
@@ -78,20 +78,23 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
   }
   const slug = slugify(v.title);
 
-  await db.insert(schema.posts).values({
-    slug,
-    authorId: user.id,
-    title: v.title,
-    subtitle: v.subtitle,
-    category: v.category,
-    body: v.body,
-    aiNotes: v.aiNotes,
-    coverFile,
-    status: result.score.needsReview ? "in_review" : "published",
-    disclosure: v.disclosure,
-    ...scoreColumns(result),
-    evidence,
-  });
+  await saveWithUploads([coverFile, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
+    db.insert(schema.posts).values({
+      slug,
+      authorId: user.id,
+      title: v.title,
+      subtitle: v.subtitle,
+      category: v.category,
+      body: v.body,
+      videoUrl: v.videoUrl,
+      aiNotes: v.aiNotes,
+      coverFile,
+      status: result.score.needsReview ? "in_review" : "published",
+      disclosure: v.disclosure,
+      ...scoreColumns(result),
+      evidence,
+    }),
+  );
 
   redirect(`/journal/${slug}?created=1`);
 }

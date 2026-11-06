@@ -63,7 +63,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 | Provenance | Verify C2PA signatures (today we only detect that a manifest exists) |
 | File delivery | Deliverables are text or links; add secure file uploads and downloads |
 | Storage | Public image copies are stored in the database; move to object storage as volume grows (`src/lib/uploads.ts`) |
-| Accounts | Email verification, password reset, seller identity verification, rate limiting |
+| Accounts | Email verification, seller identity verification |
 | Moderation | Creator appeals UI, edit and relist after review, reputation history |
 | Legal | Terms of service, DMCA process, refund policy (see the research doc) |
 

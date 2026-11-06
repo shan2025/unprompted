@@ -9,14 +9,17 @@ export function Footer() {
         <div className="max-w-sm">
           <Mark className="mb-3 h-8 w-8 text-ink" />
           <p>
-            A marketplace for work made by people. Every listing shows how much AI was involved, with the reasoning out in
-            the open.
+            A place to explore work made by people, and buy it if it&apos;s for sale. Every piece shows how much AI was
+            involved, with the reasoning out in the open.
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="eyebrow mb-1">Market</span>
+          <span className="eyebrow mb-1">Explore</span>
           <Link href="/explore" className="hover:text-ink">
             Explore
+          </Link>
+          <Link href="/journal/new" className="hover:text-ink">
+            Share your work
           </Link>
           <Link href="/sell" className="hover:text-ink">
             Sell your work

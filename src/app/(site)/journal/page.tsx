@@ -8,7 +8,7 @@ import { searchPosts } from "@/lib/journal";
 
 export const metadata: Metadata = {
   title: "Journal",
-  description: "Articles, poems, art, process notes and ideas, shared for free. Every post shows how much AI was involved.",
+  description: "Articles, poems, art, films, process notes and ideas, shared for free. Every post shows how much AI was involved.",
 };
 
 type Params = Record<string, string | string[] | undefined>;
@@ -21,12 +21,12 @@ export default function JournalPage({ searchParams }: { searchParams: Promise<Pa
           <p className="eyebrow">Journal</p>
           <h1 className="mt-1 text-4xl font-light sm:text-5xl">Shared, not sold</h1>
           <p className="mt-3 max-w-2xl text-lg text-ink-soft">
-            Articles, poems, sketches, process notes and ideas from the people who make things here. Same honesty rules
-            as the market: every post shows how much AI was involved.
+            Articles, poems, sketches, films, process notes and ideas from the people who make things here. Same honesty
+            rules as everything else here: every post shows how much AI was involved.
           </p>
         </div>
-        <Link href="/journal/new" className="btn-primary">
-          Write a post
+        <Link href="/journal/new" className="btn-ghost">
+          Share your work
         </Link>
       </div>
       <Suspense fallback={<PostGridSkeleton />}>

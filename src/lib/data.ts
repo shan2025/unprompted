@@ -1,12 +1,12 @@
 import "server-only";
-import { and, asc, avg, count, desc, eq, ilike, inArray, lte, or, sql, sum } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gt, ilike, inArray, lte, or, sql, sum } from "drizzle-orm";
 import { isCategory } from "./categories";
 import type { Sort } from "./sorts";
 import { hideDemo } from "./demo";
 import { db, schema } from "./db";
 import { TIER_INFO, type Tier } from "./scoring";
 
-const { listings, users, orders, flags } = schema;
+const { listings, posts, users, orders, flags, inquiries } = schema;
 
 // Listings anyone can see. "in_review" and "removed" are owner/admin only.
 const PUBLIC_STATUSES = ["published", "sold"] as const;
@@ -41,6 +41,8 @@ export interface ListingFilters {
   categories?: string[];
   maxAi?: number;
   verified?: boolean;
+  /** Only listings that cost money, or only free ones. */
+  price?: "paid" | "free";
   sort?: Sort;
   limit?: number;
 }
@@ -55,6 +57,8 @@ export async function searchListings(filters: ListingFilters) {
   if (categories.length) where.push(inArray(listings.category, categories));
   if (filters.maxAi !== undefined) where.push(lte(listings.aiPercent, filters.maxAi));
   if (filters.verified) where.push(eq(listings.processVerified, true));
+  if (filters.price === "paid") where.push(gt(listings.priceCents, 0));
+  if (filters.price === "free") where.push(eq(listings.priceCents, 0));
   if (hideDemo()) where.push(eq(listings.isDemo, false));
 
   const order = {
@@ -210,6 +214,44 @@ export async function getDashboard(userId: number) {
     waiting,
     purchases,
   };
+}
+
+/** True once someone has shared or listed anything. Everyone else is here to explore, so they don't see posting tools. */
+export async function isCreator(userId: number) {
+  const [[listing], [post]] = await Promise.all([
+    db.select({ id: listings.id }).from(listings).where(eq(listings.creatorId, userId)).limit(1),
+    db.select({ id: posts.id }).from(posts).where(eq(posts.authorId, userId)).limit(1),
+  ]);
+  return Boolean(listing || post);
+}
+
+/** Where someone lands after logging in, unless they were on their way somewhere. */
+export async function homePath(userId: number) {
+  return (await isCreator(userId)) ? "/dashboard" : "/explore";
+}
+
+/** Questions people have asked about this creator's work, newest first. */
+export async function getInquiries(creatorId: number) {
+  return db
+    .select({
+      id: inquiries.id,
+      message: inquiries.message,
+      createdAt: inquiries.createdAt,
+      senderName: users.name,
+      senderHandle: users.handle,
+      senderEmail: users.email,
+      listingSlug: listings.slug,
+      listingTitle: listings.title,
+      postSlug: posts.slug,
+      postTitle: posts.title,
+    })
+    .from(inquiries)
+    .innerJoin(users, eq(inquiries.senderId, users.id))
+    .leftJoin(listings, eq(inquiries.listingId, listings.id))
+    .leftJoin(posts, eq(inquiries.postId, posts.id))
+    .where(eq(inquiries.creatorId, creatorId))
+    .orderBy(desc(inquiries.createdAt))
+    .limit(50);
 }
 
 export async function getReviewQueue() {

@@ -1,45 +1,54 @@
-# Go-to-market plan: from working site to first sales
+# Go-to-market plan: from working site to an active community and first sales
 
-*October 2026. Where we are, what's blocking us, and the order to do things in. Sources at the end. Figures from secondary sources are flagged.*
+*Updated November 2026 for the explore-first direction: Unprompters is a place to explore human-made work, and also a marketplace. Where we are, what's blocking us, and the order to do things in. Sources at the end. Figures from secondary sources are flagged.*
 
 ## Where we are
 
-**Built:** marketplace with AI-involvement scores, sell form with score preview, review queue, reports, creator profiles, embeddable badges, guided `/start` entry page, deployed on Vercel + Supabase.
+**Built:** marketplace with AI-involvement scores, Journal posts for work shared for free, appreciations, comments and follows, sell form with score preview, seller payment links, review queue, reports, creator profiles, embeddable badges, password reset, legal pages, a switch to hide demo content, deployed on Vercel + Supabase at unprompters.com.
 
-**Not built yet:** real payments, password reset and email, secure file delivery, legal pages, SEO basics (sitemap, share images, structured data).
+**Not built yet:** video posts, a way to ask a creator about buying a work, one explore feed across free and for-sale work, SEO basics (sitemap, share images, structured data), analytics, email verification, platform-run payments.
 
-**Biggest risk right now:** not the product, but an empty marketplace. Buyers don't come to empty shelves, and sellers don't list where there are no buyers.
+**In progress:** a real `hello@unprompters.com` mailbox on Google Workspace, waiting on domain verification.
+
+**Biggest risk right now:** not the product, but an empty feed. People won't come back to explore if there's little to see, and creators won't post where nobody is looking.
 
 ---
 
 ## 1. Positioning: who we are, in one line
 
-> **The marketplace that shows how much AI is in everything it sells.**
+> **Explore work made by people, see how it was made, and buy it if it's for sale.**
+
+Exploring and enjoying the work comes first, like Instagram. Buying is something people can do once they're there, and not everything needs a price. Anyone can browse a work and ask its creator whether they would sell it.
 
 Not "anti-AI". "Transparent about AI." That's more honest (AI use is a spectrum), it's defensible (we don't claim to detect what detectors can't), and it gives AI-assisted creators a reason to join too.
 
-**Name:** move to **Unprompters** (unprompters.com is available). "Unprompted" is crowded: an AI security conference, an AI-art guessing game, and a creative-writing app already use it. "Made by Unprompters" works as a tagline and a community name.
+**Why come here instead of Instagram:** proof. Nobody leaves Instagram for a smaller Instagram. Showing how each work was made has to be the most enjoyable part of the page, not a compliance step.
 
-**Start narrow.** "Sell anything non-AI" is the vision, not the launch. Launch with the two groups that care most and already have process evidence:
+**Name:** **Unprompters** (unprompters.com). "Unprompted" is crowded: an AI security conference, an AI-art guessing game, and a creative-writing app already use it. "Made by Unprompters" works as a tagline and a community name.
 
-| Launch with | Why |
+**Launch with every category.** Decided November 2026: code, handicrafts, articles, journals, art, music, films and shorts are all open from day one, so any creator can post.
+
+**The risk:** an explore feed needs fresh work every day, and thin coverage across every category can feel empty. To limit that, the home feed and featured spots should show the strongest recent work across categories, and outreach can still be aimed at the groups most likely to say yes first.
+
+| Likely first groups for outreach | Why |
 | --- | --- |
 | **Illustrators and artists** | The angriest about AI, and proven to move: Cara went from 40,000 to 650,000 users in a week in June 2024 when Meta announced AI training on posts. Time-lapses and sketches are natural evidence. |
 | **Writers and poets** | Authors Guild "Human Authored" has certified 5,000+ books, so writers already seek this. Draft history is natural evidence. |
-| Later: code, music, ideas, design | Code buyers care less about human authorship; ideas are legally weak to sell. Add once the core works. |
+| **Short-film makers and video editors** | Video travels well on social media, and raw footage and edit timelines are natural evidence. Needs video posts first. |
+| Code, handicrafts, music, ideas, design | Open from day one too. Code buyers care less about human authorship, and ideas are legally weak to sell, so these may need more explaining. |
 
 **Watch:** [Fybe](https://fybe.art/), a no-AI, no-drop-shipping Etsy alternative for **fiber arts** (cross-stitch, embroidery, knitting), founded by Rachel Powell in Maine. It opened to sellers around August 2026, was crowdfunded, uses volunteer moderators, and charges 5% at most. No revenue or funding figures are public. It isn't a direct competitor, but it is proof that sellers will move over AI, and its 5% fee sets creators' expectations. Our difference: graded transparency (a % with a range, not a yes/no rule), writing as well as art, and the embeddable badge that travels with the work.
 
 ---
 
-## 2. Getting the first 100 sellers (supply first)
+## 2. Getting the first 100 creators (supply first)
 
-Marketplace research is consistent: recruit sellers by hand in a narrow niche before spending anything on buyers.
+Marketplace research is consistent: recruit creators by hand in a narrow niche before spending anything on reaching an audience. Creators don't need to sell anything to join, so the ask is smaller: share work you've already made.
 
 **Founding Unprompters program**
-- Hand-pick 100 creators. Offer: **0% commission for the first year**, a permanent "Founding Unprompter" badge, and a featured spot on the home page.
-- **Do the work for them.** Ask permission, then create their first listing from their existing portfolio. Your time is the cheapest growth channel you have.
-- Ask each one to post their badge and listing link once. Each badge on a creator's site or bio is free promotion and a backlink.
+- Hand-pick 100 creators. Offer: **0% commission for the first year if they sell**, a permanent "Founding Unprompter" badge, and a featured spot on the home page.
+- **Do the work for them.** Ask permission, then create their first post or listing from their existing portfolio. Your time is the cheapest growth channel you have.
+- Ask each one to post their badge and work link once. Each badge on a creator's site or bio is free promotion and a backlink.
 
 **Where to find them**
 - Instagram artist and poetry communities (search the hashtags `#noai`, `#humanmade`, `#instapoetry`, `#indianartist`)
@@ -48,30 +57,39 @@ Marketplace research is consistent: recruit sellers by hand in a narrow niche be
 - Fine-arts and design colleges: students want income and portfolios
 - Substack writers, open-mic and poetry collectives, NaNoWriMo-style writing groups
 - Authors with Authors Guild "Human Authored" certified books
+- Independent filmmakers and video editors on YouTube and Vimeo, film schools and short-film festivals, if film is a launch category
 
-**Message that works:** don't pitch a platform, pitch a benefit. *"Your work keeps getting called AI. Here's a page that proves it isn't, with your process attached, and a badge you can put anywhere."*
+**Message to try:** don't pitch a platform, pitch a benefit. *"Your work keeps getting called AI. Here's a page that proves it isn't, with your process attached, and a badge you can put anywhere."*
 
 **Be ready for the next AI controversy.** Cara's growth came from one news moment. Keep a ready-to-post page and message ("Leaving because your art is being used to train AI? Here's a place that shows its work") and publish the day it happens.
 
 ---
 
-## 3. Getting buyers
+## 3. Getting an audience, then buyers
 
-1. **Creators bring their own audiences first.** Every founding creator who shares their listing brings buyers at zero cost. That's why the badge and share images matter.
+**Audience first:**
+1. **Creators bring their own followers.** Every founding creator who shares a work brings visitors at zero cost, and they land on the work itself. That's why the badge and share images matter.
+2. **Short clips on Instagram:** with the creator's permission, repost a work alongside its process: "here's the human behind this".
+3. **Launches:** Product Hunt, Hacker News "Show HN", and Indian startup press (YourStory, Inc42). The angle: *an Indian founder built a place to explore human-made work, showing how much AI is in each piece.* Wait until there's real work to show.
+
+**Buyers, from that audience:**
+1. **"Ask the creator":** anyone can ask about buying a work, including one with no price. This turns appreciation into sales conversations.
 2. **Gifting and collectors:** original art, commissioned poems and prints are gifts people pay a premium for when they know a person made them.
 3. **Businesses (the bigger money):** brands, agencies and publishers increasingly want human-made illustration and copy, and want proof they can show their own customers. Add a "commission a human" request form later; this is where larger orders are.
-4. **Launches:** Product Hunt, Hacker News "Show HN", and Indian startup press (YourStory, Inc42). The angle: *an Indian founder built a marketplace that shows how much AI is in art.*
 
 ---
 
 ## 4. SEO: what to build and what to write
 
+Articles, journals and creator pages give Google far more to index than product listings alone. Expect search to build slowly: it supports the plan rather than starting it.
+
 **Technical (missing today, quick to add):**
 - `sitemap.xml` and `robots.txt`
-- Page titles and descriptions for every listing, category and creator page
-- **Share images:** each listing shows its title and AI score when shared on WhatsApp, X or LinkedIn
-- Product structured data (price, availability) so Google can show rich results
-- Category landing pages with real text: "Human-made illustration for sale", "Poetry written without AI"
+- Page titles and descriptions for every post, listing, category and creator page
+- **Share images:** each work shows its title and AI score when shared on WhatsApp, X or LinkedIn
+- Structured data so Google can show rich results: article data for posts, product data (price, availability) for listings
+- Category landing pages with real text: "Human-made illustration", "Poetry written without AI"
+- Google Search Console, connected once the sitemap is live
 
 **A free tool as the traffic magnet:**
 - **"Does my writing look AI-generated?"**: paste text, see the passage-by-passage analysis we already built, with an honest explanation of detector limits. Students, writers and freelancers search for this constantly because they get falsely accused. At the end: *"Made it yourself? List it and prove it."*
@@ -119,7 +137,7 @@ There are real constraints for an India-based marketplace:
 
 *Small story (weak):* "A marketplace for non-AI products."
 
-*Big story (strong):* **"We're building the trust layer for human-made work."** The marketplace is the starting point. The valuable part is the verification system: disclosure, scanning, process evidence and the badge. Every listing makes that data better, and the badge spreads across the web. Later it becomes a service other platforms pay for (publishers, stock sites, print shops, schools).
+*Big story (strong):* **"We're building the trust layer for human-made work."** The place to explore that work, with a marketplace attached, is the starting point. The valuable part is the verification system: disclosure, scanning, process evidence and the badge. Every post and listing makes that data better, and the badge spreads across the web. Later it becomes a service other platforms pay for (publishers, stock sites, print shops, schools).
 
 **Why now:**
 - The EU AI Act's labelling rules (Article 50) and California's AI Transparency Act both took effect 2 August 2026
@@ -133,7 +151,7 @@ There are real constraints for an India-based marketplace:
 - *"Can you get supply?"* Show the founding-creator numbers.
 - *"Was this built with AI?"* Be upfront: yes, the software was built with AI-assisted development. The human-made promise is about the **works sold**, not the tooling. Say it before they ask.
 
-**What to have before applying:** 50–100 real sellers, real listings (demo ones removed), first sales (even through Stage 0 payment links), and a week-over-week growth number. Also worth applying to: Indian programs like Peak XV's Surge, Antler India and 100X.VC (check current intake dates).
+**What to have before applying:** 50–100 real creators, real posts and listings (demo ones removed), people returning each week, first sales (even through Stage 0 payment links), and a week-over-week growth number. Also worth applying to: Indian programs like Peak XV's Surge, Antler India and 100X.VC (check current intake dates).
 
 **Practical note:** YC invests in companies set up as US (Delaware) corporations and helps Indian founders with that move. Incorporating in the US first would also make Stripe easier. Ask a CA or lawyer before choosing where to register.
 
@@ -143,34 +161,39 @@ There are real constraints for an India-based marketplace:
 
 | # | Blocker | Fix | Who |
 | --- | --- | --- | --- |
-| 1 | Brand and domain | Buy unprompters.com, rename the site, connect it to Vercel | You buy it; I rename and connect |
-| 2 | Legal pages | Terms, privacy, refund policy, contact page (Razorpay requires them) | I draft; a lawyer reviews |
-| 3 | No way to pay | Stage 0 seller payment links now; Razorpay later | I build |
-| 4 | SEO basics | Sitemap, share images, structured data, category pages | I build |
-| 5 | Locked-out users | Password reset and email verification (needs an email service such as Resend) | I build; you create the account |
-| 6 | Real files | Secure file uploads and downloads for deliverables (Supabase Storage) | I build |
-| 7 | Demo listings | Hide or remove once real listings exist | I build a switch |
-| 8 | No numbers | Privacy-friendly analytics (Vercel Analytics or Plausible) | I add |
-| 9 | Business setup | Registration, current account, GST | You, with a CA |
+| 1 | Site still says "marketplace" | Change the homepage and site description to the new message | I update |
+| 2 | Mailbox | Finish Google Workspace domain verification, then switch the mail records from ImprovMX | You verify; I update DNS |
+| 3 | No video or crafts | Add Film & video and Handicrafts categories. Creators paste a YouTube or Vimeo link and it plays on the post. Host films ourselves only once people are watching, because it gets expensive quickly | I build |
+| 4 | Can't ask about buying | "Ask the creator" button on any work | I build |
+| 5 | Exploring is split up | One feed across free posts and items for sale, each clearly marked | I build |
+| 6 | SEO basics | Sitemap, share images, structured data, category pages | I build |
+| 7 | No numbers | Privacy-friendly analytics (Vercel Analytics or Plausible) | I add |
+| 8 | Demo content | Turn on `HIDE_DEMO_CONTENT` once real work exists | You decide; I set it |
+| 9 | Unconfirmed accounts | Email verification | I build |
+| 10 | Legal pages | Published; have a lawyer review them, and check they still fit video and creator contact | I update; a lawyer reviews |
+| 11 | Business setup | Registration, current account, GST | You, with a CA |
+
+**Done since October:** domain live with the Unprompters name, seller payment links, password reset, sending email from the domain through Resend, a switch to hide demo content.
 
 ## 8. The next 90 days
 
 **Weeks 1–2: get ready**
-- Domain live, name changed, legal pages, SEO basics, Stage 0 payments, analytics
+- Update the site's message; add video by link, "Ask the creator" and one explore feed
+- SEO basics, analytics and the real mailbox
 - Make a list of 300 candidate creators
 
 **Weeks 3–6: founding creators**
-- Message 20–30 creators a day; aim for 100 signed up and 50 with real listings
+- Message 20–30 creators a day; aim for 100 signed up and 50 with real work posted
 - Publish the free "Does my writing look AI-generated?" tool
 - One creator spotlight a week on Instagram and LinkedIn
 
-**Weeks 7–12: first sales and a launch**
+**Weeks 7–12: an active community, first sales and a launch**
 - Launch on Product Hunt and Show HN; pitch Indian startup press
 - Register the business; Razorpay checkout (Stage 1)
-- Track: active sellers, listings, visits, sales, weekly growth
+- Track: active creators, works posted, visits, returning visitors, questions to creators, sales, weekly growth
 - Apply to YC or Indian accelerators with real numbers
 
-**What success looks like at day 90:** 100 founding creators, 200+ real listings, first 50 sales, and a clear weekly growth rate. That's a story an investor can say yes to.
+**What success looks like at day 90:** 100 founding creators, 200+ real works posted, people returning each week, first 50 sales, and a clear weekly growth rate. That's a story an investor can say yes to.
 
 ---
 

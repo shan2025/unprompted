@@ -2,28 +2,38 @@ import Link from "next/link";
 import { categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format";
 import type { PostCard as PostCardData } from "@/lib/journal";
+import { videoEmbed } from "@/lib/video";
 import { Cover } from "./Cover";
 import { AiPill } from "./Score";
 
 export function PostCard({ post }: { post: PostCardData }) {
+  const video = post.videoUrl ? videoEmbed(post.videoUrl) : null;
+  const hasPicture = Boolean(post.coverFile || video);
   return (
     <Link
       href={`/journal/${post.slug}`}
       className="group card flex flex-col overflow-hidden transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgb(60_40_20/0.25)]"
     >
-      {post.coverFile && (
-        <div className="aspect-[16/9] overflow-hidden border-b border-line">
-          <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} title={post.title} />
+      {hasPicture && (
+        <div className="relative aspect-[16/9] overflow-hidden border-b border-line">
+          {!post.coverFile && video?.thumbnail ? (
+            // eslint-disable-next-line @next/next/no-img-element -- thumbnails come straight from the video's host
+            <img src={video.thumbnail} alt={post.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+          ) : (
+            <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} title={post.title} />
+          )}
+          {video && <PlayBadge />}
         </div>
       )}
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-center gap-2">
           <span className="eyebrow">{categoryLabel(post.category)}</span>
           {post.isDemo && <span className="rounded bg-line/70 px-1.5 text-[10px] font-semibold text-muted">DEMO</span>}
+          <span className="ml-auto text-xs font-medium text-muted">{video ? "Free to watch" : "Free to read"}</span>
         </div>
         <h3 className="mt-1.5 text-xl font-medium leading-snug text-ink group-hover:text-accent">{post.title}</h3>
         {post.excerpt && (
-          <p className={`mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink-soft ${post.coverFile ? "line-clamp-2" : "line-clamp-5"}`}>
+          <p className={`mt-2 whitespace-pre-line text-[15px] leading-relaxed text-ink-soft ${hasPicture ? "line-clamp-2" : "line-clamp-5"}`}>
             {post.excerpt}
           </p>
         )}
@@ -47,6 +57,16 @@ export function PostCard({ post }: { post: PostCardData }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+function PlayBadge() {
+  return (
+    <span className="absolute bottom-3 left-3 flex h-9 w-9 items-center justify-center rounded-full bg-ink/85 text-paper" aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="ml-0.5 h-4 w-4" fill="currentColor">
+        <path d="M7 4.5v15l13-7.5z" />
+      </svg>
+    </span>
   );
 }
 

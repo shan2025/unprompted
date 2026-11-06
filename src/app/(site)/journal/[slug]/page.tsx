@@ -3,19 +3,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { removeComment } from "@/app/actions/posts";
+import { AskCreator } from "@/components/AskCreator";
 import { Avatar } from "@/components/Avatar";
 import { CommentForm } from "@/components/CommentForm";
 import { Cover } from "@/components/Cover";
 import { DeletePostButton } from "@/components/DeletePostButton";
 import { EvidenceSource } from "@/components/EvidenceSource";
 import { FlagForm } from "@/components/FlagForm";
+import { JsonLd } from "@/components/JsonLd";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
 import { AppreciateButton, FollowButton } from "@/components/Social";
 import { SubmitButton } from "@/components/SubmitButton";
+import { VideoPlayer } from "@/components/VideoPlayer";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryLabel } from "@/lib/categories";
-import { formatDate, plural } from "@/lib/format";
+import { formatDate, plural, siteUrl } from "@/lib/format";
 import { getPost, getPostActivity, isFollowing } from "@/lib/journal";
 import { EVIDENCE_KINDS, TIER_INFO, type Tier } from "@/lib/scoring";
 
@@ -27,10 +30,14 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const row = await getPost(slug);
-  if (!row || row.post.status !== "published") return { title: "Journal" };
+  if (!row || row.post.status !== "published") return { title: "Journal", robots: { index: false } };
+  const description = `${row.post.aiPercent}% AI · ${TIER_INFO[row.post.tier as Tier]?.label}. ${row.post.subtitle || row.post.body.slice(0, 200)}`;
   return {
     title: row.post.title,
-    description: `${row.post.aiPercent}% AI · ${TIER_INFO[row.post.tier as Tier]?.label}. ${row.post.subtitle || row.post.body.slice(0, 200)}`,
+    description,
+    alternates: { canonical: `/journal/${row.post.slug}` },
+    robots: row.post.isDemo ? { index: false } : undefined,
+    openGraph: { siteName: "Unprompters", title: row.post.title, description, type: "article" },
   };
 }
 
@@ -66,6 +73,19 @@ async function PostView({ params, searchParams }: Props) {
 
   return (
     <>
+      {isPublished && !post.isDemo && (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: post.title,
+            description: post.subtitle || post.body.slice(0, 200),
+            datePublished: post.createdAt.toISOString(),
+            author: { "@type": "Person", name: author.name, url: `${siteUrl()}/u/${author.handle}` },
+            url: `${siteUrl()}${path}`,
+          }}
+        />
+      )}
       <Banner status={post.status} created={query.created === "1"} isAuthor={isAuthor} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
@@ -91,7 +111,9 @@ async function PostView({ params, searchParams }: Props) {
             {post.isDemo && <span className="ml-2 rounded bg-line/70 px-1.5 py-0.5 text-[11px] font-semibold text-muted">DEMO POST</span>}
           </p>
 
-          {post.coverFile && (
+          {post.videoUrl && <VideoPlayer link={post.videoUrl} title={post.title} />}
+
+          {post.coverFile && !post.videoUrl && (
             <div className="card mt-6 overflow-hidden">
               <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} title={post.title} className="max-h-[560px]" />
             </div>
@@ -211,6 +233,10 @@ async function PostView({ params, searchParams }: Props) {
               </div>
             )}
           </div>
+
+          {isPublished && !isAuthor && !post.isDemo && (
+            <AskCreator target="post" slug={post.slug} creatorName={author.name} loginHref={user ? undefined : `/login?next=${encodeURIComponent(path)}`} />
+          )}
 
           <p className="px-1 text-xs leading-relaxed text-muted">
             Disclosed by the author: {analysis.score.disclosedPercent}%. Estimate after automated checks and evidence:{" "}

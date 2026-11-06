@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireUser } from "@/lib/auth";
-import { getDashboard } from "@/lib/data";
+import { getDashboard, getInquiries } from "@/lib/data";
 import { formatDate, formatMoney, formatPrice } from "@/lib/format";
 import { getMyPosts } from "@/lib/journal";
 
@@ -31,13 +31,15 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const user = await requireUser("/dashboard");
-  const [data, posts] = await Promise.all([getDashboard(user.id), getMyPosts(user.id)]);
+  const [data, posts, questions] = await Promise.all([getDashboard(user.id), getMyPosts(user.id), getInquiries(user.id)]);
+  // Someone here only to explore gets their account and purchases, not selling tools.
+  const creator = data.listings.length > 0 || posts.length > 0;
 
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Dashboard</p>
+          <p className="eyebrow">{creator ? "Dashboard" : "Your account"}</p>
           <h1 className="mt-1 text-4xl font-light">Hi, {user.name.split(" ")[0]}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-ink-soft">
             <Link href={`/u/${user.handle}`} className="link">
@@ -52,20 +54,30 @@ async function Dashboard() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href="/journal/new" className="btn-ghost">
-            Write a post
-          </Link>
-          <Link href="/sell" className="btn-primary">
-            New listing
-          </Link>
+          {creator ? (
+            <>
+              <Link href="/journal/new" className="btn-ghost">
+                Share your work
+              </Link>
+              <Link href="/sell" className="btn-primary">
+                New listing
+              </Link>
+            </>
+          ) : (
+            <Link href="/explore" className="btn-primary">
+              Explore the work
+            </Link>
+          )}
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <Stat label="Listings" value={data.listings.length.toString()} />
-        <Stat label="Sales" value={data.sales.count.toString()} />
-        <Stat label="Earned" value={formatMoney(data.sales.totalCents)} />
-      </div>
+      {creator && (
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Stat label="Listings" value={data.listings.length.toString()} />
+          <Stat label="Sales" value={data.sales.count.toString()} />
+          <Stat label="Earned" value={formatMoney(data.sales.totalCents)} />
+        </div>
+      )}
 
       {data.waiting.length > 0 && (
         <section className="mt-12">
@@ -104,6 +116,39 @@ async function Dashboard() {
         </section>
       )}
 
+      {questions.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-2xl font-normal">Questions about your work</h2>
+          <p className="mt-1 text-sm text-ink-soft">People who asked agreed to share their email address with you. If you reply, they&apos;ll see yours too.</p>
+          <ul className="mt-4 space-y-3">
+            {questions.map((q) => {
+              const title = q.listingTitle ?? q.postTitle ?? "your work";
+              const href = q.listingSlug ? `/listing/${q.listingSlug}` : `/journal/${q.postSlug}`;
+              return (
+                <li key={q.id} className="card p-4">
+                  <p className="text-sm text-ink-soft">
+                    <Link href={`/u/${q.senderHandle}`} className="link">
+                      {q.senderName}
+                    </Link>{" "}
+                    asked about{" "}
+                    <Link href={href} className="font-semibold text-ink hover:text-accent">
+                      {title}
+                    </Link>{" "}
+                    · {formatDate(q.createdAt)}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap break-words leading-relaxed text-ink">{q.message}</p>
+                  <a href={`mailto:${q.senderEmail}?subject=${encodeURIComponent(`About ${title}`)}`} className="link mt-2 inline-block text-sm">
+                    Reply to {q.senderEmail}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {creator && (
+        <>
       <section className="mt-12">
         <h2 className="text-2xl font-normal">Your listings</h2>
         {data.listings.length === 0 ? (
@@ -191,6 +236,8 @@ async function Dashboard() {
           </div>
         )}
       </section>
+        </>
+      )}
 
       <section className="mt-12">
         <h2 className="text-2xl font-normal">Your purchases</h2>
@@ -198,7 +245,7 @@ async function Dashboard() {
           <p className="mt-3 text-ink-soft">
             Nothing yet.{" "}
             <Link href="/explore" className="link font-semibold text-ink">
-              Explore the market
+              Explore the work
             </Link>
           </p>
         ) : (

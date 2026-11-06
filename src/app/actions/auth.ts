@@ -4,6 +4,7 @@ import { randomInt } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { createSession, destroySession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
+import { homePath } from "@/lib/data";
 import { safeNext } from "@/lib/format";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
@@ -43,15 +44,29 @@ export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState>
     return { error: "Too many new accounts from this connection. Try again in an hour.", values };
   }
 
-  const [taken] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
-  if (taken) return { error: "That email already has an account. Try logging in.", values };
+  const emailTaken = async () => {
+    const [row] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
+    return Boolean(row);
+  };
+  const takenError = { error: "That email already has an account. Try logging in.", values };
+  if (await emailTaken()) return takenError;
 
-  const [user] = await db
-    .insert(schema.users)
-    .values({ name, handle: await makeHandle(name), email, passwordHash: await hashPassword(password) })
-    .returning({ id: schema.users.id });
-  await createSession(user.id);
-  return { next: safeNext(fd.get("next"), "/dashboard") };
+  // Another signup can take this email or handle after the checks above, so let
+  // the unique indexes decide. If it was the handle, the next try picks another.
+  const passwordHash = await hashPassword(password);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const [user] = await db
+      .insert(schema.users)
+      .values({ name, handle: await makeHandle(name), email, passwordHash })
+      .onConflictDoNothing()
+      .returning({ id: schema.users.id });
+    if (user) {
+      await createSession(user.id);
+      return { next: safeNext(fd.get("next"), "/explore") };
+    }
+    if (await emailTaken()) return takenError;
+  }
+  return { error: "We couldn't create your account. Please try again.", values };
 }
 
 export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> {
@@ -78,7 +93,7 @@ export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> 
   }
   await clearLimits(pairKey);
   await createSession(user.id);
-  return { next: safeNext(fd.get("next"), "/dashboard") };
+  return { next: safeNext(fd.get("next"), await homePath(user.id)) };
 }
 
 export async function logout() {

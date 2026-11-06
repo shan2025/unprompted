@@ -130,6 +130,8 @@ export const posts = pgTable(
     body: text("body").notNull().default(""),
     aiNotes: text("ai_notes").notNull().default(""),
     coverFile: text("cover_file"),
+    // A tidied YouTube or Vimeo link (see video.ts). We don't host video ourselves.
+    videoUrl: text("video_url"),
     status: text("status", { enum: ["published", "in_review", "removed"] })
       .notNull()
       .default("published"),
@@ -222,6 +224,32 @@ export const flags = pgTable(
     index("flags_comment_idx").on(t.commentId),
     index("flags_reporter_idx").on(t.reporterId),
     check("flags_one_target", sql`num_nonnulls(${t.listingId}, ${t.postId}, ${t.commentId}) = 1`),
+  ],
+).enableRLS();
+
+// "Ask the creator": a question about one listing or post, for example whether
+// a work that isn't for sale could be bought. The creator replies by email.
+export const inquiries = pgTable(
+  "inquiries",
+  {
+    id: id(),
+    listingId: integer("listing_id").references(() => listings.id, { onDelete: "cascade" }),
+    postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    senderId: integer("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    creatorId: integer("creator_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    message: text("message").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("inquiries_creator_idx").on(t.creatorId, t.createdAt),
+    index("inquiries_sender_idx").on(t.senderId),
+    index("inquiries_listing_idx").on(t.listingId),
+    index("inquiries_post_idx").on(t.postId),
+    check("inquiries_one_target", sql`num_nonnulls(${t.listingId}, ${t.postId}) = 1`),
   ],
 ).enableRLS();
 

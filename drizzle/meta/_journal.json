@@ -43,6 +43,13 @@
       "when": 1793809639778,
       "tag": "0005_vengeful_smasher",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793898651990,
+      "tag": "0006_watery_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

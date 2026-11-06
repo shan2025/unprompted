@@ -7,7 +7,19 @@ import { LogoutButton } from "./LogoutButton";
 
 const ITEM = "block w-full px-4 py-2.5 text-left text-sm text-ink hover:bg-line/50";
 
-export function AccountMenu({ name, handle, avatarFile, isAdmin }: { name: string; handle: string; avatarFile: string | null; isAdmin: boolean }) {
+export function AccountMenu({
+  name,
+  handle,
+  avatarFile,
+  isAdmin,
+  creator,
+}: {
+  name: string;
+  handle: string;
+  avatarFile: string | null;
+  isAdmin: boolean;
+  creator: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -54,8 +66,13 @@ export function AccountMenu({ name, handle, avatarFile, isAdmin }: { name: strin
             Edit profile
           </Link>
           <Link href="/dashboard" className={ITEM} onClick={close}>
-            Dashboard
+            {creator ? "Dashboard" : "Your account"}
           </Link>
+          {!creator && (
+            <Link href="/journal/new" className={ITEM} onClick={close}>
+              Share your work
+            </Link>
+          )}
           {isAdmin && (
             <Link href="/admin" className={ITEM} onClick={close}>
               Review queue

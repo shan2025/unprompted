@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { GridSkeleton, ListingGrid } from "@/components/ListingCard";
 import { ExploreView } from "@/components/ExploreView";
+import { FeedGrid } from "@/components/FeedGrid";
+import { GridSkeleton } from "@/components/ListingCard";
 import { CATEGORY_IDS, type CategoryId } from "@/lib/categories";
-import { searchListings } from "@/lib/data";
+import { searchFeed } from "@/lib/feed";
+import { plural } from "@/lib/format";
+import { isShow, type Show } from "@/lib/show";
 import { SORTS, type Sort } from "@/lib/sorts";
 
-export const metadata: Metadata = { title: "Explore" };
+export const metadata: Metadata = {
+  title: "Explore",
+  description: "Read, watch and buy writing, art, film, code, handicrafts and more, made by people. Every piece shows how much AI was involved.",
+  alternates: { canonical: "/explore" },
+};
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -42,23 +49,27 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const sortRaw = one(params.sort) ?? "new";
   const sort: Sort = sortRaw in SORTS ? (sortRaw as Sort) : "new";
   const verified = one(params.verified) === "1";
+  const showRaw = one(params.show);
+  const show: Show = isShow(showRaw) ? showRaw : "all";
 
-  const listings = await searchListings({ q, categories, maxAi, sort, verified });
+  const items = await searchFeed({ q, categories, maxAi, sort, verified, show });
+  const priceSorted = sort === "price-low" || sort === "price-high";
 
   return (
-    <ExploreView filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified }}>
+    <ExploreView filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show }}>
       <p className="mb-4 text-sm text-muted">
-        {listings.length === 0 ? "No listings match." : `${listings.length} ${listings.length === 1 ? "listing" : "listings"}`}
+        {items.length === 0 ? "Nothing matches." : plural(items.length, "work")}
+        {priceSorted && show !== "video" && " · Sorting by price shows listings only."}
       </p>
-      {listings.length > 0 ? (
-        <ListingGrid listings={listings} />
+      {items.length > 0 ? (
+        <FeedGrid items={items} />
       ) : (
         <div className="card p-10 text-center">
           <p className="font-display text-xl font-medium">Nothing here yet.</p>
           <p className="mt-2 text-ink-soft">
             Try loosening the filters, or{" "}
-            <Link href="/sell" className="link font-semibold text-ink">
-              list something of your own
+            <Link href="/journal/new" className="link font-semibold text-ink">
+              share something of your own
             </Link>
             .
           </p>

@@ -11,7 +11,7 @@ type Goal = "sell" | "buy";
 
 const GOALS: { id: Goal; label: string; hint: string }[] = [
   { id: "sell", label: "Sell my work", hint: "List something you made and show how much of it is yours." },
-  { id: "buy", label: "Find human-made work", hint: "Browse code, writing, art and more, with the AI share on every listing." },
+  { id: "buy", label: "Explore human-made work", hint: "Read, watch and buy writing, art, film, code and more, with the AI share on every piece." },
 ];
 
 const SELLER_AI = [
@@ -37,8 +37,10 @@ const SYNONYMS: Record<CategoryId, string[]> = {
   photography: ["photo", "photograph", "prints", "stock", "film", "camera"],
   design: ["logo", "font", "typeface", "lettering", "ui", "ux", "branding", "pattern", "graphic"],
   music: ["song", "beat", "track", "sample", "audio", "podcast", "sound", "stems", "composition"],
+  film: ["movie", "short", "video", "documentary", "editing", "animation", "reel"],
+  crafts: ["craft", "handicraft", "handmade", "pottery", "ceramics", "weaving", "knitting", "embroidery", "woodwork", "jewellery", "jewelry"],
   idea: ["concept", "business plan", "startup", "plot", "pitch", "invention", "product"],
-  other: ["craft", "anything"],
+  other: ["anything"],
 };
 
 function matches(query: string) {

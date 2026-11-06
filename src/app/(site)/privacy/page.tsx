@@ -33,8 +33,13 @@ export default function PrivacyPage() {
             buyers, images, your AI disclosure, process evidence files, links and notes.
           </li>
           <li>
-            <strong className="text-ink">Activity on the site:</strong> purchases, reports you file, and the review history
-            of your listings.
+            <strong className="text-ink">Activity on the site:</strong> purchases, reports you file, questions you ask
+            creators, and the review history of your listings.
+          </li>
+          <li>
+            <strong className="text-ink">Visit statistics:</strong> pages viewed, where visitors came from, and general
+            device and country details, collected through Vercel Web Analytics without cookies, so we can see how the site
+            is used.
           </li>
           <li>
             <strong className="text-ink">One login cookie</strong> that keeps you signed in. We use no advertising or
@@ -81,8 +86,22 @@ export default function PrivacyPage() {
             <strong className="text-ink">Supabase</strong>: stores the database, in Mumbai, India.
           </li>
           <li>
+            <strong className="text-ink">Resend</strong>: sends our emails, such as password resets and questions to
+            creators.
+          </li>
+          <li>
+            The <strong className="text-ink">creator you ask a question</strong>: they see your name, profile handle, email
+            address and your question, so they can reply to you directly. The form tells you this before you send it. If a
+            creator replies from their own email, you will see their address.
+          </li>
+          <li>
+            <strong className="text-ink">YouTube and Vimeo</strong>: when you open a post with a video, your browser connects
+            to the video&apos;s host, which handles that connection under its own policy. We ask both for their
+            reduced-tracking players.
+          </li>
+          <li>
             The <strong className="text-ink">seller you buy from</strong>: when you tell them you&apos;ve paid, they see your
-            name, profile handle and the payment reference you give them. Never your email address.
+            name, profile handle and the payment reference you give them, but not your email address.
           </li>
           <li>
             The <strong className="text-ink">payment provider</strong> a seller uses. You pay through their link, so that

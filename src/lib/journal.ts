@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, lte, or, sql } from "drizzle-orm";
 import { isCategory } from "./categories";
 import { hideDemo } from "./demo";
 import { db, schema } from "./db";
@@ -20,6 +20,7 @@ const cardFields = {
   category: posts.category,
   excerpt: sql<string>`coalesce(nullif(${posts.subtitle}, ''), left(${posts.body}, 280))`,
   coverFile: posts.coverFile,
+  videoUrl: posts.videoUrl,
   aiPercent: posts.aiPercent,
   tier: posts.tier,
   processVerified: posts.processVerified,
@@ -34,6 +35,11 @@ const cardFields = {
 export interface PostFilters {
   q?: string;
   category?: string;
+  categories?: string[];
+  maxAi?: number;
+  verified?: boolean;
+  hasVideo?: boolean;
+  sort?: "new" | "least-ai";
   /** Only posts by people this user follows. */
   followedBy?: number;
   authorId?: number;
@@ -47,6 +53,11 @@ export async function searchPosts(filters: PostFilters) {
     where.push(or(ilike(posts.title, term), ilike(posts.subtitle, term), ilike(posts.body, term), ilike(users.name, term))!);
   }
   if (filters.category && isCategory(filters.category)) where.push(eq(posts.category, filters.category));
+  const categories = filters.categories?.filter(isCategory) ?? [];
+  if (categories.length) where.push(inArray(posts.category, categories));
+  if (filters.maxAi !== undefined) where.push(lte(posts.aiPercent, filters.maxAi));
+  if (filters.verified) where.push(eq(posts.processVerified, true));
+  if (filters.hasVideo) where.push(isNotNull(posts.videoUrl));
   if (filters.authorId !== undefined) where.push(eq(posts.authorId, filters.authorId));
   if (hideDemo()) where.push(eq(posts.isDemo, false));
   if (filters.followedBy !== undefined) {
@@ -63,7 +74,7 @@ export async function searchPosts(filters: PostFilters) {
     .from(posts)
     .innerJoin(users, eq(posts.authorId, users.id))
     .where(and(...where))
-    .orderBy(desc(posts.createdAt))
+    .orderBy(...(filters.sort === "least-ai" ? [asc(posts.aiPercent), desc(posts.createdAt)] : [desc(posts.createdAt)]))
     .limit(filters.limit ?? 60);
 }
 

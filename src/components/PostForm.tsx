@@ -82,8 +82,17 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
               Write
             </label>
             <textarea id="body" name="body" rows={16} className="field text-[16px] leading-relaxed" />
-            <p className="hint">An article, a poem, a process note, an idea. Blank lines start new paragraphs.</p>
+            <p className="hint">An article, a poem, a process note, an idea, or a few lines about your video. Blank lines start new paragraphs.</p>
             <FieldError errors={errors} name="body" />
+          </div>
+
+          <div>
+            <label htmlFor="videoUrl" className="label">
+              Video link <span className="font-normal text-muted">(optional)</span>
+            </label>
+            <input id="videoUrl" name="videoUrl" type="url" inputMode="url" className="field" maxLength={300} placeholder="https://www.youtube.com/watch?v=…" />
+            <p className="hint">A YouTube or Vimeo link plays right on your post. We can&apos;t scan video for AI, so your disclosure and process evidence carry the score.</p>
+            <FieldError errors={errors} name="videoUrl" />
           </div>
 
           <ImageField

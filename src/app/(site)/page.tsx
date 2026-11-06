@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { connection } from "next/server";
+import type { Metadata } from "next";
 import { Suspense } from "react";
-import { GridSkeleton, ListingGrid } from "@/components/ListingCard";
-import { PostGrid, PostGridSkeleton } from "@/components/PostCard";
+import { FeedGrid } from "@/components/FeedGrid";
+import { GridSkeleton } from "@/components/ListingCard";
 import { ScoreCard } from "@/components/Score";
 import { CATEGORIES } from "@/lib/categories";
-import { searchListings } from "@/lib/data";
-import { searchPosts } from "@/lib/journal";
+import { searchFeed } from "@/lib/feed";
 import { computeScore } from "@/lib/scoring";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 // A worked example for the hero: a short story with light AI help on the edit.
 const EXAMPLE = computeScore({
@@ -31,7 +33,7 @@ const STEPS = [
   {
     n: "03",
     title: "Prove",
-    body: "Drafts, time-lapses and commit history narrow the range. They're public, so buyers can check the receipts themselves.",
+    body: "Drafts, time-lapses and commit history narrow the range. They're public, so anyone can see how the work was made.",
   },
 ];
 
@@ -40,22 +42,23 @@ export default function Home() {
     <>
       <section className="mx-auto grid max-w-7xl items-center gap-16 px-4 pb-24 pt-20 sm:px-8 lg:grid-cols-[1.3fr_1fr] lg:pt-32">
         <div>
-          <p className="eyebrow">A market for human work</p>
+          <p className="eyebrow">A place for human work</p>
           <h1 className="mt-6 text-[44px] font-light leading-[1.04] sm:text-6xl lg:text-[76px]">
             Made by people.
             <br />
             Proven, not promised.
           </h1>
           <p className="mt-8 max-w-xl text-lg leading-relaxed text-ink-soft">
-            Buy and sell code, writing, art, ideas and anything else people make themselves. Every listing shows how much
-            AI was involved, as a number with a range and the reasoning behind it.
+            Explore writing, art, film, code, handicrafts and anything else people make themselves. See how each piece was
+            made and how much AI was involved, as a number with a range and the reasoning behind it. If it&apos;s for sale,
+            you can buy it.
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
-            <Link href="/start" className="btn-primary px-8 py-4">
-              Get started
+            <Link href="/explore" className="btn-primary px-8 py-4">
+              Explore the work
             </Link>
-            <Link href="/explore" className="btn-ghost px-8 py-4">
-              Explore the market
+            <Link href="/start" className="btn-ghost px-8 py-4">
+              Share or sell yours
             </Link>
           </div>
         </div>
@@ -79,34 +82,19 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
         <div className="mb-10 flex items-end justify-between gap-4">
-          <h2 className="text-4xl font-light">Recently listed</h2>
+          <h2 className="text-4xl font-light">Recently shared</h2>
           <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
             See everything
           </Link>
         </div>
-        <Suspense fallback={<GridSkeleton count={3} />}>
+        <Suspense fallback={<GridSkeleton count={6} />}>
           <Recent />
         </Suspense>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
-        <div className="mb-10 flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-4xl font-light">From the Journal</h2>
-            <p className="mt-2 text-ink-soft">Articles, poems and process notes, shared for free.</p>
-          </div>
-          <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
-            Read more
-          </Link>
-        </div>
-        <Suspense fallback={<PostGridSkeleton count={3} />}>
-          <RecentPosts />
-        </Suspense>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
         <h2 className="text-4xl font-light">Browse by craft</h2>
-        <div className="mt-10 grid grid-cols-2 border-l border-t border-line sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-10 grid grid-cols-2 border-l border-t border-line sm:grid-cols-3 lg:grid-cols-4">
           {CATEGORIES.map((c) => (
             <Link
               key={c.id}
@@ -160,32 +148,16 @@ export default function Home() {
 
 async function Recent() {
   await connection();
-  const listings = await searchListings({ sort: "new", limit: 6 });
-  if (listings.length === 0) {
+  const items = await searchFeed({ sort: "new", limit: 9 });
+  if (items.length === 0) {
     return (
       <p className="card p-8 text-center text-ink-soft">
-        Nothing listed yet.{" "}
+        Nothing shared yet.{" "}
         <Link href="/start" className="link text-ink">
           Be the first.
         </Link>
       </p>
     );
   }
-  return <ListingGrid listings={listings} />;
-}
-
-async function RecentPosts() {
-  await connection();
-  const posts = await searchPosts({ limit: 3 });
-  if (posts.length === 0) {
-    return (
-      <p className="card p-8 text-center text-ink-soft">
-        No posts yet.{" "}
-        <Link href="/journal/new" className="link text-ink">
-          Write the first one.
-        </Link>
-      </p>
-    );
-  }
-  return <PostGrid posts={posts} />;
+  return <FeedGrid items={items} />;
 }
