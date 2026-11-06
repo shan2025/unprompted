@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useId } from "react";
 import { askCreator } from "@/app/actions/inquiries";
 import { MAX_QUESTION } from "@/lib/inquiry";
+import { keepFields } from "./keepFields";
 
 /** `loginHref` is set when nobody is logged in, and replaces the form with a link. */
 export function AskCreator({
@@ -40,7 +41,7 @@ export function AskCreator({
           <strong className="text-ink">Sent.</strong> {firstName} can reply to your email address.
         </p>
       ) : (
-        <form action={action} className="mt-4 space-y-3">
+        <form action={action} onSubmit={keepFields(action)} className="mt-4 space-y-3">
           <input type="hidden" name="target" value={target} />
           <input type="hidden" name="slug" value={slug} />
           <label htmlFor={id} className="sr-only">

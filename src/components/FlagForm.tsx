@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { submitReport } from "@/app/actions/reports";
+import { keepFields } from "./keepFields";
 
 const REASONS = {
   listing: [
@@ -36,7 +37,7 @@ export function FlagForm({ target, id, compact }: { target: keyof typeof REASONS
       <summary className="cursor-pointer list-none font-medium text-muted hover:text-ink group-open:text-ink">
         {LABELS[target]}
       </summary>
-      <form action={action} className="mt-3 space-y-3 text-sm">
+      <form action={action} onSubmit={keepFields(action)} className="mt-3 space-y-3 text-sm">
         <input type="hidden" name="target" value={target} />
         <input type="hidden" name="id" value={id} />
         <select name="reason" className="field" defaultValue={REASONS[target][0][0]} aria-label="Reason">

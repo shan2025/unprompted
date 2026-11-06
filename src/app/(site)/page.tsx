@@ -6,6 +6,7 @@ import { FeedGrid } from "@/components/FeedGrid";
 import { GridSkeleton } from "@/components/ListingCard";
 import { ScoreCard } from "@/components/Score";
 import { CATEGORIES } from "@/lib/categories";
+import { usedCategories } from "@/lib/data";
 import { searchFeed } from "@/lib/feed";
 import { computeScore } from "@/lib/scoring";
 
@@ -94,18 +95,9 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
         <h2 className="text-4xl font-light">Browse by craft</h2>
-        <div className="mt-10 grid grid-cols-2 border-l border-t border-line sm:grid-cols-3 lg:grid-cols-4">
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c.id}
-              href={`/explore?category=${c.id}`}
-              className="group border-b border-r border-line p-6 transition-colors hover:bg-field"
-            >
-              <span className="text-lg">{c.label}</span>
-              <span className="mt-1 block text-xs leading-snug text-muted">{c.blurb}</span>
-            </Link>
-          ))}
-        </div>
+        <Suspense fallback={<div className="mt-10 h-48 animate-pulse border border-line" />}>
+          <Crafts />
+        </Suspense>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
@@ -143,6 +135,29 @@ export default function Home() {
         </div>
       </section>
     </>
+  );
+}
+
+// Only crafts with something in them. Each links to Explore when it has free
+// work there, and to the marketplace when everything in it is for sale.
+async function Crafts() {
+  await connection();
+  const [explore, market] = await Promise.all([usedCategories("explore"), usedCategories("marketplace")]);
+  const crafts = CATEGORIES.filter((c) => explore.includes(c.id) || market.includes(c.id));
+  if (crafts.length === 0) return <p className="mt-6 text-ink-soft">Nothing shared yet.</p>;
+  return (
+    <div className="mt-10 grid grid-cols-2 border-l border-t border-line sm:grid-cols-3 lg:grid-cols-4">
+      {crafts.map((c) => (
+        <Link
+          key={c.id}
+          href={`/${explore.includes(c.id) ? "explore" : "marketplace"}?category=${c.id}`}
+          className="group border-b border-r border-line p-6 transition-colors hover:bg-field"
+        >
+          <span className="text-lg">{c.label}</span>
+          <span className="mt-1 block text-xs leading-snug text-muted">{c.blurb}</span>
+        </Link>
+      ))}
+    </div>
   );
 }
 

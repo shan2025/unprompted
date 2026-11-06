@@ -2,11 +2,12 @@
 
 import { useActionState } from "react";
 import { claimPayment, updatePaymentLink } from "@/app/actions/listings";
+import { keepFields } from "./keepFields";
 
 export function ClaimPaymentForm({ slug }: { slug: string }) {
   const [state, action, pending] = useActionState(claimPayment, null);
   return (
-    <form action={action} className="space-y-2">
+    <form action={action} onSubmit={keepFields(action)} className="space-y-2">
       <input type="hidden" name="slug" value={slug} />
       <label className="block text-sm font-semibold">
         Paid? Tell the seller
@@ -28,7 +29,7 @@ export function PaymentLinkForm({ slug, current }: { slug: string; current: stri
       <summary className="cursor-pointer list-none font-medium text-muted hover:text-ink">
         {current ? "Change your payment link" : "Add a payment link so buyers can pay you"}
       </summary>
-      <form action={action} className="mt-2 space-y-2">
+      <form action={action} onSubmit={keepFields(action)} className="mt-2 space-y-2">
         <input type="hidden" name="slug" value={slug} />
         <input name="paymentUrl" className="field" defaultValue={current ?? ""} placeholder="https://rzp.io/… or upi://pay?pa=…" aria-label="Payment link" />
         {state?.message && <p className={`text-sm font-medium ${state.ok ? "text-human" : "text-heavy"}`}>{state.message}</p>}

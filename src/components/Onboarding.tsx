@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { CATEGORIES, type CategoryId } from "@/lib/categories";
 import { Cover } from "./Cover";
 import { Logo } from "./Logo";
@@ -98,14 +98,16 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1fr_minmax(320px,26vw)]">
       <div className="flex min-h-dvh flex-col">
-        <header className="flex h-[88px] items-center justify-between px-5 sm:px-12">
-          <Link href="/" aria-label="Unprompters home">
-            <Logo />
+        <header className="flex h-[88px] items-center justify-between gap-4 px-5 sm:px-12">
+          <Link href="/" aria-label="Unprompters home" className="shrink-0">
+            {/* Just the mark on phones, so the two links beside it fit on one line. */}
+            <Logo compact />
           </Link>
-          <div className="flex items-center gap-5 sm:gap-8">
+          <div className="flex items-center gap-5 whitespace-nowrap sm:gap-8">
             {!signedIn && (
               <Link href="/login" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
-                I have an account
+                <span className="sm:hidden">Log in</span>
+                <span className="max-sm:hidden">I have an account</span>
               </Link>
             )}
             <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 lg:hidden">
@@ -186,6 +188,7 @@ function Choices({
   onPick?: () => void;
 }) {
   const multiple = Array.isArray(value);
+  const id = useId();
   return (
     <div role={multiple ? "group" : "radiogroup"} className="divide-y divide-line border-y border-line">
       {options.map((o) => {
@@ -196,6 +199,8 @@ function Choices({
             type="button"
             role={multiple ? "checkbox" : "radio"}
             aria-checked={selected}
+            aria-labelledby={`${id}-${o.id}`}
+            aria-describedby={`${id}-${o.id}-hint`}
             onClick={() => onChange(o.id)}
             onDoubleClick={onPick}
             className="group flex w-full items-start gap-4 py-5 text-left"
@@ -216,8 +221,12 @@ function Choices({
                 ))}
             </span>
             <span>
-              <span className={`block text-[19px] ${selected ? "text-ink" : "text-ink-soft group-hover:text-ink"}`}>{o.label}</span>
-              <span className="mt-1 block text-sm text-muted">{o.hint}</span>
+              <span id={`${id}-${o.id}`} className={`block text-[19px] ${selected ? "text-ink" : "text-ink-soft group-hover:text-ink"}`}>
+                {o.label}
+              </span>
+              <span id={`${id}-${o.id}-hint`} className="mt-1 block text-sm text-muted">
+                {o.hint}
+              </span>
             </span>
           </button>
         );
@@ -291,6 +300,7 @@ function CategorySearch({
               type="button"
               role="option"
               aria-selected={on}
+              aria-label={c.label}
               onClick={() => pick(c.id)}
               className="flex w-full items-center justify-between gap-4 px-8 py-2.5 text-left hover:bg-field"
             >

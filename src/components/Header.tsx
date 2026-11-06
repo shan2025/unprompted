@@ -5,8 +5,9 @@ import { isCreator } from "@/lib/data";
 import { AccountMenu } from "./AccountMenu";
 import { Logo } from "./Logo";
 
-// Phones get the essentials; the rest appear as the screen widens. Anything
-// hidden here is also reachable from the dashboard or the footer.
+// Wide screens put the sections next to the logo; narrower ones give them a
+// second row. Posting tools appear as the screen widens; anything hidden here
+// is also reachable from the account menu, the dashboard or the footer.
 export function Header() {
   return (
     <header className="border-b border-line bg-white">
@@ -34,6 +35,21 @@ export function Header() {
           </Suspense>
         </div>
       </div>
+      {/* Phones and small tablets: the main sections get their own row, so none is left out. */}
+      <nav
+        aria-label="Sections"
+        className="flex h-11 items-center gap-6 overflow-x-auto whitespace-nowrap border-t border-line px-4 text-[13px] font-semibold uppercase tracking-[0.08em] no-scrollbar sm:px-8 md:hidden"
+      >
+        <Link href="/explore" className="hover:opacity-60">
+          Explore
+        </Link>
+        <Link href="/marketplace" className="hover:opacity-60">
+          Marketplace
+        </Link>
+        <Link href="/journal" className="hover:opacity-60">
+          Journal
+        </Link>
+      </nav>
     </header>
   );
 }
@@ -44,16 +60,10 @@ async function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-3.5 whitespace-nowrap sm:gap-6">
-        <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
-          Explore
-        </Link>
-        <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
-          Journal
-        </Link>
         <Link href="/login" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
           Log in
         </Link>
-        <Link href="/start" className="btn-primary hidden px-5 py-3 sm:inline-flex">
+        <Link href="/start" className="btn-primary px-4 py-2.5 sm:px-5 sm:py-3">
           Get started
         </Link>
       </div>
@@ -66,14 +76,6 @@ async function UserMenu() {
 
   return (
     <div className="flex items-center gap-3.5 whitespace-nowrap sm:gap-6">
-      {!creator && (
-        <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
-          Explore
-        </Link>
-      )}
-      <Link href="/journal" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60 md:hidden">
-        Journal
-      </Link>
       {creator && (
         <>
           <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 lg:inline-flex">

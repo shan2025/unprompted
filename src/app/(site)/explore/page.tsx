@@ -74,8 +74,8 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   return (
     <ExploreView available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show }}>
       <p className="mb-4 text-sm text-muted">
-        {items.length === 0 ? "Nothing matches." : plural(items.length, "work")}
-        {" · "}
+        {/* The empty state below says it when nothing matches. */}
+        {items.length > 0 && `${plural(items.length, "work")} · `}
         <Link href="/marketplace" className="link text-ink">
           Looking to buy? See the marketplace
         </Link>

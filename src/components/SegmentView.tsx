@@ -55,9 +55,13 @@ export function SegmentView({
             {show ? "Hide" : "Show"} passage analysis
           </button>
           <span className="text-xs text-muted">
-            {flagged === 0
-              ? `All ${segments.length} passages read as human-written.`
-              : `${flagged} of ${segments.length} passages show machine-like patterns.`}
+            {segments.length === 1
+              ? flagged === 0
+                ? "The passage reads as human-written."
+                : "The passage shows machine-like patterns."
+              : flagged === 0
+                ? `All ${segments.length} passages read as human-written.`
+                : `${flagged} of ${segments.length} passages show machine-like patterns.`}
           </span>
         </div>
       )}

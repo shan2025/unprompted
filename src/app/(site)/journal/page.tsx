@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { PostGrid, PostGridSkeleton } from "@/components/PostCard";
 import { getCurrentUser } from "@/lib/auth";
 import { CATEGORIES, categoryLabel, isCategory } from "@/lib/categories";
+import { usedCategories } from "@/lib/data";
 import { searchPosts } from "@/lib/journal";
 
 export const metadata: Metadata = {
@@ -56,7 +57,12 @@ async function Feed({ searchParams }: { searchParams: Promise<Params> }) {
   const tab = one(params.tab) === "following" ? "following" : "everyone";
   const user = await getCurrentUser();
 
-  const posts = tab === "following" && !user ? [] : await searchPosts({ q, category, followedBy: tab === "following" ? user!.id : undefined });
+  const [posts, available] = await Promise.all([
+    tab === "following" && !user ? [] : searchPosts({ q, category, followedBy: tab === "following" ? user!.id : undefined }),
+    usedCategories("journal"),
+  ]);
+  // Chips for categories with posts in them, plus the one picked, so it can be cleared.
+  const chips = CATEGORIES.filter((c) => available.includes(c.id) || c.id === category);
 
   return (
     <>
@@ -85,7 +91,7 @@ async function Feed({ searchParams }: { searchParams: Promise<Params> }) {
         <Chip href={feedHref({ tab, q })} active={!category}>
           All
         </Chip>
-        {CATEGORIES.map((c) => (
+        {chips.map((c) => (
           <Chip key={c.id} href={feedHref({ tab, category: c.id, q })} active={category === c.id}>
             {c.label}
           </Chip>

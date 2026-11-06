@@ -3,13 +3,14 @@
 import { useActionState } from "react";
 import { addComment } from "@/app/actions/posts";
 import { MAX_COMMENT } from "@/lib/post-form";
+import { keepFields } from "./keepFields";
 
 export function CommentForm({ slug }: { slug: string }) {
   const [state, action, pending] = useActionState(addComment, null);
 
   return (
     // Changing the key after a successful post remounts the form, clearing it.
-    <form key={state?.key ?? 0} action={action} className="space-y-3">
+    <form key={state?.key ?? 0} action={action} onSubmit={keepFields(action)} className="space-y-3">
       <input type="hidden" name="slug" value={slug} />
       <label htmlFor="comment" className="sr-only">
         Add a comment

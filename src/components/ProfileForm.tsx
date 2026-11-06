@@ -5,6 +5,7 @@ import { updateProfile } from "@/app/actions/profile";
 import { MAX_LINKS } from "@/lib/links";
 import { Avatar } from "./Avatar";
 import { shrinkImage } from "./FormParts";
+import { keepFields } from "./keepFields";
 
 // Profile photos show at most 80px wide, so 800px leaves room for sharp screens.
 const AVATAR_EDGE = 800;
@@ -29,6 +30,13 @@ export function ProfileForm({
   const [preparing, setPreparing] = useState(false);
   const [photoSave, setPhotoSave] = useState(false);
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
+  // The form keeps its fields between saves, so once a photo is saved, empty the
+  // file picker: a later Save changes shouldn't upload the same photo again.
+  useEffect(() => {
+    if (!state?.saved || !formRef.current) return;
+    const photo = formRef.current.elements.namedItem("avatar");
+    if (photo instanceof HTMLInputElement) photo.value = "";
+  }, [state]);
 
   // A chosen photo saves straight away, so nobody has to scroll to a button to
   // keep it. Phone photos are shrunk first: the host refuses requests over
@@ -78,6 +86,7 @@ export function ProfileForm({
       onSubmit={(e) => {
         // A press of Save changes is a full save, not a photo save.
         if ((e.nativeEvent as SubmitEvent).submitter) setPhotoSave(false);
+        keepFields(action)(e);
       }}
     >
       <div className="flex flex-wrap items-center gap-5 border-b border-line pb-6">
