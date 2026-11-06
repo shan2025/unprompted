@@ -9,6 +9,7 @@ import { FollowButton } from "@/components/Social";
 import { getCurrentUser } from "@/lib/auth";
 import { getCreator } from "@/lib/data";
 import { formatDate } from "@/lib/format";
+import { linkLabel } from "@/lib/links";
 import { followCounts, isFollowing, searchPosts } from "@/lib/journal";
 
 type Props = { params: Promise<{ handle: string }> };
@@ -59,6 +60,24 @@ async function Creator({ params }: Props) {
             <strong className="text-ink">{counts.following}</strong> following
           </p>
           {creator.bio && <p className="mt-4 max-w-2xl text-lg leading-relaxed text-ink-soft">{creator.bio}</p>}
+          {creator.links.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-2" aria-label={`${creator.name} elsewhere`}>
+              {creator.links.map((link) => (
+                <li key={link}>
+                  {/* Links people add themselves: no ranking credit, and the new tab can't reach back. */}
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="nofollow ugc noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-ink hover:text-ink"
+                  >
+                    {linkLabel(link)}
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
           {isSelf && (
             <Link href="/dashboard/profile" className="btn-ghost mt-5 inline-flex px-5 py-2">
               Edit profile

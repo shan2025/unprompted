@@ -4,11 +4,24 @@ import { useActionState, useEffect, useState } from "react";
 import { updateProfile } from "@/app/actions/profile";
 import { Avatar } from "./Avatar";
 import { shrinkImage } from "./FormParts";
+import { MAX_LINKS } from "@/lib/links";
 
 // Profile photos show at most 80px wide, so 800px leaves room for sharp screens.
 const AVATAR_EDGE = 800;
 
-export function ProfileForm({ name, bio, avatarFile }: { name: string; bio: string; avatarFile: string | null }) {
+const LINK_EXAMPLES = ["instagram.com/yourname", "youtube.com/@yourname", "github.com/yourname", "yoursite.com", ""];
+
+export function ProfileForm({
+  name,
+  bio,
+  links,
+  avatarFile,
+}: {
+  name: string;
+  bio: string;
+  links: string[];
+  avatarFile: string | null;
+}) {
   const [state, action, pending] = useActionState(updateProfile, null);
   const [preview, setPreview] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -88,6 +101,28 @@ export function ProfileForm({ name, bio, avatarFile }: { name: string; bio: stri
         <textarea id="bio" name="bio" rows={5} className="field" defaultValue={bio} maxLength={500} />
         <p className="hint">Shown on your public profile, posts and listings.</p>
       </div>
+      <fieldset>
+        <legend className="label">Your other profiles</legend>
+        <p className="hint mb-2 mt-0">Instagram, YouTube, GitHub, your own site: up to {MAX_LINKS} links.</p>
+        <div className="space-y-2">
+          {Array.from({ length: MAX_LINKS }, (_, i) => (
+            <input
+              key={i}
+              name="link"
+              type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="field"
+              defaultValue={links[i] ?? ""}
+              placeholder={LINK_EXAMPLES[i]}
+              aria-label={`Link ${i + 1}`}
+              maxLength={300}
+            />
+          ))}
+        </div>
+      </fieldset>
       {state?.error && (
         <p role="alert" className="rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
           {state.error}

@@ -33,6 +33,8 @@ export const users = pgTable("users", {
   handle: text("handle").notNull().unique(),
   bio: text("bio").notNull().default(""),
   avatarFile: text("avatar_file"),
+  /** Links to the person's other profiles and sites, in the order they chose. */
+  links: jsonb("links").$type<string[]>().notNull().default([]),
   role: text("role", { enum: ["member", "admin"] }).notNull().default("member"),
   createdAt: createdAt(),
 }).enableRLS();

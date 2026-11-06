@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
+import { MAX_LINKS, normalizeLink } from "@/lib/links";
 import { MAX_IMAGE_BYTES, UNREADABLE_IMAGE } from "@/lib/listing-form";
 import { saveUpload } from "@/lib/uploads";
 
@@ -18,6 +19,14 @@ export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<
   if (name.length < 1 || name.length > 60) return { error: "Please enter a name of up to 60 characters." };
   if (bio.length > 500) return { error: "Keep your bio under 500 characters." };
 
+  const typed = fd.getAll("link").map((v) => String(v).trim()).filter(Boolean).slice(0, MAX_LINKS);
+  const links: string[] = [];
+  for (const raw of typed) {
+    const link = normalizeLink(raw);
+    if (!link) return { error: `"${raw.slice(0, 60)}" doesn't look like a web address. Try something like instagram.com/yourname.` };
+    if (!links.includes(link)) links.push(link);
+  }
+
   let avatarFile = fd.get("removeAvatar") === "on" ? null : user.avatarFile;
   const photo = fd.get("avatar");
   if (photo instanceof File && photo.size > 0) {
@@ -27,7 +36,7 @@ export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<
     if (!avatarFile) return { error: UNREADABLE_IMAGE };
   }
 
-  await db.update(schema.users).set({ name, bio, avatarFile }).where(eq(schema.users.id, user.id));
+  await db.update(schema.users).set({ name, bio, avatarFile, links }).where(eq(schema.users.id, user.id));
   if (user.avatarFile && user.avatarFile !== avatarFile) {
     await db.delete(schema.uploads).where(eq(schema.uploads.name, user.avatarFile));
   }

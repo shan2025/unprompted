@@ -139,7 +139,7 @@ export async function salesCount(listingId: number) {
 
 export async function getCreator(handle: string) {
   const [creator] = await db
-    .select({ id: users.id, name: users.name, handle: users.handle, bio: users.bio, avatarFile: users.avatarFile, createdAt: users.createdAt })
+    .select({ id: users.id, name: users.name, handle: users.handle, bio: users.bio, avatarFile: users.avatarFile, links: users.links, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.handle, handle))
     .limit(1);
