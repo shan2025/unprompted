@@ -4,11 +4,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { updateProfile } from "@/app/actions/profile";
 import { MAX_LINKS } from "@/lib/links";
 import { Avatar } from "./Avatar";
-import { shrinkImage } from "./FormParts";
 import { keepFields } from "./keepFields";
-
-// Profile photos show at most 80px wide, so 800px leaves room for sharp screens.
-const AVATAR_EDGE = 800;
+import { PhotoCropper } from "./PhotoCropper";
 
 const LINK_EXAMPLES = ["instagram.com/yourname", "youtube.com/@yourname", "github.com/yourname", "yoursite.com", ""];
 
@@ -27,13 +24,14 @@ export function ProfileForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [preparing, setPreparing] = useState(false);
   // Which photo change the save in flight is for: a new photo, a removal, or neither.
   const [photoSave, setPhotoSave] = useState<"new" | "remove" | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const viewerRef = useRef<HTMLDialogElement>(null);
+  // The photo being framed in the cropper: a newly chosen file, or the saved one.
+  const [crop, setCrop] = useState<{ src: string; local: boolean } | null>(null);
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
   // The photo menu closes on a click elsewhere or on Escape.
   useEffect(() => {
@@ -57,40 +55,46 @@ export function ProfileForm({
     if (photo instanceof HTMLInputElement) photo.value = "";
   }, [state]);
 
-  // A chosen photo saves straight away, so nobody has to scroll to a button to
-  // keep it. Phone photos are shrunk first: the host refuses requests over
-  // 4.5 MB, which used to make the save fail with no message.
-  async function choose(input: HTMLInputElement) {
+  // A chosen photo opens the cropper first, so people can frame it in the circle.
+  function choose(input: HTMLInputElement) {
     const file = input.files?.[0];
     setProblem(null);
     setPreview(null);
     if (!file) return;
-    setPreparing(true);
-    try {
-      if (!file.type.startsWith("image/")) throw new Error("Choose a photo: a JPG, PNG, WebP or GIF.");
-      const smaller = await shrinkImage(file, AVATAR_EDGE).catch(() => {
-        throw new Error("We couldn't read that photo. Try a JPG or PNG. iPhone photos in HEIC format may need converting first.");
-      });
-      const files = new DataTransfer();
-      files.items.add(smaller);
-      input.files = files.files;
-      setPreview(URL.createObjectURL(smaller));
-      setPhotoSave("new");
-      formRef.current?.requestSubmit();
-    } catch (e) {
+    if (!file.type.startsWith("image/")) {
       input.value = "";
-      setProblem((e as Error).message);
-    } finally {
-      setPreparing(false);
+      setProblem("Choose a photo: a JPG, PNG, WebP or GIF.");
+      return;
     }
+    setCrop({ src: URL.createObjectURL(file), local: true });
   }
 
-  const busy = preparing || pending;
+  function closeCrop() {
+    if (crop?.local) URL.revokeObjectURL(crop.src);
+    setCrop(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  // The framed photo saves straight away, so nobody has to scroll to a button to
+  // keep it. It's an 800px square at most: the host refuses requests over 4.5 MB.
+  function cropped(photo: Blob) {
+    if (crop?.local) URL.revokeObjectURL(crop.src);
+    setCrop(null);
+    const input = fileRef.current;
+    if (!input) return;
+    const files = new DataTransfer();
+    files.items.add(new File([photo], "profile-photo.jpg", { type: "image/jpeg" }));
+    input.files = files.files;
+    setPreview(URL.createObjectURL(photo));
+    setPhotoSave("new");
+    formRef.current?.requestSubmit();
+  }
+
+  const busy = pending;
   // The local preview covers the moment between choosing and the save finishing.
   const showPreview = preview && busy;
-  const photoStatus = preparing
-    ? "Preparing your photo…"
-    : pending && photoSave === "remove"
+  const photoStatus =
+    pending && photoSave === "remove"
       ? "Removing your photo…"
       : pending && photoSave
         ? "Saving your photo…"
@@ -110,6 +114,12 @@ export function ProfileForm({
   function viewPhoto() {
     setMenuOpen(false);
     viewerRef.current?.showModal();
+  }
+
+  // Re-frames the photo already saved.
+  function adjustPhoto() {
+    setMenuOpen(false);
+    if (avatarFile) setCrop({ src: `/api/files/${avatarFile}`, local: false });
   }
 
   return (
@@ -153,6 +163,9 @@ export function ProfileForm({
               <button type="button" role="menuitem" onClick={viewPhoto} className="block w-full px-4 py-3 text-left font-medium hover:bg-black/5">
                 View photo
               </button>
+              <button type="button" role="menuitem" onClick={adjustPhoto} className="block w-full border-t border-line px-4 py-3 text-left font-medium hover:bg-black/5">
+                Adjust or crop photo
+              </button>
               <button type="button" role="menuitem" onClick={pickPhoto} className="block w-full border-t border-line px-4 py-3 text-left font-medium hover:bg-black/5">
                 Upload a new photo
               </button>
@@ -176,8 +189,9 @@ export function ProfileForm({
             className="sr-only"
             tabIndex={-1}
             // Never disabled: a disabled field is left out of the form, photo and all.
-            onChange={(e) => void choose(e.target)}
+            onChange={(e) => choose(e.target)}
           />
+          {crop && <PhotoCropper src={crop.src} onCancel={closeCrop} onDone={cropped} />}
           {avatarFile && (
             // The photo at full size. A native dialog handles Escape and keeps focus inside;
             // a click on the dark backdrop closes it too.
@@ -201,7 +215,7 @@ export function ProfileForm({
         </div>
         <div className="min-w-0 flex-1">
           <p className="hint mt-0" role="status">
-            {photoStatus ?? (avatarFile ? "Tap the pencil to view, change or remove your photo.": "Tap the pencil to add a photo. It saves as soon as you choose it.")}
+            {photoStatus ?? (avatarFile ? "Tap the pencil to view, adjust, change or remove your photo.": "Tap the pencil to add a photo. It saves as soon as you choose it.")}
           </p>
           {problem && (
             <p role="alert" className="mt-1.5 text-sm font-medium text-heavy">
