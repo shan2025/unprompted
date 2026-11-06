@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useTransition } from "react";
 import { CATEGORIES, type CategoryId } from "@/lib/categories";
 import { isShow, SHOWS, type Show } from "@/lib/show";
-import { SORTS, type Sort } from "@/lib/sorts";
+import { EXPLORE_SORTS, SORTS, type Sort } from "@/lib/sorts";
 
 const AI_LIMITS = [
   ["", "Any AI level"],
@@ -17,29 +17,52 @@ const AI_LIMITS = [
 type Filters = { categories: CategoryId[] };
 type Fields = { q: string; maxAi: string; sort: Sort; verified: boolean; show: Show };
 
-function toQuery(f: Filters & Fields) {
+// Explore holds free work; the marketplace holds work for sale. Same filters,
+// except the marketplace sorts by price and has no "what to show" picker.
+const PAGES = {
+  explore: {
+    path: "/explore",
+    title: "Explore",
+    intro: "Read and watch work made by people. Every piece shows how much AI was involved.",
+    sorts: EXPLORE_SORTS as Partial<typeof SORTS>,
+  },
+  marketplace: {
+    path: "/marketplace",
+    title: "Marketplace",
+    intro: "Buy work made by people. Every piece shows how much AI was involved.",
+    sorts: SORTS as Partial<typeof SORTS>,
+  },
+} as const;
+type Page = keyof typeof PAGES;
+
+function toQuery(page: Page, f: Filters & Fields) {
   const qs = new URLSearchParams();
   if (f.q) qs.set("q", f.q);
   if (f.categories.length) qs.set("category", f.categories.join(","));
   if (f.maxAi) qs.set("maxAi", f.maxAi);
   if (f.sort !== "new") qs.set("sort", f.sort);
   if (f.verified) qs.set("verified", "1");
-  if (f.show !== "all") qs.set("show", f.show);
+  if (page === "explore" && f.show !== "all") qs.set("show", f.show);
   const query = qs.toString();
-  return query ? `/explore?${query}` : "/explore";
+  const { path } = PAGES[page];
+  return query ? `${path}?${query}` : path;
 }
 
 // Every filter applies as soon as it changes: chips and the heading update
 // on click, and the results dim while the server fetches the new ones.
 export function ExploreView({
+  page = "explore",
   filters,
   fields,
   children,
 }: {
+  page?: Page;
   filters: Filters;
   fields: Fields;
   children: React.ReactNode;
 }) {
+  const { path, title, intro, sorts } = PAGES[page];
+  const market = page === "marketplace";
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(filters);
@@ -58,7 +81,8 @@ export function ExploreView({
     el("maxAi").value = maxAi;
     el("sort").value = sort;
     (el("verified") as HTMLInputElement).checked = verified;
-    el("show").value = show;
+    const showField = el("show") as HTMLSelectElement | null;
+    if (showField) showField.value = show;
   }, [q, maxAi, sort, verified, show]);
 
   // What the form shows right now, which may be ahead of the URL.
@@ -70,7 +94,7 @@ export function ExploreView({
     return {
       q: String(data.get("q") ?? "").trim(),
       maxAi: String(data.get("maxAi") ?? ""),
-      sort: sort in SORTS ? (sort as Sort) : "new",
+      sort: sort in sorts ? (sort as Sort) : "new",
       verified: data.get("verified") === "1",
       show: isShow(show) ? show : "all",
     };
@@ -83,7 +107,7 @@ export function ExploreView({
     const ordered = { ...next, categories: CATEGORIES.map((c) => c.id).filter((id) => next.categories.includes(id)) };
     startTransition(() => {
       setShown(ordered);
-      router.push(toQuery({ ...ordered, ...liveFields() }), { scroll: false });
+      router.push(toQuery(page, { ...ordered, ...liveFields() }), { scroll: false });
     });
   }
 
@@ -94,7 +118,7 @@ export function ExploreView({
     apply(next);
   }
 
-  const hrefFor = (next: Filters) => toQuery({ ...next, ...fields });
+  const hrefFor = (next: Filters) => toQuery(page, { ...next, ...fields });
 
   const chip = (next: Filters, props: { active?: boolean; label?: string; children: React.ReactNode; k?: string }) => (
     <Chip key={props.k} href={hrefFor(next)} next={next} onGo={go} active={props.active} label={props.label}>
@@ -105,15 +129,15 @@ export function ExploreView({
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-4xl font-light">Explore</h1>
-        <p className="mt-2 max-w-2xl text-ink-soft">Read, watch and buy work made by people. Every piece shows how much AI was involved.</p>
+        <h1 className="text-4xl font-light">{title}</h1>
+        <p className="mt-2 max-w-2xl text-ink-soft">{intro}</p>
       </div>
 
       <form
         ref={formRef}
-        action="/explore"
+        action={path}
         role="search"
-        className="card mb-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]"
+        className={`card mb-6 grid gap-3 p-4 sm:grid-cols-2 ${market ? "lg:grid-cols-[1.6fr_1fr_1fr]" : "lg:grid-cols-[1.6fr_1fr_1fr_1fr]"}`}
         onSubmit={(e) => {
           e.preventDefault();
           apply(shown);
@@ -134,13 +158,15 @@ export function ExploreView({
           enterKeyHint="search"
         />
         {categories.length > 0 && <input type="hidden" name="category" value={categories.join(",")} />}
-        <select name="show" defaultValue={fields.show} className="field" aria-label="What to show">
-          {Object.entries(SHOWS).map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
-            </option>
-          ))}
-        </select>
+        {!market && (
+          <select name="show" defaultValue={fields.show} className="field" aria-label="What to show">
+            {Object.entries(SHOWS).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        )}
         <select name="maxAi" defaultValue={fields.maxAi} className="field" aria-label="Maximum AI involvement">
           {AI_LIMITS.map(([v, l]) => (
             <option key={v} value={v}>
@@ -149,13 +175,13 @@ export function ExploreView({
           ))}
         </select>
         <select name="sort" defaultValue={fields.sort} className="field" aria-label="Sort">
-          {Object.entries(SORTS).map(([v, l]) => (
+          {Object.entries(sorts).map(([v, l]) => (
             <option key={v} value={v}>
               {l}
             </option>
           ))}
         </select>
-        <label className="flex items-center gap-2 text-sm text-ink-soft sm:col-span-2 lg:col-span-4">
+        <label className="flex items-center gap-2 text-sm text-ink-soft sm:col-span-2 lg:col-span-full">
           <input type="checkbox" name="verified" value="1" defaultChecked={fields.verified} className="h-4 w-4 accent-[var(--accent)]" />
           Only show work with process evidence attached
         </label>

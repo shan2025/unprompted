@@ -161,11 +161,11 @@ async function ListingView({ params, searchParams }: Props) {
       <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1"} claimed={query.claimed === "1"} isDemo={listing.isDemo} isOwner={isOwner} owned={purchased} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
-        <Link href="/explore" className="hover:text-ink">
-          Explore
+        <Link href={listing.priceCents > 0 ? "/marketplace" : "/explore"} className="hover:text-ink">
+          {listing.priceCents > 0 ? "Marketplace" : "Explore"}
         </Link>
         <span className="mx-2">/</span>
-        <Link href={`/explore?category=${listing.category}`} className="hover:text-ink">
+        <Link href={`${listing.priceCents > 0 ? "/marketplace" : "/explore"}?category=${listing.category}`} className="hover:text-ink">
           {categoryLabel(listing.category)}
         </Link>
       </nav>

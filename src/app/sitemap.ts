@@ -5,7 +5,7 @@ import { db, schema } from "@/lib/db";
 import { siteUrl } from "@/lib/format";
 
 const { listings, posts, users } = schema;
-const STATIC_PAGES = ["/", "/explore", "/journal", "/standard", "/contact", "/terms", "/privacy", "/refunds"];
+const STATIC_PAGES = ["/", "/explore", "/marketplace", "/journal", "/standard", "/contact", "/terms", "/privacy", "/refunds"];
 // One sitemap file may list 50,000 addresses. This leaves plenty of room.
 const MAX_OF_EACH = 10_000;
 

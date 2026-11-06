@@ -18,6 +18,9 @@ export function Header() {
           <Link href="/explore" className="hover:opacity-60">
             Explore
           </Link>
+          <Link href="/marketplace" className="hover:opacity-60">
+            Marketplace
+          </Link>
           <Link href="/journal" className="hover:opacity-60">
             Journal
           </Link>

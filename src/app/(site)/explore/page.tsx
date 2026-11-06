@@ -8,11 +8,12 @@ import { CATEGORY_IDS, type CategoryId } from "@/lib/categories";
 import { searchFeed } from "@/lib/feed";
 import { plural } from "@/lib/format";
 import { isShow, type Show } from "@/lib/show";
-import { SORTS, type Sort } from "@/lib/sorts";
+import { EXPLORE_SORTS, type ExploreSort } from "@/lib/sorts";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Explore",
-  description: "Read, watch and buy writing, art, film, code, handicrafts and more, made by people. Every piece shows how much AI was involved.",
+  description: "Read and watch writing, art, film, code, handicrafts and more, made by people. Every piece shows how much AI was involved.",
   alternates: { canonical: "/explore" },
 };
 
@@ -40,6 +41,16 @@ function parseCategories(v: string | string[] | undefined): CategoryId[] {
   return picked.length === CATEGORY_IDS.length ? [] : picked;
 }
 
+function marketplaceHref(params: Params) {
+  const qs = new URLSearchParams();
+  for (const key of ["q", "category", "maxAi", "sort", "verified"]) {
+    const v = one(params[key]);
+    if (v) qs.set(key, v);
+  }
+  const query = qs.toString();
+  return query ? `/marketplace?${query}` : "/marketplace";
+}
+
 async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
   const q = one(params.q)?.trim().slice(0, 100) ?? "";
@@ -47,19 +58,23 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const maxAiRaw = one(params.maxAi) ?? "";
   const maxAi = ["5", "20", "50"].includes(maxAiRaw) ? Number(maxAiRaw) : undefined;
   const sortRaw = one(params.sort) ?? "new";
-  const sort: Sort = sortRaw in SORTS ? (sortRaw as Sort) : "new";
+  const sort: ExploreSort = sortRaw in EXPLORE_SORTS ? (sortRaw as ExploreSort) : "new";
   const verified = one(params.verified) === "1";
   const showRaw = one(params.show);
+  // Old links asked for ?show=sale here; that work now lives on the marketplace.
+  if (showRaw === "sale") redirect(marketplaceHref(params));
   const show: Show = isShow(showRaw) ? showRaw : "all";
 
   const items = await searchFeed({ q, categories, maxAi, sort, verified, show });
-  const priceSorted = sort === "price-low" || sort === "price-high";
 
   return (
     <ExploreView filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show }}>
       <p className="mb-4 text-sm text-muted">
         {items.length === 0 ? "Nothing matches." : plural(items.length, "work")}
-        {priceSorted && show !== "video" && " · Sorting by price shows listings only."}
+        {" · "}
+        <Link href="/marketplace" className="link text-ink">
+          Looking to buy? See the marketplace
+        </Link>
       </p>
       {items.length > 0 ? (
         <FeedGrid items={items} />
