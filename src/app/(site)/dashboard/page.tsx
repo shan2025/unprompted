@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { reviewOrder } from "@/app/actions/listings";
-import { LogoutButton } from "@/components/LogoutButton";
 import { Suspense } from "react";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -50,7 +49,6 @@ async function Dashboard() {
                 Review queue
               </Link>
             )}
-            <LogoutButton className="link text-ink-soft hover:text-ink" />
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
