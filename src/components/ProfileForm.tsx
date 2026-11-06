@@ -33,6 +33,7 @@ export function ProfileForm({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const viewerRef = useRef<HTMLDialogElement>(null);
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
   // The photo menu closes on a click elsewhere or on Escape.
   useEffect(() => {
@@ -106,6 +107,11 @@ export function ProfileForm({
     fileRef.current?.click();
   }
 
+  function viewPhoto() {
+    setMenuOpen(false);
+    viewerRef.current?.showModal();
+  }
+
   return (
     <form
       ref={formRef}
@@ -144,7 +150,10 @@ export function ProfileForm({
           </button>
           {menuOpen && avatarFile && (
             <div role="menu" className="absolute left-0 top-full z-20 mt-2 w-52 overflow-hidden border border-line bg-white text-sm shadow-lg">
-              <button type="button" role="menuitem" onClick={pickPhoto} className="block w-full px-4 py-3 text-left font-medium hover:bg-black/5">
+              <button type="button" role="menuitem" onClick={viewPhoto} className="block w-full px-4 py-3 text-left font-medium hover:bg-black/5">
+                View photo
+              </button>
+              <button type="button" role="menuitem" onClick={pickPhoto} className="block w-full border-t border-line px-4 py-3 text-left font-medium hover:bg-black/5">
                 Upload a new photo
               </button>
               <button
@@ -169,10 +178,30 @@ export function ProfileForm({
             // Never disabled: a disabled field is left out of the form, photo and all.
             onChange={(e) => void choose(e.target)}
           />
+          {avatarFile && (
+            // The photo at full size. A native dialog handles Escape and keeps focus inside;
+            // a click on the dark backdrop closes it too.
+            <dialog
+              ref={viewerRef}
+              aria-label="Your profile photo"
+              onClick={(e) => e.target === e.currentTarget && viewerRef.current?.close()}
+              className="m-auto max-h-[90dvh] max-w-[min(90vw,640px)] bg-transparent p-0 backdrop:bg-black/80"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- served from our own file route */}
+              <img src={`/api/files/${avatarFile}`} alt={`${name}'s profile photo`} className="block max-h-[85dvh] w-auto rounded-lg object-contain" />
+              <button
+                type="button"
+                onClick={() => viewerRef.current?.close()}
+                className="mx-auto mt-3 block rounded-full bg-white px-5 py-2 text-sm font-semibold text-ink hover:bg-white/85"
+              >
+                Close
+              </button>
+            </dialog>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="hint mt-0" role="status">
-            {photoStatus ?? (avatarFile ? "Tap the pencil to change or remove your photo." : "Tap the pencil to add a photo. It saves as soon as you choose it.")}
+            {photoStatus ?? (avatarFile ? "Tap the pencil to view, change or remove your photo.": "Tap the pencil to add a photo. It saves as soon as you choose it.")}
           </p>
           {problem && (
             <p role="alert" className="mt-1.5 text-sm font-medium text-heavy">
