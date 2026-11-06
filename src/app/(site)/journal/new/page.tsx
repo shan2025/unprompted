@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { PostForm } from "@/components/PostForm";
 import { requireUser } from "@/lib/auth";
 import { isCategory } from "@/lib/categories";
+import { LEVELS, type Level } from "@/lib/scoring";
 
 export const metadata: Metadata = { title: "Write a post" };
 
@@ -28,8 +29,17 @@ export default function NewPostPage({ searchParams }: Props) {
 
 async function Gate({ searchParams }: Props) {
   const query = await searchParams;
-  const raw = Array.isArray(query.category) ? query.category[0] : query.category;
-  const category = isCategory(raw) ? raw : undefined;
-  await requireUser(category ? `/journal/new?category=${category}` : "/journal/new", { newcomers: true });
-  return <PostForm defaultCategory={category} />;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const category = one(query.category);
+  const ai = one(query.ai);
+  // Answers from Get started prefill the form.
+  const prefill = {
+    category: isCategory(category) ? category : undefined,
+    ai: (LEVELS as readonly string[]).includes(ai ?? "") ? (ai as Level) : undefined,
+  };
+  const qs = new URLSearchParams();
+  if (prefill.category) qs.set("category", prefill.category);
+  if (prefill.ai) qs.set("ai", prefill.ai);
+  await requireUser(qs.size ? `/journal/new?${qs}` : "/journal/new", { newcomers: true });
+  return <PostForm defaultCategory={prefill.category} defaultAi={prefill.ai} />;
 }

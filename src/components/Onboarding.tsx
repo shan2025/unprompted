@@ -7,9 +7,10 @@ import { CATEGORIES, type CategoryId } from "@/lib/categories";
 import { Cover } from "./Cover";
 import { Logo } from "./Logo";
 
-type Goal = "sell" | "buy";
+type Goal = "share" | "sell" | "buy";
 
 const GOALS: { id: Goal; label: string; hint: string }[] = [
+  { id: "share", label: "Share my work", hint: "Post something you made, with how you made it. Nothing has to be for sale." },
   { id: "sell", label: "Sell my work", hint: "List something you made and show how much of it is yours." },
   { id: "buy", label: "Explore human-made work", hint: "Read, watch and buy writing, art, film, code and more, with the AI share on every piece." },
 ];
@@ -54,22 +55,26 @@ function matches(query: string) {
   );
 }
 
-/** New sellers finish by creating an account; explorers, and anyone signed in, go straight on. */
+/** New creators finish by creating an account; explorers, and anyone signed in, go straight on. */
 export function Onboarding({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [categories, setCategories] = useState<CategoryId[]>([]);
   const [ai, setAi] = useState<string | null>(null);
-  // Choosing both follows the seller questions: those answers prefill the listing.
+  // Sharing or selling follows the creator questions: those answers prefill the first post or listing.
   const selling = goals.includes("sell");
+  const creating = selling || goals.includes("share");
 
   const steps = [
-    { title: "What brings you here?", sub: "Pick one or both. We'll set things up around what you want to do." },
-    selling
-      ? { title: "What do you make?", sub: "Pick as many as you like. We'll start your first listing in the first one." }
+    { title: "What brings you here?", sub: "Pick as many as you like. We'll set things up around what you want to do." },
+    creating
+      ? {
+          title: "What do you make?",
+          sub: `Pick as many as you like. We'll start your first ${selling ? "listing" : "post"} in the first one.`,
+        }
       : { title: "What are you looking for?", sub: "Pick as many as you like. We'll show you the work that fits." },
-    selling
+    creating
       ? { title: "How much AI goes into your work?", sub: "Be honest: it sets the floor of your score." }
       : { title: "How much AI is okay?", sub: "Every listing shows its AI involvement, so the choice is yours." },
   ];
@@ -80,20 +85,23 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
   function toggleGoal(v: string) {
     const goal = v as Goal;
     const nextGoals = goals.includes(goal) ? goals.filter((g) => g !== goal) : [...goals, goal];
-    const nextSelling = nextGoals.includes("sell");
+    const nextCreating = nextGoals.includes("sell") || nextGoals.includes("share");
     setGoals(nextGoals);
-    // The AI question has different answers for sellers and buyers.
-    if (nextSelling !== selling) setAi(null);
+    // The AI question has different answers for creators and explorers.
+    if (nextCreating !== creating) setAi(null);
   }
 
   function next() {
     if (!ready) return;
     if (!last) return setStep(step + 1);
-    // A listing has one category, so the form starts with the first pick.
-    const destination = selling ? `/sell?category=${categories[0]}&ai=${ai}` : `/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`;
-    // Selling needs an account, so new sellers make one first. Exploring doesn't:
+    // A post or listing has one category, so the form starts with the first pick.
+    // Selling wins when both are picked: a listing is shared on Explore too.
+    const destination = creating
+      ? `${selling ? "/sell" : "/journal/new"}?category=${categories[0]}&ai=${ai}`
+      : `/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`;
+    // Posting needs an account, so new creators make one first. Exploring doesn't:
     // explorers go straight to the work their answers point to.
-    router.push(signedIn || !selling ? destination : `/signup?next=${encodeURIComponent(destination)}`);
+    router.push(signedIn || !creating ? destination : `/signup?next=${encodeURIComponent(destination)}`);
   }
 
   return (
@@ -132,7 +140,7 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
           <div key={`a${step}`} className="rise">
             {step === 0 && <Choices options={GOALS} value={goals} onChange={toggleGoal} />}
             {step === 1 && <CategorySearch value={categories} onChange={setCategories} onSubmit={next} />}
-            {step === 2 && <Choices options={selling ? SELLER_AI : BUYER_AI} value={ai} onChange={setAi} onPick={next} />}
+            {step === 2 && <Choices options={creating ? SELLER_AI : BUYER_AI} value={ai} onChange={setAi} onPick={next} />}
           </div>
         </main>
 

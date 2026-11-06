@@ -5,9 +5,10 @@ import { createPost, previewPostAssessment } from "@/app/actions/posts";
 import { CATEGORIES } from "@/lib/categories";
 import type { FieldErrors } from "@/lib/listing-form";
 import type { PostPreviewState } from "@/lib/post-form";
+import type { Level } from "@/lib/scoring";
 import { DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
-export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
+export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: string; defaultAi?: Level }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [createState, createAction, publishing] = useActionState(createPost, null);
   const [preview, setPreview] = useState<PostPreviewState | null>(null);
@@ -130,7 +131,7 @@ export function PostForm({ defaultCategory }: { defaultCategory?: string }) {
           title="AI disclosure"
           intro="Same standard as the market. Your answers set the floor of your score: we never show less AI than you disclose."
         >
-          <DisclosureFields errors={errors} />
+          <DisclosureFields errors={errors} defaultAi={defaultAi} />
         </Section>
 
         <Section
