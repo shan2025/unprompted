@@ -1,11 +1,11 @@
 "use server";
 
-import { randomInt } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { createSession, destroySession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { homePath } from "@/lib/data";
 import { safeNext } from "@/lib/format";
+import { makeHandle } from "@/lib/handles";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
 
@@ -13,23 +13,7 @@ import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
 // redirect, so no page remembered from before the login change is reused.
 export type AuthState = { error?: string; next?: string; values?: { email?: string; name?: string } } | null;
 
-const RESERVED = new Set(["admin", "api", "explore", "sell", "dashboard", "login", "signup", "standard", "team", "unprompted", "unprompters", "privacy", "terms", "refunds", "contact", "start"]);
 const MIN_PASSWORD = 8;
-
-// Public profile handle, made from the name: "Shan K." -> "shank".
-async function makeHandle(name: string) {
-  let base = name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^a-z0-9]+/g, "")
-    .slice(0, 18);
-  if (base.length < 3 || RESERVED.has(base)) base = `${base}user`.slice(0, 18);
-  for (let i = 0; ; i++) {
-    const handle = i === 0 ? base : `${base}${randomInt(10, 10_000)}`;
-    const [taken] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.handle, handle)).limit(1);
-    if (!taken) return handle;
-  }
-}
 
 export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState> {
   const name = String(fd.get("name") ?? "").trim();
