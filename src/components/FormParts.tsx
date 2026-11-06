@@ -21,9 +21,9 @@ export function filesTooBigMessage(data: FormData) {
 }
 
 /** Shrinks a photo in the browser, so one straight from a phone fits the shared limit. */
-async function shrinkImage(file: File) {
+export async function shrinkImage(file: File, maxEdge = MAX_PUBLIC_EDGE) {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_PUBLIC_EDGE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
