@@ -5,7 +5,7 @@ import { ExploreView } from "@/components/ExploreView";
 import { FeedGrid } from "@/components/FeedGrid";
 import { GridSkeleton } from "@/components/ListingCard";
 import { CATEGORY_IDS, type CategoryId } from "@/lib/categories";
-import { searchListings } from "@/lib/data";
+import { searchListings, usedCategories } from "@/lib/data";
 import { plural } from "@/lib/format";
 import { SORTS, type Sort } from "@/lib/sorts";
 
@@ -48,11 +48,14 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   const sort: Sort = sortRaw in SORTS ? (sortRaw as Sort) : "new";
   const verified = one(params.verified) === "1";
 
-  const listings = await searchListings({ q, categories, maxAi, sort, verified, price: "paid" });
+  const [listings, available] = await Promise.all([
+    searchListings({ q, categories, maxAi, sort, verified, price: "paid" }),
+    usedCategories("marketplace"),
+  ]);
   const items = listings.map((listing) => ({ kind: "listing" as const, listing }));
 
   return (
-    <ExploreView page="marketplace" filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show: "all" }}>
+    <ExploreView page="marketplace" available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show: "all" }}>
       <p className="mb-4 text-sm text-muted">{items.length === 0 ? "Nothing matches." : plural(items.length, "piece") + " for sale"}</p>
       {items.length > 0 ? (
         <FeedGrid items={items} />

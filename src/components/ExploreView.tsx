@@ -52,11 +52,14 @@ function toQuery(page: Page, f: Filters & Fields) {
 // on click, and the results dim while the server fetches the new ones.
 export function ExploreView({
   page = "explore",
+  available,
   filters,
   fields,
   children,
 }: {
   page?: Page;
+  /** Categories with something in them on this page. Empty ones get no chip. */
+  available: CategoryId[];
   filters: Filters;
   fields: Fields;
   children: React.ReactNode;
@@ -117,6 +120,8 @@ export function ExploreView({
     e.preventDefault();
     apply(next);
   }
+
+  const chipCategories = CATEGORIES.filter((c) => available.includes(c.id) || categories.includes(c.id));
 
   const hrefFor = (next: Filters) => toQuery(page, { ...next, ...fields });
 
@@ -190,16 +195,19 @@ export function ExploreView({
         </noscript>
       </form>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        {chip({ categories: [] }, { active: categories.length === 0, children: "All" })}
-        {CATEGORIES.map((c) => {
-          const on = categories.includes(c.id);
-          return chip(
-            { categories: on ? categories.filter((id) => id !== c.id) : [...categories, c.id] },
-            { k: c.id, active: on, children: c.label },
-          );
-        })}
-      </div>
+      {/* A picked category keeps its chip even if it's empty, so it can be turned off. */}
+      {chipCategories.length > 1 && (
+        <div className="mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {chip({ categories: [] }, { active: categories.length === 0, children: "All" })}
+          {chipCategories.map((c) => {
+            const on = categories.includes(c.id);
+            return chip(
+              { categories: on ? categories.filter((id) => id !== c.id) : [...categories, c.id] },
+              { k: c.id, active: on, children: c.label },
+            );
+          })}
+        </div>
+      )}
 
       <div aria-busy={pending} className={`transition-opacity duration-200 ${pending ? "opacity-50" : ""}`}>
         {children}

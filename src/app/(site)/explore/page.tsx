@@ -5,6 +5,7 @@ import { ExploreView } from "@/components/ExploreView";
 import { FeedGrid } from "@/components/FeedGrid";
 import { GridSkeleton } from "@/components/ListingCard";
 import { CATEGORY_IDS, type CategoryId } from "@/lib/categories";
+import { usedCategories } from "@/lib/data";
 import { searchFeed } from "@/lib/feed";
 import { plural } from "@/lib/format";
 import { isShow, type Show } from "@/lib/show";
@@ -65,10 +66,13 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
   if (showRaw === "sale") redirect(marketplaceHref(params));
   const show: Show = isShow(showRaw) ? showRaw : "all";
 
-  const items = await searchFeed({ q, categories, maxAi, sort, verified, show });
+  const [items, available] = await Promise.all([
+    searchFeed({ q, categories, maxAi, sort, verified, show }),
+    usedCategories("explore"),
+  ]);
 
   return (
-    <ExploreView filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show }}>
+    <ExploreView available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show }}>
       <p className="mb-4 text-sm text-muted">
         {items.length === 0 ? "Nothing matches." : plural(items.length, "work")}
         {" · "}

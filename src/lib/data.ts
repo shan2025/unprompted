@@ -79,6 +79,27 @@ export async function searchListings(filters: ListingFilters) {
 
 export type ListingCard = Awaited<ReturnType<typeof searchListings>>[number];
 
+/**
+ * Categories that have at least one public piece on a page, so the filter
+ * chips skip empty ones. Explore holds free listings and posts; the
+ * marketplace holds listings with a price.
+ */
+export async function usedCategories(page: "explore" | "marketplace") {
+  const listingWhere = [
+    inArray(listings.status, PUBLIC_STATUSES),
+    page === "marketplace" ? gt(listings.priceCents, 0) : eq(listings.priceCents, 0),
+  ];
+  if (hideDemo()) listingWhere.push(eq(listings.isDemo, false));
+  const postWhere = [eq(posts.status, "published")];
+  if (hideDemo()) postWhere.push(eq(posts.isDemo, false));
+
+  const [fromListings, fromPosts] = await Promise.all([
+    db.selectDistinct({ category: listings.category }).from(listings).where(and(...listingWhere)),
+    page === "explore" ? db.selectDistinct({ category: posts.category }).from(posts).where(and(...postWhere)) : [],
+  ]);
+  return [...new Set([...fromListings, ...fromPosts].map((r) => r.category).filter(isCategory))];
+}
+
 export async function getListing(slug: string) {
   const [row] = await db
     .select({ listing: listings, creator: { id: users.id, name: users.name, handle: users.handle, bio: users.bio } })
