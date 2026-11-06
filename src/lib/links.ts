@@ -44,11 +44,20 @@ const SITES: [RegExp, string][] = [
   [/(^|\.)pinterest\.com$/, "Pinterest"],
 ];
 
+/** The name of a well-known site a link points to, such as "Instagram", or null. */
+export function siteName(link: string): string | null {
+  try {
+    const host = new URL(link).hostname.replace(/^www\./, "");
+    return SITES.find(([pattern]) => pattern.test(host))?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** A short name for a link: "Instagram", or the site's address for anything else. */
 export function linkLabel(link: string): string {
   try {
-    const host = new URL(link).hostname.replace(/^www\./, "");
-    return SITES.find(([pattern]) => pattern.test(host))?.[1] ?? host;
+    return siteName(link) ?? new URL(link).hostname.replace(/^www\./, "");
   } catch {
     return link;
   }
