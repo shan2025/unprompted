@@ -8,7 +8,8 @@ import { MAX_LINKS, normalizeLink } from "@/lib/links";
 import { MAX_IMAGE_BYTES, UNREADABLE_IMAGE } from "@/lib/listing-form";
 import { saveUpload } from "@/lib/uploads";
 
-export type ProfileState = { error?: string; saved?: boolean } | null;
+/** `photoSaved` says a new photo arrived with this save, so the form never claims one that didn't. */
+export type ProfileState = { error?: string; saved?: boolean; photoSaved?: boolean } | null;
 
 export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<ProfileState> {
   const user = await getCurrentUser();
@@ -29,7 +30,8 @@ export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<
 
   let avatarFile = fd.get("removeAvatar") === "on" ? null : user.avatarFile;
   const photo = fd.get("avatar");
-  if (photo instanceof File && photo.size > 0) {
+  const hasPhoto = photo instanceof File && photo.size > 0;
+  if (hasPhoto) {
     if (photo.size > MAX_IMAGE_BYTES) return { error: "Photos must be 4 MB or smaller." };
     // saveUpload only keeps files it can read as images, and strips their metadata.
     avatarFile = await saveUpload(new Uint8Array(await photo.arrayBuffer()));
@@ -41,5 +43,5 @@ export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<
     await db.delete(schema.uploads).where(eq(schema.uploads.name, user.avatarFile));
   }
   revalidatePath("/", "layout");
-  return { saved: true };
+  return { saved: true, photoSaved: hasPhoto };
 }

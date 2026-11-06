@@ -9,9 +9,9 @@ export const metadata: Metadata = { title: "Edit profile" };
 
 export default function EditProfilePage() {
   return (
-    <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
+    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
       <h1 className="text-4xl font-light">Edit profile</h1>
-      <div className="card mt-8 p-6">
+      <div className="card mt-6 p-6">
         <Suspense fallback={<div className="h-72" />}>
           <EditProfile />
         </Suspense>
