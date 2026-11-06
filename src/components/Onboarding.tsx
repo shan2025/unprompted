@@ -54,7 +54,7 @@ function matches(query: string) {
   );
 }
 
-/** New people finish by creating an account; anyone already signed in goes straight on. */
+/** New sellers finish by creating an account; explorers, and anyone signed in, go straight on. */
 export function Onboarding({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -91,8 +91,9 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
     if (!last) return setStep(step + 1);
     // A listing has one category, so the form starts with the first pick.
     const destination = selling ? `/sell?category=${categories[0]}&ai=${ai}` : `/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`;
-    // New people create their account next, then land where their answers point.
-    router.push(signedIn ? destination : `/signup?next=${encodeURIComponent(destination)}`);
+    // Selling needs an account, so new sellers make one first. Exploring doesn't:
+    // explorers go straight to the work their answers point to.
+    router.push(signedIn || !selling ? destination : `/signup?next=${encodeURIComponent(destination)}`);
   }
 
   return (

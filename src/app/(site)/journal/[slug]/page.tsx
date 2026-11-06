@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { removeComment } from "@/app/actions/posts";
 import { AskCreator } from "@/components/AskCreator";
 import { Avatar } from "@/components/Avatar";
 import { CommentForm } from "@/components/CommentForm";
 import { Cover } from "@/components/Cover";
+import { DeleteCommentButton } from "@/components/DeleteCommentButton";
 import { DeletePostButton } from "@/components/DeletePostButton";
 import { EvidenceSource } from "@/components/EvidenceSource";
 import { FlagForm } from "@/components/FlagForm";
@@ -14,7 +14,6 @@ import { JsonLd } from "@/components/JsonLd";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
 import { AppreciateButton, FollowButton } from "@/components/Social";
-import { SubmitButton } from "@/components/SubmitButton";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryLabel } from "@/lib/categories";
@@ -183,14 +182,7 @@ async function PostView({ params, searchParams }: Props) {
                     <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed text-ink">{c.body}</p>
                     <div className="mt-2 flex items-center gap-4">
                       {user && (user.id === c.authorId || isAdmin) && (
-                        <form action={removeComment}>
-                          <input type="hidden" name="id" value={c.id} />
-                          <SubmitButton className="text-base opacity-60 hover:opacity-100" pendingText="…">
-                            <span role="img" aria-label="Remove comment" title="Remove comment">
-                              🗑️
-                            </span>
-                          </SubmitButton>
-                        </form>
+                        <DeleteCommentButton id={c.id} />
                       )}
                       {user && user.id !== c.authorId && <FlagForm target="comment" id={c.id} compact />}
                     </div>

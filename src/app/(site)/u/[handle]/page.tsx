@@ -42,12 +42,17 @@ async function Creator({ params }: Props) {
     followCounts(creator.id),
     user && !isSelf ? isFollowing(user.id, creator.id) : Promise.resolve(false),
   ]);
+  // Plenty of people are here to look, not to make. Their profile shows the
+  // person, without empty selling stats or a "for sale" shelf.
+  const sells = listings.length > 0;
+  const shares = posts.length > 0;
+  const makes = sells || shares;
 
   return (
     <>
       <div className="grid gap-8 border-b border-line pb-10 md:grid-cols-[1fr_auto] md:items-end">
         <div>
-          <p className="eyebrow">Creator</p>
+          <p className="eyebrow">{makes ? "Creator" : "Member"}</p>
           <div className="mt-2 flex items-center gap-5">
             <Avatar name={creator.name} file={creator.avatarFile} className="h-20 w-20 shrink-0 text-3xl" />
             <h1 className="min-w-0 break-words text-5xl font-light">{creator.name}</h1>
@@ -89,50 +94,57 @@ async function Creator({ params }: Props) {
             </div>
           )}
         </div>
-        <dl className="grid grid-cols-3 gap-6 text-center md:text-right">
-          <div>
-            <dt className="eyebrow">Avg. AI</dt>
-            <dd className="font-display text-3xl font-light">{stats.avgAi === null ? "–" : `${stats.avgAi}%`}</dd>
-          </div>
-          <div>
-            <dt className="eyebrow">With evidence</dt>
-            <dd className="font-display text-3xl font-light">{stats.verified}</dd>
-          </div>
-          <div>
-            <dt className="eyebrow">Sales</dt>
-            <dd className="font-display text-3xl font-light">{stats.sales}</dd>
-          </div>
-        </dl>
+        {sells && (
+          <dl className="grid grid-cols-3 gap-6 text-center md:text-right">
+            <div>
+              <dt className="eyebrow">Avg. AI</dt>
+              <dd className="font-display text-3xl font-light">{stats.avgAi === null ? "–" : `${stats.avgAi}%`}</dd>
+            </div>
+            <div>
+              <dt className="eyebrow">With evidence</dt>
+              <dd className="font-display text-3xl font-light">{stats.verified}</dd>
+            </div>
+            <div>
+              <dt className="eyebrow">Sales</dt>
+              <dd className="font-display text-3xl font-light">{stats.sales}</dd>
+            </div>
+          </dl>
+        )}
       </div>
 
-      <section className="mt-10">
-        <h2 className="text-2xl font-normal">For sale</h2>
-        <div className="mt-4">
-          {listings.length ? <ListingGrid listings={listings} /> : <p className="text-ink-soft">No public listings yet.</p>}
-        </div>
-      </section>
+      {sells && (
+        <section className="mt-10">
+          <h2 className="text-2xl font-normal">For sale</h2>
+          <div className="mt-4">
+            <ListingGrid listings={listings} />
+          </div>
+        </section>
+      )}
 
-      <section className="mt-14">
-        <h2 className="text-2xl font-normal">Journal</h2>
-        <div className="mt-4">
-          {posts.length ? (
+      {shares && (
+        <section className={sells ? "mt-14" : "mt-10"}>
+          <h2 className="text-2xl font-normal">Journal</h2>
+          <div className="mt-4">
             <PostGrid posts={posts} />
+          </div>
+        </section>
+      )}
+
+      {!makes && (
+        <p className="mt-10 text-ink-soft">
+          {isSelf ? (
+            <>
+              You haven&apos;t shared anything yet.{" "}
+              <Link href="/journal/new" className="link font-semibold text-ink">
+                Share something you made
+              </Link>
+              , or keep exploring.
+            </>
           ) : (
-            <p className="text-ink-soft">
-              No posts yet.
-              {isSelf && (
-                <>
-                  {" "}
-                  <Link href="/journal/new" className="link font-semibold text-ink">
-                    Write your first one
-                  </Link>
-                  .
-                </>
-              )}
-            </p>
+            <>{creator.name.split(" ")[0]} hasn&apos;t shared any work yet.</>
           )}
-        </div>
-      </section>
+        </p>
+      )}
     </>
   );
 }
