@@ -45,14 +45,14 @@ export default function Home() {
         <div>
           <p className="eyebrow">A place for human work</p>
           <h1 className="mt-6 text-[44px] font-light leading-[1.04] sm:text-6xl lg:text-[76px]">
-            Made by people.
+            Work made by people.
             <br />
-            Proven, not promised.
+            See how it was made.
           </h1>
           <p className="mt-8 max-w-xl text-lg leading-relaxed text-ink-soft">
-            Explore writing, art, film, code, handicrafts and anything else people make themselves. See how each piece was
-            made and how much AI was involved, as a number with a range and the reasoning behind it. If it&apos;s for sale,
-            you can buy it.
+            Explore writing, art, film, code, handicrafts and anything else people make themselves. Each piece shows how
+            much AI was involved, as a number with a range and the reasoning behind it. If it&apos;s for sale, you can buy
+            it.
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
             <Link href="/explore" className="btn-primary px-8 py-4">
