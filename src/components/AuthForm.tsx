@@ -17,105 +17,106 @@ export function AuthForm({ mode, next, google, googleError }: { mode: "login" | 
 
   return (
     <>
-    {google && (
-      <div className="mb-6 space-y-4">
-        {/* A plain link: the route sends the browser on to Google, which a client-side navigation can't follow. */}
-        <a href={googleHref} className="btn-ghost flex w-full items-center justify-center gap-3 normal-case tracking-normal">
-          <GoogleMark />
-          Continue with Google
-        </a>
-        {mode === "login" && (
-          <p className="text-xs leading-relaxed text-muted">
-            No account yet? Continuing with Google makes one, and you agree to our{" "}
-            <Link href="/terms" className="link text-ink-soft">
-              terms
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="link text-ink-soft">
-              privacy policy
-            </Link>{" "}
-            and confirm you&apos;re 18 or older.
-          </p>
-        )}
-        {googleError && (
-          <p role="alert" className="rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
-            {googleError}
-          </p>
-        )}
-        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted" aria-hidden="true">
-          <span className="h-px flex-1 bg-line" />
-          or
-          <span className="h-px flex-1 bg-line" />
-        </div>
-      </div>
-    )}
-    <form action={action} className="space-y-4">
-      <input type="hidden" name="next" value={next} />
-      {mode === "signup" && (
-        <>
+      {/* Shown first, so someone sent back from Google sees why straight away. */}
+      {googleError && (
+        <p role="alert" className="mb-4 rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
+          {googleError}
+        </p>
+      )}
+      <form action={action} className="space-y-4">
+        <input type="hidden" name="next" value={next} />
+        {mode === "signup" && (
           <div>
             <label htmlFor="name" className="label">
               Your name
             </label>
             <input id="name" name="name" className="field" defaultValue={v.name} autoComplete="name" required />
           </div>
-        </>
-      )}
-      <div>
-        <label htmlFor="email" className="label">
-          Email
-        </label>
-        <input id="email" name="email" type="email" className="field" defaultValue={v.email} autoComplete="email" required />
-      </div>
-      <div>
-        <label htmlFor="password" className="label">
-          Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          className="field"
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
-          minLength={mode === "signup" ? 8 : undefined}
-          required
-        />
-        {mode === "signup" ? (
-          <p className="hint">At least 8 characters.</p>
-        ) : (
-          <Link href="/forgot-password" className="mt-2 inline-block text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
-            Forgot password?
-          </Link>
         )}
-      </div>
-      {state?.error && (
-        <p role="alert" className="rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
-          {state.error}
-        </p>
+        <div>
+          <label htmlFor="email" className="label">
+            Email
+          </label>
+          <input id="email" name="email" type="email" className="field" defaultValue={v.email} autoComplete="email" required />
+        </div>
+        <div>
+          <label htmlFor="password" className="label">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            className="field"
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            minLength={mode === "signup" ? 8 : undefined}
+            required
+          />
+          {mode === "signup" ? (
+            <p className="hint">At least 8 characters.</p>
+          ) : (
+            <Link href="/forgot-password" className="mt-2 inline-block text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
+              Forgot password?
+            </Link>
+          )}
+        </div>
+        {state?.error && (
+          <p role="alert" className="rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
+            {state.error}
+          </p>
+        )}
+        {mode === "signup" && (
+          <p className="text-xs leading-relaxed text-muted">
+            By creating an account, with Google or a password, you agree to our{" "}
+            <Link href="/terms" className="link text-ink-soft">
+              terms
+            </Link>{" "}
+            and confirm you&apos;ve read our{" "}
+            <Link href="/privacy" className="link text-ink-soft">
+              privacy policy
+            </Link>
+            , and that you are 18 or older.
+          </p>
+        )}
+        <button className="btn-primary w-full" disabled={pending || Boolean(state?.next)}>
+          {pending || state?.next ? "One moment…" : mode === "login" ? "Log in" : "Create account"}
+        </button>
+      </form>
+
+      {google && (
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted" aria-hidden="true">
+            <span className="h-px flex-1 bg-line" />
+            or
+            <span className="h-px flex-1 bg-line" />
+          </div>
+          {/* A plain link: the route sends the browser on to Google, which a client-side navigation can't follow. */}
+          <a href={googleHref} className="btn-ghost flex w-full items-center justify-center gap-3 normal-case tracking-normal">
+            <GoogleMark />
+            Continue with Google
+          </a>
+          {mode === "login" && (
+            <p className="text-xs leading-relaxed text-muted">
+              No account yet? Continuing with Google makes one, and you agree to our{" "}
+              <Link href="/terms" className="link text-ink-soft">
+                terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="link text-ink-soft">
+                privacy policy
+              </Link>{" "}
+              and confirm you&apos;re 18 or older.
+            </p>
+          )}
+        </div>
       )}
-      {mode === "signup" && (
-        <p className="text-xs leading-relaxed text-muted">
-          By creating an account, with Google or a password, you agree to our{" "}
-          <Link href="/terms" className="link text-ink-soft">
-            terms
-          </Link>{" "}
-          and confirm you&apos;ve read our{" "}
-          <Link href="/privacy" className="link text-ink-soft">
-            privacy policy
-          </Link>
-          , and that you are 18 or older.
-        </p>
-      )}
-      <button className="btn-primary w-full" disabled={pending || Boolean(state?.next)}>
-        {pending || state?.next ? "One moment…" : mode === "login" ? "Log in" : "Create account"}
-      </button>
-      <p className="text-center text-sm text-ink-soft">
+
+      <p className="mt-6 text-center text-sm text-ink-soft">
         {mode === "login" ? "New here? " : "Already have an account? "}
         <Link href={otherHref} className="link font-semibold text-ink">
           {mode === "login" ? "Create an account" : "Log in"}
         </Link>
       </p>
-    </form>
     </>
   );
 }
