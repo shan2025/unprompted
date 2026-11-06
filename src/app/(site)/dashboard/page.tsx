@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { reviewOrder } from "@/app/actions/listings";
 import { Suspense } from "react";
+import { Avatar } from "@/components/Avatar";
+import { Cover } from "@/components/Cover";
+import { CommentIcon, HeartIcon } from "@/components/PostCard";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireUser } from "@/lib/auth";
 import { getDashboard, getInquiries } from "@/lib/data";
-import { formatDate, formatMoney, formatPrice } from "@/lib/format";
-import { getMyPosts } from "@/lib/journal";
+import { formatDate, formatMoney, formatPrice, formatShortDate } from "@/lib/format";
+import { getCreatorStats, getMyPosts, getRecentActivity } from "@/lib/journal";
+import { videoEmbed } from "@/lib/video";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -16,6 +20,18 @@ const STATUS: Record<string, { label: string; tone: string }> = {
   in_review: { label: "In review", tone: "text-assist" },
   sold: { label: "Sold", tone: "text-ink" },
   removed: { label: "Removed", tone: "text-heavy" },
+};
+
+// Posts only show a status when it isn't the usual "Live".
+const POST_STATUS: Record<string, { label: string; tone: string }> = {
+  in_review: { label: "In review", tone: "bg-[#faeeda] text-assist" },
+  removed: { label: "Removed", tone: "bg-[#f7e1de] text-heavy" },
+};
+
+const STAT_COLUMNS: Record<number, string> = {
+  1: "sm:grid-cols-1",
+  2: "",
+  4: "lg:grid-cols-[1.4fr_1fr_1fr_1fr]",
 };
 
 export default function DashboardPage() {
@@ -30,17 +46,45 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const user = await requireUser("/dashboard");
-  const [data, posts, questions] = await Promise.all([getDashboard(user.id), getMyPosts(user.id), getInquiries(user.id)]);
-  // Someone here only to explore gets their account and purchases, not selling tools.
-  const creator = data.listings.length > 0 || posts.length > 0;
+  const [data, posts, questions, stats, activity] = await Promise.all([
+    getDashboard(user.id),
+    getMyPosts(user.id),
+    getInquiries(user.id),
+    getCreatorStats(user.id),
+    getRecentActivity(user.id),
+  ]);
+  const sharer = posts.length > 0;
+  const seller = data.listings.length > 0;
+  // Someone here only to explore gets their account and purchases, not creator tools.
+  const creator = sharer || seller;
+  const total = (key: "views" | "appreciations" | "comments") => posts.reduce((n, p) => n + p[key], 0);
+
+  // Stats show what this person actually does: sharing numbers once they've
+  // shared, and sales numbers only once they've listed something.
+  const statCards: React.ReactNode[] = [];
+  if (sharer) {
+    statCards.push(
+      <Stat key="views" label="Views" value={total("views")} change={stats.thisWeek.views}>
+        <Spark days={stats.lastSevenDays} />
+      </Stat>,
+      <Stat key="works" label="Works shared" value={posts.length} />,
+      <Stat key="appreciations" label="Appreciations" value={total("appreciations")} change={stats.thisWeek.appreciations} />,
+      <Stat key="comments" label="Comments" value={total("comments")} change={stats.thisWeek.comments} />,
+    );
+  }
+  if (seller) {
+    statCards.push(
+      <Stat key="sales" label="Sales" value={data.sales.count} />,
+      <Stat key="earned" label="Earned" value={formatMoney(data.sales.totalCents)} />,
+    );
+  }
 
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">{creator ? "Dashboard" : "Your account"}</p>
-          <h1 className="mt-1 text-4xl font-light">Hi, {user.name.split(" ")[0]}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-ink-soft">
+          <h1 className="text-4xl font-light">Hi, {user.name.split(" ")[0]}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-ink-soft">
             <Link href={`/u/${user.handle}`} className="link">
               View your public profile
             </Link>
@@ -51,30 +95,15 @@ async function Dashboard() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          {creator ? (
-            <>
-              <Link href="/journal/new" className="btn-ghost">
-                Share your work
-              </Link>
-              <Link href="/sell" className="btn-primary">
-                New listing
-              </Link>
-            </>
-          ) : (
-            <Link href="/explore" className="btn-primary">
-              Explore the work
-            </Link>
-          )}
-        </div>
+        {!creator && (
+          <Link href="/explore" className="btn-primary">
+            Explore the work
+          </Link>
+        )}
       </div>
 
-      {creator && (
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <Stat label="Listings" value={data.listings.length.toString()} />
-          <Stat label="Sales" value={data.sales.count.toString()} />
-          <Stat label="Earned" value={formatMoney(data.sales.totalCents)} />
-        </div>
+      {statCards.length > 0 && (
+        <div className={`mt-8 grid gap-4 sm:grid-cols-2 ${STAT_COLUMNS[statCards.length] ?? "lg:grid-cols-3"}`}>{statCards}</div>
       )}
 
       {data.waiting.length > 0 && (
@@ -146,96 +175,115 @@ async function Dashboard() {
       )}
 
       {creator && (
-        <>
-      <section className="mt-12">
-        <h2 className="text-2xl font-normal">Your listings</h2>
-        {data.listings.length === 0 ? (
-          <p className="card mt-4 p-8 text-center text-ink-soft">
-            You haven&apos;t listed anything yet.{" "}
-            <Link href="/sell" className="link font-semibold text-ink">
-              List your first work
-            </Link>
-          </p>
-        ) : (
-          <div className="card mt-4 overflow-x-auto no-scrollbar">
-            <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Title</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">AI</th>
-                  <th className="px-4 py-3 text-right font-semibold">Price</th>
-                  <th className="px-4 py-3 text-right font-semibold">Sales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.listings.map((l) => (
-                  <tr key={l.id} className="border-b border-line last:border-0">
-                    <td className="px-4 py-3">
-                      <Link href={`/listing/${l.slug}`} className="font-semibold hover:text-accent">
-                        {l.title}
-                      </Link>
-                      <div className="text-xs text-muted">{formatDate(l.createdAt)}</div>
-                    </td>
-                    <td className={`px-4 py-3 font-semibold ${STATUS[l.status]?.tone}`}>{STATUS[l.status]?.label ?? l.status}</td>
-                    <td className="px-4 py-3">
-                      <AiPill percent={l.aiPercent} tier={l.tier} />
-                    </td>
-                    <td className="px-4 py-3 text-right">{formatPrice(l.priceCents)}</td>
-                    <td className="px-4 py-3 text-right">{l.sales}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-2xl font-normal">Your journal posts</h2>
-        {posts.length === 0 ? (
-          <p className="card mt-4 p-8 text-center text-ink-soft">
-            Not everything has to be for sale.{" "}
-            <Link href="/journal/new" className="link font-semibold text-ink">
-              Share your first post
-            </Link>
-          </p>
-        ) : (
-          <div className="card mt-4 overflow-x-auto no-scrollbar">
-            <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Title</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">AI</th>
-                  <th className="px-4 py-3 text-right font-semibold">Appreciations</th>
-                  <th className="px-4 py-3 text-right font-semibold">Comments</th>
-                </tr>
-              </thead>
-              <tbody>
+        <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <section className="min-w-0">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className="text-2xl font-normal">Your work</h2>
+              <Link href="/journal/new" className="link text-sm">
+                Share new work
+              </Link>
+            </div>
+            {posts.length === 0 ? (
+              <p className="mt-4 border-y border-line py-6 text-ink-soft">
+                Not everything has to be for sale.{" "}
+                <Link href="/journal/new" className="link font-semibold text-ink">
+                  Share your first post
+                </Link>
+              </p>
+            ) : (
+              <ul className="mt-4 border-b border-line">
                 {posts.map((p) => (
-                  <tr key={p.id} className="border-b border-line last:border-0">
-                    <td className="px-4 py-3">
-                      <Link href={`/journal/${p.slug}`} className="font-semibold hover:text-accent">
-                        {p.title}
-                      </Link>
-                      <div className="text-xs text-muted">{formatDate(p.createdAt)}</div>
-                    </td>
-                    <td className={`px-4 py-3 font-semibold ${STATUS[p.status]?.tone}`}>{STATUS[p.status]?.label ?? p.status}</td>
-                    <td className="px-4 py-3">
-                      <AiPill percent={p.aiPercent} tier={p.tier} />
-                    </td>
-                    <td className="px-4 py-3 text-right">{p.appreciations}</td>
-                    <td className="px-4 py-3 text-right">{p.comments}</td>
-                  </tr>
+                  <WorkRow key={p.id} post={p} />
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-        </>
+              </ul>
+            )}
+          </section>
+
+          <section className="min-w-0">
+            <h2 className="text-2xl font-normal">Recent activity</h2>
+            {activity.length === 0 ? (
+              <p className="mt-4 border border-line p-5 text-sm leading-relaxed text-ink-soft">
+                When people comment on or appreciate your work, you&apos;ll see it here.
+              </p>
+            ) : (
+              <ul className="card mt-4">
+                {activity.map((a, i) => (
+                  <li key={i} className="flex gap-3 border-b border-line p-4 text-sm leading-snug last:border-0">
+                    <Link href={`/u/${a.handle}`} tabIndex={-1} aria-hidden="true" className="shrink-0">
+                      <Avatar name={a.name} file={a.avatarFile} className="h-8 w-8 text-xs" />
+                    </Link>
+                    <div className="min-w-0">
+                      <p className="text-ink-soft">
+                        <Link href={`/u/${a.handle}`} className="font-semibold text-ink hover:text-accent">
+                          {a.name}
+                        </Link>{" "}
+                        {a.kind === "comment" ? "commented on" : "appreciated"}{" "}
+                        <Link href={`/journal/${a.slug}${a.kind === "comment" ? "#comments" : ""}`} className="font-medium text-ink hover:text-accent">
+                          {a.title}
+                        </Link>
+                      </p>
+                      {a.body && <p className="mt-1 line-clamp-2 break-words text-ink-soft">&ldquo;{a.body}&rdquo;</p>}
+                      <p className="mt-1 text-xs text-muted">{timeAgo(a.at)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       )}
+
+      {creator &&
+        (seller ? (
+          <section className="mt-12">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className="text-2xl font-normal">Your listings</h2>
+              <Link href="/sell" className="link text-sm">
+                New listing
+              </Link>
+            </div>
+            <div className="card mt-4 overflow-x-auto no-scrollbar">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Title</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">AI</th>
+                    <th className="px-4 py-3 text-right font-semibold">Price</th>
+                    <th className="px-4 py-3 text-right font-semibold">Sales</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.listings.map((l) => (
+                    <tr key={l.id} className="border-b border-line last:border-0">
+                      <td className="px-4 py-3">
+                        <Link href={`/listing/${l.slug}`} className="font-semibold hover:text-accent">
+                          {l.title}
+                        </Link>
+                        <div className="text-xs text-muted">{formatDate(l.createdAt)}</div>
+                      </td>
+                      <td className={`px-4 py-3 font-semibold ${STATUS[l.status]?.tone}`}>{STATUS[l.status]?.label ?? l.status}</td>
+                      <td className="px-4 py-3">
+                        <AiPill percent={l.aiPercent} tier={l.tier} />
+                      </td>
+                      <td className="px-4 py-3 text-right">{formatPrice(l.priceCents)}</td>
+                      <td className="px-4 py-3 text-right">{l.sales}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : (
+          <p className="mt-12 flex flex-wrap items-center justify-between gap-2 border-y border-line py-5 text-ink-soft">
+            <span>
+              <span className="font-medium text-ink">Want to sell something?</span> List a piece in the marketplace and set your own price.
+            </span>
+            <Link href="/sell" className="link text-ink">
+              Create a listing
+            </Link>
+          </p>
+        ))}
 
       <section className="mt-12">
         <h2 className="text-2xl font-normal">Your purchases</h2>
@@ -270,11 +318,103 @@ async function Dashboard() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+type MyPost = Awaited<ReturnType<typeof getMyPosts>>[number];
+
+function WorkRow({ post: p }: { post: MyPost }) {
+  const video = p.videoUrl ? videoEmbed(p.videoUrl) : null;
+  const status = POST_STATUS[p.status];
   return (
-    <div className="card p-5">
-      <span className="eyebrow">{label}</span>
-      <span className="mt-1 block font-display text-3xl font-light">{value}</span>
+    <li className="flex items-center gap-4 border-t border-line py-3.5">
+      <Link href={`/journal/${p.slug}`} tabIndex={-1} aria-hidden="true" className="hidden h-16 w-[88px] shrink-0 overflow-hidden bg-field sm:block">
+        {!p.coverFile && video?.thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element -- thumbnails come straight from the video's host
+          <img src={video.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+        ) : (
+          <Cover slug={p.slug} category={p.category} coverFile={p.coverFile} title="" />
+        )}
+      </Link>
+      <div className="min-w-0 flex-1">
+        <Link href={`/journal/${p.slug}`} className="font-medium hover:text-accent">
+          {p.title}
+        </Link>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
+          {formatShortDate(p.createdAt)}
+          <AiPill percent={p.aiPercent} tier={p.tier} />
+          {status && <span className={`rounded-full px-2 py-0.5 font-semibold ${status.tone}`}>{status.label}</span>}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-4 text-xs font-semibold text-ink-soft">
+        <span className="inline-flex items-center gap-1" title="Views">
+          <EyeIcon className="h-3.5 w-3.5" />
+          {p.views.toLocaleString("en-US")}
+          <span className="sr-only">views</span>
+        </span>
+        <span className="inline-flex items-center gap-1" title="Appreciations">
+          <HeartIcon className="h-3.5 w-3.5" />
+          {p.appreciations}
+          <span className="sr-only">appreciations</span>
+        </span>
+        <span className="inline-flex items-center gap-1" title="Comments">
+          <CommentIcon className="h-3.5 w-3.5" />
+          {p.comments}
+          <span className="sr-only">comments</span>
+        </span>
+      </div>
+    </li>
+  );
+}
+
+function Stat({ label, value, change, children }: { label: string; value: number | string; change?: number; children?: React.ReactNode }) {
+  return (
+    <div className="card flex justify-between gap-4 p-5 [&>:last-child:not(:first-child)]:self-end">
+      <div>
+        <span className="eyebrow">{label}</span>
+        <span className="mt-1 block font-display text-3xl font-light">{typeof value === "number" ? value.toLocaleString("en-US") : value}</span>
+        {change !== undefined && (
+          <span className={`mt-0.5 block text-xs font-semibold ${change > 0 ? "text-human" : "text-muted"}`}>
+            {change > 0 ? `+${change.toLocaleString("en-US")}` : "None"} this week
+          </span>
+        )}
+      </div>
+      {children}
     </div>
   );
+}
+
+/** Views per day for the last seven days, today darkest. */
+function Spark({ days }: { days: { day: string; views: number }[] }) {
+  const max = Math.max(1, ...days.map((d) => d.views));
+  return (
+    <div className="flex h-10 items-end gap-[3px]" role="img" aria-label={`Views over the last 7 days: ${days.map((d) => d.views).join(", ")}`}>
+      {days.map((d, i) => (
+        <span
+          key={d.day}
+          title={`${d.day}: ${d.views} ${d.views === 1 ? "view" : "views"}`}
+          className={`block w-[7px] ${i === days.length - 1 ? "bg-ink" : "bg-line"}`}
+          style={{ height: `${Math.max(8, (d.views / max) * 100)}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function timeAgo(date: Date) {
+  const minutes = Math.round((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return formatShortDate(date);
 }

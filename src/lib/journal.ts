@@ -12,6 +12,7 @@ const { posts, postComments, postAppreciations, follows, users, flags } = schema
 // the table prefix, and an unqualified "id" would bind to the inner table.
 const appreciationCount = sql<number>`(select count(*)::int from post_appreciations pa where pa.post_id = "posts"."id")`;
 const commentCount = sql<number>`(select count(*)::int from post_comments pc where pc.post_id = "posts"."id" and pc.status = 'visible')`;
+const viewCount = sql<number>`(select count(*)::int from post_views pv where pv.post_id = "posts"."id")`;
 
 const cardFields = {
   id: posts.id,
@@ -26,8 +27,10 @@ const cardFields = {
   processVerified: posts.processVerified,
   isDemo: posts.isDemo,
   createdAt: posts.createdAt,
+  words: sql<number>`coalesce(array_length(regexp_split_to_array(nullif(trim(${posts.body}), ''), '\\s+'), 1), 0)`,
   authorName: users.name,
   authorHandle: users.handle,
+  authorAvatarFile: users.avatarFile,
   appreciations: appreciationCount,
   comments: commentCount,
 };
@@ -141,16 +144,78 @@ export async function getMyPosts(userId: number) {
       id: posts.id,
       slug: posts.slug,
       title: posts.title,
+      category: posts.category,
+      coverFile: posts.coverFile,
+      videoUrl: posts.videoUrl,
       status: posts.status,
       aiPercent: posts.aiPercent,
       tier: posts.tier,
       createdAt: posts.createdAt,
       appreciations: appreciationCount,
       comments: commentCount,
+      views: viewCount,
     })
     .from(posts)
     .where(eq(posts.authorId, userId))
     .orderBy(desc(posts.createdAt));
+}
+
+/**
+ * Totals across everything a creator has shared: views (with a count per day
+ * for the last 7 days), and how many views, appreciations and comments from
+ * other people arrived in the last 7 days.
+ */
+export async function getCreatorStats(userId: number) {
+  // Views are stamped with the UTC date (see views.ts), so days are counted in UTC here too.
+  const today = sql`(now() at time zone 'utc')::date`;
+  const [[week], days] = await Promise.all([
+    db.execute<{ views: number; appreciations: number; comments: number }>(sql`
+      select
+        (select count(*)::int from post_views v join posts p on p.id = v.post_id
+          where p.author_id = ${userId} and v.day > ${today} - 7) as views,
+        (select count(*)::int from post_appreciations a join posts p on p.id = a.post_id
+          where p.author_id = ${userId} and a.user_id <> ${userId} and a.created_at > now() - interval '7 days') as appreciations,
+        (select count(*)::int from post_comments c join posts p on p.id = c.post_id
+          where p.author_id = ${userId} and c.author_id <> ${userId} and c.status = 'visible'
+            and c.created_at > now() - interval '7 days') as comments`),
+    db.execute<{ day: string; views: number }>(sql`
+      select to_char(d.day, 'YYYY-MM-DD') as day, count(v.post_id)::int as views
+      from generate_series(${today} - 6, ${today}, interval '1 day') as d(day)
+      left join post_views v on v.day = d.day::date
+        and v.post_id in (select id from posts where author_id = ${userId})
+      group by d.day order by d.day`),
+  ]);
+  return {
+    thisWeek: { views: week?.views ?? 0, appreciations: week?.appreciations ?? 0, comments: week?.comments ?? 0 },
+    lastSevenDays: days.map((d) => ({ day: d.day, views: Number(d.views) })),
+  };
+}
+
+/** The latest comments and appreciations other people left on a creator's posts. */
+export async function getRecentActivity(userId: number, limit = 6) {
+  const rows = await db.execute<{
+    kind: "comment" | "appreciation";
+    at: string;
+    body: string | null;
+    slug: string;
+    title: string;
+    name: string;
+    handle: string;
+    avatarFile: string | null;
+  }>(sql`
+    select * from (
+      select 'comment' as kind, c.created_at as at, c.body, p.slug, p.title,
+        u.name, u.handle, u.avatar_file as "avatarFile"
+      from post_comments c join posts p on p.id = c.post_id join users u on u.id = c.author_id
+      where p.author_id = ${userId} and c.author_id <> ${userId} and c.status = 'visible'
+      union all
+      select 'appreciation', a.created_at, null, p.slug, p.title, u.name, u.handle, u.avatar_file
+      from post_appreciations a join posts p on p.id = a.post_id join users u on u.id = a.user_id
+      where p.author_id = ${userId} and a.user_id <> ${userId}
+    ) activity
+    order by at desc
+    limit ${limit}`);
+  return rows.map((r) => ({ ...r, at: new Date(r.at) }));
 }
 
 export async function getPostReviewQueue() {

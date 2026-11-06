@@ -23,13 +23,13 @@ const PAGES = {
   explore: {
     path: "/explore",
     title: "Explore",
-    intro: "Read and watch work made by people. Every piece shows how much AI was involved.",
+    intro: "Work made by people, with its AI use shown.",
     sorts: EXPLORE_SORTS as Partial<typeof SORTS>,
   },
   marketplace: {
     path: "/marketplace",
     title: "Marketplace",
-    intro: "Buy work made by people. Every piece shows how much AI was involved.",
+    intro: "Buy work made by people, with its AI use shown.",
     sorts: SORTS as Partial<typeof SORTS>,
   },
 } as const;
@@ -133,16 +133,13 @@ export function ExploreView({
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-4xl font-light">{title}</h1>
-        <p className="mt-2 max-w-2xl text-ink-soft">{intro}</p>
-      </div>
-
+      {/* The page heading, search, categories and filters all fit in two short rows,
+          so the work itself starts high on the screen. */}
       <form
         ref={formRef}
         action={path}
         role="search"
-        className={`card mb-6 grid gap-3 p-4 sm:grid-cols-2 ${market ? "lg:grid-cols-[1.6fr_1fr_1fr]" : "lg:grid-cols-[1.6fr_1fr_1fr_1fr]"}`}
+        className="mb-6"
         onSubmit={(e) => {
           e.preventDefault();
           apply(shown);
@@ -153,66 +150,111 @@ export function ExploreView({
           typing.current = setTimeout(() => apply(shown), 400);
         }}
       >
-        <input
-          name="q"
-          type="search"
-          defaultValue={fields.q}
-          placeholder="Search work and creators"
-          className="field sm:col-span-2 lg:col-span-1"
-          aria-label="Search"
-          enterKeyHint="search"
-        />
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+          <div>
+            <h1 className="text-4xl font-light">{title}</h1>
+            <p className="mt-1 text-ink-soft">{intro}</p>
+          </div>
+          <div className="relative w-full sm:w-80">
+            <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <input
+              name="q"
+              type="search"
+              defaultValue={fields.q}
+              placeholder="Search work and creators"
+              className="field pl-10"
+              aria-label="Search"
+              enterKeyHint="search"
+            />
+          </div>
+        </div>
         {categories.length > 0 && <input type="hidden" name="category" value={categories.join(",")} />}
-        {!market && (
-          <select name="show" defaultValue={fields.show} className="field" aria-label="What to show">
-            {Object.entries(SHOWS).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-        )}
-        <select name="maxAi" defaultValue={fields.maxAi} className="field" aria-label="Maximum AI involvement">
-          {AI_LIMITS.map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
-            </option>
-          ))}
-        </select>
-        <select name="sort" defaultValue={fields.sort} className="field" aria-label="Sort">
-          {Object.entries(sorts).map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm text-ink-soft sm:col-span-2 lg:col-span-full">
-          <input type="checkbox" name="verified" value="1" defaultChecked={fields.verified} className="h-4 w-4 accent-[var(--accent)]" />
-          Only show work with process evidence attached
-        </label>
+
+        {/* Phones scroll the chips sideways. Wide screens keep the filters on the
+            right and let the chips wrap beside them, so none is hidden. */}
+        <div className="mt-6 flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-line pb-4 lg:flex-nowrap">
+          {/* A picked category keeps its chip even if it's empty, so it can be turned off. */}
+          {chipCategories.length > 1 && (
+            <div className="-my-1 flex min-w-0 max-w-full gap-2 overflow-x-auto no-scrollbar py-1 lg:flex-1 lg:flex-wrap lg:overflow-visible">
+              {chip({ categories: [] }, { active: categories.length === 0, children: "All" })}
+              {chipCategories.map((c) => {
+                const on = categories.includes(c.id);
+                return chip(
+                  { categories: on ? categories.filter((id) => id !== c.id) : [...categories, c.id] },
+                  { k: c.id, active: on, children: c.label },
+                );
+              })}
+            </div>
+          )}
+          <div className="ml-auto flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
+            {!market && (
+              <PillSelect name="show" defaultValue={fields.show} label="What to show">
+                {Object.entries(SHOWS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </PillSelect>
+            )}
+            <PillSelect name="maxAi" defaultValue={fields.maxAi} label="Maximum AI involvement">
+              {AI_LIMITS.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </PillSelect>
+            <PillSelect name="sort" defaultValue={fields.sort} label="Sort">
+              {Object.entries(sorts).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </PillSelect>
+            <label
+              className="flex items-center gap-2 rounded-full border border-line px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:text-ink"
+              title="Only show work with process evidence attached"
+            >
+              <input type="checkbox" name="verified" value="1" defaultChecked={fields.verified} className="h-3.5 w-3.5 accent-[var(--accent)]" />
+              Process evidence
+            </label>
+          </div>
+        </div>
         <noscript>
-          <button className="btn-primary">Apply</button>
+          <button className="btn-primary mt-3">Apply</button>
         </noscript>
       </form>
-
-      {/* A picked category keeps its chip even if it's empty, so it can be turned off. */}
-      {chipCategories.length > 1 && (
-        <div className="mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {chip({ categories: [] }, { active: categories.length === 0, children: "All" })}
-          {chipCategories.map((c) => {
-            const on = categories.includes(c.id);
-            return chip(
-              { categories: on ? categories.filter((id) => id !== c.id) : [...categories, c.id] },
-              { k: c.id, active: on, children: c.label },
-            );
-          })}
-        </div>
-      )}
 
       <div aria-busy={pending} className={`transition-opacity duration-200 ${pending ? "opacity-50" : ""}`}>
         {children}
       </div>
     </>
+  );
+}
+
+function PillSelect({ name, defaultValue, label, children }: { name: string; defaultValue: string; label: string; children: React.ReactNode }) {
+  return (
+    <span className="relative">
+      <select
+        name={name}
+        defaultValue={defaultValue}
+        aria-label={label}
+        className="appearance-none rounded-full border border-line bg-transparent py-1.5 pl-3.5 pr-8 text-sm text-ink-soft transition-colors hover:border-ink focus:border-ink focus:outline-none"
+      >
+        {children}
+      </select>
+      <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-4-4" strokeLinecap="round" />
+    </svg>
   );
 }
 

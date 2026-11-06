@@ -42,6 +42,12 @@ export default function PrivacyPage() {
             is used.
           </li>
           <li>
+            <strong className="text-ink">View counts on posts:</strong> when you open a post, we count one view for that
+            day so the author can see how many people read it. To tell visitors apart we store a scrambled code made
+            from your account (or your IP address and browser if you&apos;re logged out) and the date. We never store the
+            IP address itself, and the code changes every day, so it can&apos;t be used to follow you.
+          </li>
+          <li>
             <strong className="text-ink">One login cookie</strong> that keeps you signed in. We use no advertising or
             tracking cookies.
           </li>

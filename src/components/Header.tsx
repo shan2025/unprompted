@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isCreator } from "@/lib/data";
 import { AccountMenu } from "./AccountMenu";
 import { Logo } from "./Logo";
+import { NavLink } from "./NavLink";
 
 // Wide screens put the sections next to the logo; narrower ones give them a
 // second row. Posting tools appear as the screen widens; anything hidden here
@@ -16,18 +17,12 @@ export function Header() {
           <Logo compact />
         </Link>
         <nav className="hidden items-center gap-6 whitespace-nowrap text-[15px] text-ink md:flex lg:gap-8">
-          <Link href="/explore" className="hover:opacity-60">
-            Explore
-          </Link>
-          <Link href="/marketplace" className="hover:opacity-60">
-            Marketplace
-          </Link>
-          <Link href="/journal" className="hover:opacity-60">
-            Journal
-          </Link>
-          <Link href="/standard" className="hidden hover:opacity-60 xl:inline">
+          <NavLink href="/explore">Explore</NavLink>
+          <NavLink href="/marketplace">Marketplace</NavLink>
+          <NavLink href="/journal">Journal</NavLink>
+          <NavLink href="/standard" className="hidden xl:inline">
             How scoring works
-          </Link>
+          </NavLink>
         </nav>
         <div className="ml-auto">
           <Suspense fallback={<div className="h-11 w-36" />}>
@@ -40,15 +35,9 @@ export function Header() {
         aria-label="Sections"
         className="flex h-11 items-center gap-6 overflow-x-auto whitespace-nowrap border-t border-line px-4 text-[13px] font-semibold uppercase tracking-[0.08em] no-scrollbar sm:px-8 md:hidden"
       >
-        <Link href="/explore" className="hover:opacity-60">
-          Explore
-        </Link>
-        <Link href="/marketplace" className="hover:opacity-60">
-          Marketplace
-        </Link>
-        <Link href="/journal" className="hover:opacity-60">
-          Journal
-        </Link>
+        <NavLink href="/explore">Explore</NavLink>
+        <NavLink href="/marketplace">Marketplace</NavLink>
+        <NavLink href="/journal">Journal</NavLink>
       </nav>
     </header>
   );

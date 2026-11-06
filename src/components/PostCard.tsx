@@ -1,27 +1,36 @@
 import Link from "next/link";
 import { categoryLabel } from "@/lib/categories";
-import { formatDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
 import type { PostCard as PostCardData } from "@/lib/journal";
 import { videoEmbed } from "@/lib/video";
+import { Avatar } from "./Avatar";
 import { Cover } from "./Cover";
 import { AiPill } from "./Score";
+
+/** About how long a piece takes to read, at 220 words a minute. */
+function readingTime(words: number) {
+  return `${Math.max(1, Math.round(words / 220))} min read`;
+}
 
 export function PostCard({ post }: { post: PostCardData }) {
   const video = post.videoUrl ? videoEmbed(post.videoUrl) : null;
   const hasPicture = Boolean(post.coverFile || video);
+  const aiPill = <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} />;
   return (
     <Link
       href={`/journal/${post.slug}`}
       className="group card flex flex-col overflow-hidden transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgb(60_40_20/0.25)]"
     >
       {hasPicture && (
-        <div className="relative aspect-[16/9] overflow-hidden border-b border-line">
+        <div className="relative aspect-[4/3] overflow-hidden border-b border-line">
           {!post.coverFile && video?.thumbnail ? (
             // eslint-disable-next-line @next/next/no-img-element -- thumbnails come straight from the video's host
             <img src={video.thumbnail} alt={post.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
           ) : (
             <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} title={post.title} />
           )}
+          {/* The AI score sits on the picture so it's seen while scanning the grid. */}
+          <span className="absolute left-3 top-3 rounded-full bg-card/95 px-2.5 py-1">{aiPill}</span>
           {video && <PlayBadge />}
         </div>
       )}
@@ -29,7 +38,7 @@ export function PostCard({ post }: { post: PostCardData }) {
         <div className="flex items-center gap-2">
           <span className="eyebrow">{categoryLabel(post.category)}</span>
           {post.isDemo && <span className="rounded bg-line/70 px-1.5 text-[10px] font-semibold text-muted">DEMO</span>}
-          <span className="ml-auto text-xs font-medium text-muted">{video ? "Free to watch" : "Free to read"}</span>
+          <span className="ml-auto text-xs font-medium text-muted">{video ? "Video" : post.words > 0 ? readingTime(post.words) : null}</span>
         </div>
         <h3 className="mt-1.5 text-xl font-medium leading-snug text-ink group-hover:text-accent">{post.title}</h3>
         {post.excerpt && (
@@ -37,23 +46,22 @@ export function PostCard({ post }: { post: PostCardData }) {
             {post.excerpt}
           </p>
         )}
-        <div className="mt-auto pt-4">
-          <p className="text-sm text-muted">
-            {post.authorName} · {formatDate(post.createdAt)}
-          </p>
-          <div className="mt-2 flex items-center gap-4 text-xs font-semibold text-ink-soft">
-            <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} />
-            <span className="ml-auto inline-flex items-center gap-1" title="Appreciations">
-              <HeartIcon className="h-3.5 w-3.5" />
-              {post.appreciations}
-              <span className="sr-only">appreciations</span>
-            </span>
-            <span className="inline-flex items-center gap-1" title="Comments">
-              <CommentIcon className="h-3.5 w-3.5" />
-              {post.comments}
-              <span className="sr-only">comments</span>
-            </span>
-          </div>
+        {!hasPicture && <div className="mt-3">{aiPill}</div>}
+        <div className="mt-auto flex items-center gap-2 pt-4 text-sm text-ink-soft">
+          <Avatar name={post.authorName} file={post.authorAvatarFile} className="h-6 w-6 shrink-0 text-[11px]" />
+          <span className="min-w-0 truncate">
+            {post.authorName} <span className="text-muted">· {formatShortDate(post.createdAt)}</span>
+          </span>
+          <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs font-semibold" title="Appreciations">
+            <HeartIcon className="h-3.5 w-3.5" />
+            {post.appreciations}
+            <span className="sr-only">appreciations</span>
+          </span>
+          <span className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs font-semibold" title="Comments">
+            <CommentIcon className="h-3.5 w-3.5" />
+            {post.comments}
+            <span className="sr-only">comments</span>
+          </span>
         </div>
       </div>
     </Link>

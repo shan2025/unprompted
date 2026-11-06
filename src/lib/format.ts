@@ -16,6 +16,12 @@ export function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
+/** "Nov 4", with the year only when it isn't this year. */
+export function formatShortDate(date: Date) {
+  const thisYear = date.getFullYear() === new Date().getFullYear();
+  return new Intl.DateTimeFormat("en-US", thisYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
 export function plural(n: number, word: string, pluralWord = `${word}s`) {
   return `${n.toLocaleString("en-US")} ${n === 1 ? word : pluralWord}`;
 }

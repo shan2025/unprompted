@@ -57,6 +57,13 @@
       "when": 1793932776053,
       "tag": "0007_profile_links",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793991414697,
+      "tag": "0008_post_views",
+      "breakpoints": true
     }
   ]
 }

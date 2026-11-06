@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { Suspense } from "react";
 import { AskCreator } from "@/components/AskCreator";
 import { Avatar } from "@/components/Avatar";
@@ -19,7 +21,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { categoryLabel } from "@/lib/categories";
 import { formatDate, plural, siteUrl } from "@/lib/format";
 import { getPost, getPostActivity, isFollowing } from "@/lib/journal";
+import { clientIp } from "@/lib/rate-limit";
 import { EVIDENCE_KINDS, TIER_INFO, type Tier } from "@/lib/scoring";
+import { recordView } from "@/lib/views";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -69,6 +73,14 @@ async function PostView({ params, searchParams }: Props) {
   ]);
   const { analysis, evidence } = post;
   const isPublished = post.status === "published";
+
+  // Count the view once the page is sent. Authors reading their own post and
+  // link prefetches don't count. Request data has to be read here, not inside after().
+  const h = await headers();
+  if (isPublished && !isAuthor && !h.get("next-router-prefetch")) {
+    const who = { userId: user?.id ?? null, ip: await clientIp(), userAgent: h.get("user-agent") ?? "" };
+    after(() => recordView(post.id, who).catch(() => {}));
+  }
 
   return (
     <>

@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   customType,
+  date,
   index,
   integer,
   jsonb,
@@ -182,6 +183,21 @@ export const postAppreciations = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.postId, t.userId] }), index("post_appreciations_user_idx").on(t.userId)],
+).enableRLS();
+
+// One row per visitor per post per day, so refreshing doesn't add views.
+// `visitor` is a hash that includes the day, so the same person can't be
+// followed from one day to the next, and no IP address is stored.
+export const postViews = pgTable(
+  "post_views",
+  {
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    visitor: text("visitor").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.day, t.visitor] })],
 ).enableRLS();
 
 export const follows = pgTable(

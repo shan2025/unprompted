@@ -73,15 +73,18 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
 
   return (
     <ExploreView available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show }}>
-      <p className="mb-4 text-sm text-muted">
-        {/* The empty state below says it when nothing matches. */}
-        {items.length > 0 && `${plural(items.length, "work")} · `}
-        <Link href="/marketplace" className="link text-ink">
-          Looking to buy? See the marketplace
-        </Link>
-      </p>
+      {/* The empty state below says it when nothing matches. */}
+      {items.length > 0 && <p className="mb-4 text-sm text-muted">{plural(items.length, "work")}</p>}
       {items.length > 0 ? (
-        <FeedGrid items={items} />
+        <>
+          <FeedGrid items={items} />
+          <p className="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-5 text-ink-soft">
+            Looking to buy? Some creators sell their work.
+            <Link href={marketplaceHref(params)} className="link text-ink">
+              See the marketplace
+            </Link>
+          </p>
+        </>
       ) : (
         <div className="card p-10 text-center">
           <p className="font-display text-xl font-medium">Nothing here yet.</p>
