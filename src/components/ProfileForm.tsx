@@ -67,11 +67,16 @@ export function ProfileForm({
   // The form keeps its fields between saves, so once a photo is saved, empty the
   // file picker: a later Save changes shouldn't upload the same photo again.
   // Whatever was sent with a successful save becomes the new "saved" version.
+  // Right after a save the bar says so plainly for a few seconds, so it can't be missed.
+  const [justSaved, setJustSaved] = useState(false);
   useEffect(() => {
     if (!state?.saved) return;
     if (submitted.current) setBase(submitted.current);
     const photo = formRef.current?.elements.namedItem("avatar");
     if (photo instanceof HTMLInputElement) photo.value = "";
+    setJustSaved(true);
+    const t = setTimeout(() => setJustSaved(false), 4000);
+    return () => clearTimeout(t);
   }, [state]);
   // Leaving with unsaved changes asks first.
   useEffect(() => {
@@ -373,8 +378,13 @@ export function ProfileForm({
                 <span className="h-2 w-2 rounded-full bg-assist" aria-hidden />
                 Unsaved changes
               </span>
-            ) : state?.saved && !photoSave && !pending ? (
-              <span className="font-semibold text-human">Saved.</span>
+            ) : justSaved && !photoSave && !pending ? (
+              <span className="fade inline-flex items-center gap-2 rounded-full bg-human/10 px-3 py-1.5 font-semibold text-human">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                </svg>
+                Your profile is saved
+              </span>
             ) : (
               <span className="text-muted">All changes saved</span>
             )}
@@ -384,8 +394,11 @@ export function ProfileForm({
               Discard
             </button>
           )}
-          <button className="btn-primary grow sm:grow-0" disabled={busy || !dirty}>
-            {pending && !photoSave ? "Saving…" : "Save changes"}
+          <button
+            className={`btn-primary grow transition-colors sm:grow-0 ${justSaved && !photoSave && !dirty && !pending ? "!border-human !bg-human !text-paper !opacity-100" : ""}`}
+            disabled={busy || !dirty}
+          >
+            {pending && !photoSave ? "Saving…" : justSaved && !photoSave && !dirty ? "✓ Saved" : "Save changes"}
           </button>
         </div>
       </div>

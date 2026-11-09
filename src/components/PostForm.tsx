@@ -1,21 +1,22 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { createPost, previewPostAssessment } from "@/app/actions/posts";
+import Link from "next/link";
+import { createPost, previewPostAssessment, updatePost } from "@/app/actions/posts";
 import { CATEGORIES } from "@/lib/categories";
 import type { FieldErrors } from "@/lib/listing-form";
-import type { PostPreviewState } from "@/lib/post-form";
+import type { EditablePost, PostPreviewState } from "@/lib/post-form";
 import type { Level } from "@/lib/scoring";
 import { DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
-export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: string; defaultAi?: Level }) {
+export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory?: string; defaultAi?: Level; post?: EditablePost }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const [createState, createAction, publishing] = useActionState(createPost, null);
+  const [createState, createAction, publishing] = useActionState(post ? updatePost : createPost, null);
   const [preview, setPreview] = useState<PostPreviewState | null>(null);
   const [checking, startChecking] = useTransition();
   const [, startPublishing] = useTransition();
   const [tooBig, setTooBig] = useState<string | null>(null);
-  const [hasVideo, setHasVideo] = useState(false);
+  const [hasVideo, setHasVideo] = useState(Boolean(post?.videoUrl));
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
   const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
@@ -44,12 +45,13 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
   return (
     <form ref={formRef} onSubmit={submit} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]" noValidate>
       <div className="space-y-6">
+        {post && <input type="hidden" name="editSlug" value={post.slug} />}
         <Section step="01" title="Your post">
           <div>
             <label htmlFor="title" className="label">
               Title
             </label>
-            <input id="title" name="title" className="field" maxLength={100} required />
+            <input id="title" name="title" className="field" maxLength={100} required defaultValue={post?.title} />
             <FieldError errors={errors} name="title" />
           </div>
 
@@ -57,7 +59,7 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             <label htmlFor="subtitle" className="label">
               Subtitle <span className="font-normal text-muted">(optional)</span>
             </label>
-            <input id="subtitle" name="subtitle" className="field" maxLength={160} />
+            <input id="subtitle" name="subtitle" className="field" maxLength={160} defaultValue={post?.subtitle} />
             <p className="hint">One line that tells readers what this is about.</p>
             <FieldError errors={errors} name="subtitle" />
           </div>
@@ -66,7 +68,7 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             <label htmlFor="category" className="label">
               Category
             </label>
-            <select id="category" name="category" className="field sm:max-w-xs" defaultValue={defaultCategory ?? ""}>
+            <select id="category" name="category" className="field sm:max-w-xs" defaultValue={post?.category ?? defaultCategory ?? ""}>
               <option value="" disabled>
                 Choose one
               </option>
@@ -83,7 +85,7 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             <label htmlFor="body" className="label">
               Write
             </label>
-            <textarea id="body" name="body" rows={16} className="field text-[16px] leading-relaxed" />
+            <textarea id="body" name="body" rows={16} className="field text-[16px] leading-relaxed" defaultValue={post?.body} />
             <p className="hint">An article, a poem, a process note, an idea, or a few lines about your video. Blank lines start new paragraphs.</p>
             <FieldError errors={errors} name="body" />
           </div>
@@ -100,6 +102,7 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
               className="field"
               maxLength={300}
               placeholder="https://www.youtube.com/watch?v=…"
+              defaultValue={post?.videoUrl ?? undefined}
               onChange={(e) => setHasVideo(e.target.value.trim() !== "")}
             />
             <p className="hint">
@@ -122,6 +125,7 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
 
           <ImageField
             errors={errors}
+            currentFile={post?.coverFile}
             hint="A photo of the work, a sketch, or a cover, up to 4 MB. For art and photography, upload the file you exported: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px."
           />
         </Section>
@@ -131,7 +135,7 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
           title="AI disclosure"
           intro="Same standard as the market. Your answers set the floor of your score: we never show less AI than you disclose."
         >
-          <DisclosureFields errors={errors} defaultAi={defaultAi} />
+          <DisclosureFields errors={errors} defaultAi={defaultAi} saved={post?.disclosure} savedNotes={post?.aiNotes} />
         </Section>
 
         <Section
@@ -139,7 +143,7 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
           title="Process evidence"
           intro="Optional, but it narrows your score's range and is the best answer to a false flag."
         >
-          <EvidenceFields errors={errors} />
+          <EvidenceFields errors={errors} saved={post?.evidence} />
         </Section>
 
         <section className="card space-y-4 p-5 sm:p-7">
@@ -160,9 +164,17 @@ export function PostForm({ defaultCategory, defaultAi }: { defaultCategory?: str
               {checking ? "Checking…" : "Check my score"}
             </button>
             <button type="submit" className="btn-accent" disabled={publishing}>
-              {publishing ? "Analyzing & publishing…" : "Publish post"}
+              {publishing ? "Analyzing & publishing…" : post ? "Save & post again" : "Publish post"}
             </button>
+            {post && (
+              <Link href={`/journal/${post.slug}`} className="self-center text-sm font-medium text-muted hover:text-ink">
+                Cancel
+              </Link>
+            )}
           </div>
+          {post && (
+            <p className="text-xs text-muted">Your post is scored again from scratch. Comments and appreciations stay.</p>
+          )}
         </section>
       </div>
 

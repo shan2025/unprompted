@@ -5,6 +5,7 @@ import type { PostCard as PostCardData } from "@/lib/journal";
 import { videoEmbed } from "@/lib/video";
 import { Avatar } from "./Avatar";
 import { Cover } from "./Cover";
+import { PostOwnerMenu } from "./PostOwnerMenu";
 import { AiPill } from "./Score";
 
 /** About how long a piece takes to read, at 220 words a minute. */
@@ -12,7 +13,18 @@ function readingTime(words: number) {
   return `${Math.max(1, Math.round(words / 220))} min read`;
 }
 
-export function PostCard({ post }: { post: PostCardData }) {
+/** With `ownerReturnTo`, the author sees a menu to edit or delete the post; deleting comes back to that page. */
+export function PostCard({ post, ownerReturnTo }: { post: PostCardData; ownerReturnTo?: string }) {
+  if (!ownerReturnTo) return <PostCardLink post={post} />;
+  return (
+    <div className="relative flex flex-col">
+      <PostCardLink post={post} />
+      <PostOwnerMenu slug={post.slug} title={post.title} returnTo={ownerReturnTo} />
+    </div>
+  );
+}
+
+function PostCardLink({ post }: { post: PostCardData }) {
   const video = post.videoUrl ? videoEmbed(post.videoUrl) : null;
   const hasPicture = Boolean(post.coverFile || video);
   const aiPill = <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} />;

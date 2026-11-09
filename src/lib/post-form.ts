@@ -22,7 +22,30 @@ export interface ParsedPost {
 export type PostPreviewState = { ok: true; result: PreviewResult } | { ok: false; errors: FieldErrors; message?: string };
 export type PostCreateState = { errors?: FieldErrors; message?: string } | null;
 
-export async function parsePostForm(fd: FormData, { requireAttestation }: { requireAttestation: boolean }) {
+/** A post as the edit form starts out: what the author saved last time. */
+export interface EditablePost {
+  slug: string;
+  title: string;
+  subtitle: string;
+  category: string;
+  body: string;
+  videoUrl: string | null;
+  aiNotes: string;
+  coverFile: string | null;
+  disclosure: Disclosure;
+  /** Evidence the author added, with its place in the saved list so they can choose what to keep. */
+  evidence: (Evidence & { index: number })[];
+}
+
+/** C2PA evidence the image scan added by itself. It belongs to the image, not the author. */
+export function isAutoEvidence(e: Evidence) {
+  return e.kind === "c2pa" && !e.file && !e.url && (e.note ?? "").startsWith("Found in the uploaded file");
+}
+
+export async function parsePostForm(
+  fd: FormData,
+  { requireAttestation, keepsImage = false }: { requireAttestation: boolean; keepsImage?: boolean },
+) {
   const errors: FieldErrors = {};
 
   const title = str(fd, "title");
@@ -48,7 +71,7 @@ export async function parsePostForm(fd: FormData, { requireAttestation }: { requ
   const { evidence, files: evidenceFiles } = await parseEvidence(fd, errors);
   const image = await parseImage(fd, errors);
 
-  if (!body && !image && !videoLink && !errors.cover) errors.body = "Write something, or add a video or an image.";
+  if (!body && !image && !keepsImage && !videoLink && !errors.cover) errors.body = "Write something, or add a video or an image.";
 
   if (requireAttestation && fd.get("attest") !== "on") {
     errors.attest = "Please confirm your disclosure is accurate.";

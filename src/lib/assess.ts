@@ -12,6 +12,12 @@ export interface AssessmentInput {
   /** Deliverable unlocked after purchase. Analyzed, but never shown in results. */
   locked: string;
   image?: Uint8Array | null;
+  /**
+   * When an edit keeps the image already on a post, the scan made from the
+   * original upload. Only the stripped public copy is stored, so the original's
+   * metadata can't be read again.
+   */
+  priorMedia?: MediaScan | null;
   disclosure: Disclosure;
   evidence: Evidence[];
 }
@@ -51,9 +57,16 @@ export async function assess(input: AssessmentInput): Promise<Assessment> {
   }
 
   let media: MediaScan | null = null;
+  // With no text alongside it, the image is the work whatever the category.
+  const imageStage = VISUAL_CATEGORIES.includes(input.category) || !fullText ? "creation" : "assets";
+  if (!(input.image && input.image.byteLength > 0) && input.priorMedia) {
+    media = input.priorMedia;
+    sources.push("Image metadata scan (IPTC, C2PA, EXIF, generator tags), from the original upload");
+    if (media.aiSignal === "strong") detections.push({ stage: imageStage, share: 1, confidence: 0.9, source: METADATA_SOURCE });
+    if (media.aiSignal === "partial") detections.push({ stage: imageStage, share: 0.5, confidence: 0.8, source: METADATA_SOURCE });
+  }
   if (input.image && input.image.byteLength > 0) {
-    // With no text alongside it, the image is the work whatever the category.
-    const stage = VISUAL_CATEGORIES.includes(input.category) || !fullText ? "creation" : "assets";
+    const stage = imageStage;
     media = scanImageMetadata(input.image);
     sources.push("Image metadata scan (IPTC, C2PA, EXIF, generator tags)");
     if (media.aiSignal === "strong") detections.push({ stage, share: 1, confidence: 0.9, source: METADATA_SOURCE });

@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_EVIDENCE, MAX_FILES_BYTES, MAX_IMAGE_BYTES, type FieldErrors, type PreviewResult } from "@/lib/listing-form";
 import { MAX_PUBLIC_EDGE } from "@/lib/public-image-size";
-import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Level } from "@/lib/scoring";
+import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Disclosure, type Evidence, type Level } from "@/lib/scoring";
 import { ScoreCard } from "./Score";
 import { SegmentView } from "./SegmentView";
 
@@ -99,10 +99,12 @@ export function Section({ step, title, intro, children }: { step: string; title:
   );
 }
 
-export function ImageField({ errors, hint }: { errors: FieldErrors; hint: string }) {
+export function ImageField({ errors, hint, currentFile }: { errors: FieldErrors; hint: string; currentFile?: string | null }) {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [tooBig, setTooBig] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
   useEffect(() => () => void (coverUrl && URL.revokeObjectURL(coverUrl)), [coverUrl]);
+  const showCurrent = currentFile && !coverUrl && !removing;
 
   return (
     <div>
@@ -113,6 +115,10 @@ export function ImageField({ errors, hint }: { errors: FieldErrors; hint: string
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
           <img src={coverUrl} alt="" className="h-16 w-20 rounded-lg border border-line object-cover" />
+        )}
+        {showCurrent && (
+          // eslint-disable-next-line @next/next/no-img-element -- the image already on the post
+          <img src={`/api/files/${currentFile}`} alt="Current image" className="h-16 w-20 rounded-lg border border-line object-cover" />
         )}
         <input
           id="cover"
@@ -134,14 +140,37 @@ export function ImageField({ errors, hint }: { errors: FieldErrors; hint: string
           }}
         />
       </div>
-      <p className="hint">{hint}</p>
+      <p className="hint">{currentFile ? `Choosing a new file replaces the current image. ${hint}` : hint}</p>
+      {currentFile && !coverUrl && (
+        <label className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            name="remove_cover"
+            className="h-4 w-4 accent-[var(--accent)]"
+            checked={removing}
+            onChange={(e) => setRemoving(e.target.checked)}
+          />
+          Remove the current image
+        </label>
+      )}
       {tooBig && <p className="mt-1.5 text-sm font-medium text-heavy">{tooBig}</p>}
       <FieldError errors={errors} name="cover" />
     </div>
   );
 }
 
-export function DisclosureFields({ errors, defaultAi }: { errors: FieldErrors; defaultAi?: Level }) {
+export function DisclosureFields({
+  errors,
+  defaultAi,
+  saved,
+  savedNotes,
+}: {
+  errors: FieldErrors;
+  defaultAi?: Level;
+  /** On an edit, the answers given last time. */
+  saved?: Disclosure;
+  savedNotes?: string;
+}) {
   return (
     <>
       {STAGES.map((stage) => (
@@ -162,7 +191,7 @@ export function DisclosureFields({ errors, defaultAi }: { errors: FieldErrors; d
                   type="radio"
                   name={`disclosure_${stage}`}
                   value={level}
-                  defaultChecked={stage === "creation" && level === defaultAi}
+                  defaultChecked={saved ? saved[stage] === level : stage === "creation" && level === defaultAi}
                   className="sr-only"
                 />
                 {LEVEL_INFO[level].label}
@@ -188,6 +217,7 @@ export function DisclosureFields({ errors, defaultAi }: { errors: FieldErrors; d
           name="aiNotes"
           rows={2}
           maxLength={1000}
+          defaultValue={savedNotes}
           className="field"
           placeholder="e.g. I used a grammar checker on the final draft. Everything else is mine."
         />
@@ -197,12 +227,44 @@ export function DisclosureFields({ errors, defaultAi }: { errors: FieldErrors; d
   );
 }
 
-export function EvidenceFields({ errors }: { errors: FieldErrors }) {
-  const [rows, setRows] = useState<number[]>([0]);
+export function EvidenceFields({ errors, saved = [] }: { errors: FieldErrors; saved?: (Evidence & { index: number })[] }) {
+  const [rows, setRows] = useState<number[]>(saved.length ? [] : [0]);
   const nextRow = useRef(1);
+  const [keep, setKeep] = useState(() => new Set(saved.map((e) => e.index)));
 
   return (
     <>
+      {saved.length > 0 && (
+        <ul className="space-y-2" aria-label="Evidence already on this post">
+          {saved.map((e) => (
+            <li key={e.index} className="flex items-start gap-3 rounded-xl border border-line p-3">
+              <input
+                type="checkbox"
+                name="keep_evidence"
+                value={e.index}
+                checked={keep.has(e.index)}
+                onChange={(ev) =>
+                  setKeep((k) => {
+                    const next = new Set(k);
+                    if (ev.target.checked) next.add(e.index);
+                    else next.delete(e.index);
+                    return next;
+                  })
+                }
+                className="mt-1 h-4 w-4 accent-[var(--accent)]"
+                aria-label={`Keep ${EVIDENCE_KINDS[e.kind]?.label ?? e.kind}`}
+              />
+              <div className={`min-w-0 flex-1 text-sm ${keep.has(e.index) ? "" : "opacity-50 line-through"}`}>
+                <p className="font-semibold">{EVIDENCE_KINDS[e.kind]?.label ?? e.kind}</p>
+                {e.url && <p className="break-all text-ink-soft">{e.url}</p>}
+                {e.file && <p className="text-ink-soft">{e.file.endsWith(".pdf") ? "PDF" : "Image"} uploaded</p>}
+                {e.note && <p className="text-muted">{e.note}</p>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {saved.length > 0 && <p className="hint">Untick anything you want to take off. Add more below.</p>}
       <div className="space-y-3">
         {rows.map((row) => (
           <div key={row} className="grid gap-2 rounded-xl border border-line p-3 sm:grid-cols-[180px_1fr_auto]">
@@ -234,7 +296,7 @@ export function EvidenceFields({ errors }: { errors: FieldErrors }) {
         Only evidence with a file or link counts towards your score, so people have something to check. Upload images or PDFs: anyone can open
         them, and they share a 4 MB limit with your image (photos are shrunk to fit). For video, paste a link.
       </p>
-      {rows.length < MAX_EVIDENCE && (
+      {rows.length + keep.size < MAX_EVIDENCE && (
         <button type="button" className="btn-ghost" onClick={() => setRows((r) => [...r, nextRow.current++])}>
           + Add evidence
         </button>

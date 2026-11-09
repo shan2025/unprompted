@@ -97,7 +97,7 @@ async function PostView({ params, searchParams }: Props) {
           }}
         />
       )}
-      <Banner status={post.status} created={query.created === "1"} isAuthor={isAuthor} />
+      <Banner status={post.status} created={query.created === "1"} updated={query.updated === "1"} isAuthor={isAuthor} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
         <Link href="/journal" className="hover:text-ink">
@@ -119,6 +119,15 @@ async function PostView({ params, searchParams }: Props) {
               {author.name}
             </Link>{" "}
             · {formatDate(post.createdAt)}
+            {isAuthor && post.status !== "removed" && (
+              <>
+                {" "}
+                ·{" "}
+                <Link href={`${path}/edit`} className="link text-sm font-semibold text-ink">
+                  Edit
+                </Link>
+              </>
+            )}
             {post.isDemo && <span className="ml-2 rounded bg-line/70 px-1.5 py-0.5 text-[11px] font-semibold text-muted">DEMO POST</span>}
           </p>
 
@@ -257,7 +266,12 @@ async function PostView({ params, searchParams }: Props) {
           )}
 
           {(isAuthor || isAdmin) && (
-            <div className="px-1">
+            <div className="space-y-3 px-1">
+              {isAuthor && post.status !== "removed" && (
+                <Link href={`${path}/edit`} className="block text-sm font-medium text-ink hover:text-accent">
+                  Edit this post
+                </Link>
+              )}
               <DeletePostButton slug={post.slug} />
             </div>
           )}
@@ -267,7 +281,7 @@ async function PostView({ params, searchParams }: Props) {
   );
 }
 
-function Banner({ status, created, isAuthor }: { status: string; created: boolean; isAuthor: boolean }) {
+function Banner({ status, created, updated, isAuthor }: { status: string; created: boolean; updated: boolean; isAuthor: boolean }) {
   const banner = (tone: string, text: React.ReactNode) => (
     <div className={`mb-6 rounded-xl border px-4 py-3 text-sm ${tone}`} role="status">
       {text}
@@ -289,6 +303,7 @@ function Banner({ status, created, isAuthor }: { status: string; created: boolea
     );
   }
   if (status === "removed") return banner("border-heavy/40 bg-card text-ink", <><strong>Removed.</strong> This post is no longer in the Journal.</>);
+  if (updated) return banner("border-human/40 bg-card text-ink", <><strong>Your changes are live.</strong> The post was scored again with your edits.</>);
   if (created) return banner("border-human/40 bg-card text-ink", <><strong>Your post is live.</strong> Share the link, or keep writing.</>);
   return null;
 }

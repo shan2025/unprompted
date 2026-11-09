@@ -146,7 +146,7 @@ async function Creator({ params, searchParams }: Props) {
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {posts.map((p) => (
-                  <PostCard key={p.id} post={p} />
+                  <PostCard key={p.id} post={p} ownerReturnTo={isSelf ? `/u/${creator.handle}` : undefined} />
                 ))}
                 {isSelf && <ShareSlot />}
               </div>
