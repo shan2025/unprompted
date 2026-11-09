@@ -1,7 +1,7 @@
 import "server-only";
 import { searchListings, type ListingCard, type ListingFilters } from "./data";
 import { searchPosts, type PostCard } from "./journal";
-import type { Show } from "./show";
+import { SHOW_CATEGORIES, type Show } from "./show";
 import type { ExploreSort } from "./sorts";
 
 export type FeedItem = { kind: "listing"; listing: ListingCard } | { kind: "post"; post: PostCard };
@@ -24,11 +24,20 @@ export async function searchFeed({ show = "all", ...filters }: FeedFilters) {
   // Videos are only on posts for now.
   const wantListings = show !== "video";
 
+  // A kind of work narrows the categories. Picked category chips narrow it
+  // further, and a pick outside the kind leaves nothing to show.
+  let categories = filters.categories ?? [];
+  const kind = SHOW_CATEGORIES[show];
+  if (kind) {
+    categories = categories.length ? kind.filter((id) => categories.includes(id)) : kind;
+    if (!categories.length) return [];
+  }
+
   const [listings, posts] = await Promise.all([
-    wantListings ? searchListings({ ...filters, sort, limit, price: "free" }) : [],
+    wantListings ? searchListings({ ...filters, categories, sort, limit, price: "free" }) : [],
     searchPosts({
       q: filters.q,
-      categories: filters.categories,
+      categories,
       maxAi: filters.maxAi,
       verified: filters.verified,
       hasVideo: show === "video",
