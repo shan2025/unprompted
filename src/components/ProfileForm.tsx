@@ -1,7 +1,8 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
-import { updateProfile } from "@/app/actions/profile";
+import { checkHandle, updateProfile } from "@/app/actions/profile";
+import { cleanHandle, HANDLE_MAX, HANDLE_MIN } from "@/lib/handle-rules";
 import { linkLabel, MAX_LINKS, normalizeLink, siteName } from "@/lib/links";
 import { Avatar } from "./Avatar";
 import { CopyLink } from "./CopyLink";
@@ -26,7 +27,7 @@ type LinkRow = { id: number; value: string };
 
 export function ProfileForm({
   name: savedName,
-  handle,
+  handle: savedHandle,
   joined,
   profileUrl,
   bio: savedBio,
@@ -60,8 +61,38 @@ export function ProfileForm({
   const [links, setLinks] = useState<LinkRow[]>(() => rows(savedLinks));
   const [base, setBase] = useState<Values>({ name: savedName, bio: savedBio, links: savedLinks });
   const submitted = useRef<Values | null>(null);
+  const [handle, setHandle] = useState(savedHandle);
+  const [baseHandle, setBaseHandle] = useState(savedHandle);
+  const submittedHandle = useRef(savedHandle);
+  const handleChanged = handle !== baseHandle;
+  const linkBase = profileUrl.replace(/^https?:\/\//, "").replace(/[^/]+$/, "");
   const current: Values = { name, bio, links: links.map((l) => l.value) };
-  const dirty = !sameProfile(current, base);
+  const dirty = !sameProfile(current, base) || handleChanged;
+
+  // Says whether a new handle is free, a moment after typing stops.
+  const [checked, setChecked] = useState<{ handle: string; problem: string | null } | null>(null);
+  const checkable = handleChanged && handle.length >= HANDLE_MIN;
+  useEffect(() => {
+    if (!checkable) return;
+    let live = true;
+    const t = setTimeout(async () => {
+      const problem = await checkHandle(handle).catch(() => null);
+      if (live) setChecked({ handle, problem });
+    }, 400);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [handle, checkable]);
+  const handleNote = !handleChanged
+    ? null
+    : !checkable
+      ? { text: `At least ${HANDLE_MIN} characters.`, bad: true }
+      : checked?.handle !== handle
+        ? { text: "Checking…", bad: false }
+        : checked.problem
+          ? { text: checked.problem, bad: true }
+          : { text: `${linkBase}${handle} is free.`, bad: false };
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
   // The form keeps its fields between saves, so once a photo is saved, empty the
@@ -72,6 +103,7 @@ export function ProfileForm({
   useEffect(() => {
     if (!state?.saved) return;
     if (submitted.current) setBase(submitted.current);
+    setBaseHandle(submittedHandle.current);
     const photo = formRef.current?.elements.namedItem("avatar");
     if (photo instanceof HTMLInputElement) photo.value = "";
     setJustSaved(true);
@@ -150,12 +182,14 @@ export function ProfileForm({
   }
 
   function snapshot(): Values {
+    submittedHandle.current = handle;
     return { name: name.trim(), bio: bio.trim(), links: links.map((l) => l.value.trim()).filter(Boolean) };
   }
 
   function discard() {
     setName(base.name);
     setBio(base.bio);
+    setHandle(baseHandle);
     setLinks(rows(base.links));
   }
 
@@ -277,14 +311,30 @@ export function ProfileForm({
               />
             </div>
             <div>
-              <p className="label">Your profile link</p>
-              <div className="flex items-center gap-3 border border-line py-2 pl-4 pr-2">
-                <span className="min-w-0 flex-1 break-all text-[15px] text-ink-soft">
-                  {profileUrl.replace(/^https?:\/\//, "").replace(/[^/]+$/, "")}
-                  <strong className="font-semibold text-ink">{handle}</strong>
-                </span>
-                <CopyLink url={profileUrl} className="btn-ghost shrink-0 px-4 py-2 text-xs" />
+              <FieldTop htmlFor="handle" label="Your profile link" count={handle.length} max={HANDLE_MAX} />
+              <div className="flex items-center gap-3 border-b border-transparent bg-field py-1.5 pl-4 pr-2 focus-within:border-ink">
+                <label htmlFor="handle" className="shrink-0 text-[15px] text-ink-soft">
+                  {linkBase}
+                </label>
+                <input
+                  id="handle"
+                  name="handle"
+                  className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] font-semibold text-ink focus:outline-none"
+                  value={handle}
+                  onChange={(e) => setHandle(cleanHandle(e.target.value))}
+                  minLength={HANDLE_MIN}
+                  maxLength={HANDLE_MAX}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-describedby="handle-status"
+                  required
+                />
+                {!handleChanged && <CopyLink url={profileUrl} className="btn-ghost shrink-0 px-4 py-2 text-xs" />}
               </div>
+              <p id="handle-status" role="status" className={`mt-2 text-[13px] ${handleNote?.bad ? "font-medium text-heavy" : "text-muted"}`}>
+                {handleNote?.text ?? "Letters, numbers and underscores. Changing it means your old link stops working."}
+              </p>
             </div>
             <div>
               <FieldTop htmlFor="bio" label="Bio" count={bio.length} max={BIO_MAX} />

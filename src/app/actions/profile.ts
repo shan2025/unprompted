@@ -7,6 +7,8 @@ import { db, schema } from "@/lib/db";
 import { MAX_LINKS, normalizeLink } from "@/lib/links";
 import { MAX_IMAGE_BYTES, UNREADABLE_IMAGE } from "@/lib/listing-form";
 import { saveUpload } from "@/lib/uploads";
+import { cleanHandle } from "@/lib/handle-rules";
+import { handleProblem } from "@/lib/handles";
 
 /** `photoSaved` says a new photo arrived with this save, so the form never claims one that didn't. */
 export type ProfileState = { error?: string; saved?: boolean; photoSaved?: boolean } | null;
@@ -19,6 +21,12 @@ export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<
   const bio = String(fd.get("bio") ?? "").trim();
   if (name.length < 1 || name.length > 60) return { error: "Please enter a name of up to 60 characters." };
   if (bio.length > 500) return { error: "Keep your bio under 500 characters." };
+
+  const handle = cleanHandle(String(fd.get("handle") ?? user.handle));
+  if (handle !== user.handle) {
+    const problem = await handleProblem(handle, user.id);
+    if (problem) return { error: problem };
+  }
 
   const typed = fd.getAll("link").map((v) => String(v).trim()).filter(Boolean).slice(0, MAX_LINKS);
   const links: string[] = [];
@@ -38,10 +46,25 @@ export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<
     if (!avatarFile) return { error: UNREADABLE_IMAGE };
   }
 
-  await db.update(schema.users).set({ name, bio, avatarFile, links }).where(eq(schema.users.id, user.id));
+  try {
+    await db.update(schema.users).set({ name, handle, bio, avatarFile, links }).where(eq(schema.users.id, user.id));
+  } catch (e) {
+    // Someone else took the handle between the check above and this save.
+    if (handle !== user.handle && /unique|duplicate/i.test(String((e as Error)?.message ?? e)))
+      return { error: "That profile link is taken. Try another." };
+    throw e;
+  }
   if (user.avatarFile && user.avatarFile !== avatarFile) {
     await db.delete(schema.uploads).where(eq(schema.uploads.name, user.avatarFile));
   }
   revalidatePath("/", "layout");
   return { saved: true, photoSaved: hasPhoto };
+}
+
+/** Live check for the profile link field: null when the handle is free for this person. */
+export async function checkHandle(raw: string): Promise<string | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const handle = cleanHandle(raw);
+  return handle === user.handle ? null : handleProblem(handle, user.id);
 }
