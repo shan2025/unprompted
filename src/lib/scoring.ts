@@ -122,7 +122,6 @@ export function computeScore(input: {
 }): Score {
   const weights = STAGE_WEIGHTS[input.category];
   const E = evidenceStrength(input.evidence);
-  const notes: string[] = [];
 
   let disclosed = 0;
   let point = 0;
@@ -168,15 +167,7 @@ export function computeScore(input: {
   const needsReview = contradicted || discrepancy >= REVIEW_THRESHOLD;
   const blocked = disclosed > MAX_DISCLOSED;
 
-  if (blocked) notes.push("Disclosed AI use is above the 50% limit for new listings.");
-  if (contradicted) notes.push("The file's metadata says AI was used where the disclosure says it wasn't, so a person will review this.");
-  else if (needsReview) notes.push("Automated analysis found noticeably more AI than was disclosed, so a person will review this listing.");
-  else if (discrepancy > 0.03) notes.push("Automated analysis found slightly more AI than was disclosed. The estimate includes that.");
-  if (!hasDetection) notes.push("Nothing in this listing could be scanned automatically, so the range is wider.");
-  if (E >= 0.5) notes.push("Strong process evidence narrows the range.");
-  else if (E === 0) notes.push("No process evidence attached. Adding drafts or a time-lapse narrows the range.");
-
-  return {
+  const score: Omit<Score, "notes"> = {
     percent,
     low,
     high,
@@ -188,6 +179,29 @@ export function computeScore(input: {
     needsReview,
     blocked,
     stages,
-    notes,
   };
+  return { ...score, notes: scoreNotes(score, contradicted) };
+}
+
+/**
+ * The plain-language notes under a score. They're built from the score itself,
+ * so a score stored months ago still shows today's wording. They appear on
+ * listings and Journal posts alike, so they say "work". `contradicted` is known
+ * at scoring time; from a stored score it's inferred: a review with a detector
+ * disagreement below the threshold can only have come from file metadata.
+ */
+export function scoreNotes(
+  score: Omit<Score, "notes">,
+  contradicted = score.needsReview && score.discrepancy < Math.round(REVIEW_THRESHOLD * 100),
+) {
+  const notes: string[] = [];
+  const hasDetection = score.stages.some((s) => s.detected !== null);
+  if (score.blocked) notes.push(`Disclosed AI use is above the ${Math.round(MAX_DISCLOSED * 100)}% limit for new work.`);
+  if (contradicted) notes.push("The file's metadata says AI was used where the disclosure says it wasn't, so a person will review this.");
+  else if (score.needsReview) notes.push("Automated analysis found noticeably more AI than was disclosed, so a person will review this work.");
+  else if (score.discrepancy > 3) notes.push("Automated analysis found slightly more AI than was disclosed. The estimate includes that.");
+  if (!hasDetection) notes.push("Nothing in this work could be scanned automatically, so the range is wider.");
+  if (score.processVerified) notes.push("Strong process evidence narrows the range.");
+  else if (score.evidenceStrength === 0) notes.push("No process evidence attached. Adding drafts or a time-lapse narrows the range.");
+  return notes;
 }

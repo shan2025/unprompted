@@ -23,9 +23,10 @@ export default function StandardPage() {
       <p className="eyebrow">The Unprompters standard</p>
       <h1 className="mt-2 text-5xl font-light leading-tight">How scoring works</h1>
       <p className="mt-5 text-lg leading-relaxed text-ink-soft">
-        Every listing carries an <strong className="text-ink">AI-involvement estimate</strong>: roughly how much of the
-        creative work came from AI rather than from the person selling it. It comes with a range, a stage-by-stage
-        breakdown, and the reasoning behind it. Here is exactly how it&apos;s built, and where it falls short.
+        Every piece on Unprompters, shared for free or for sale, carries an{" "}
+        <strong className="text-ink">AI-involvement estimate</strong>: roughly how much of the creative work came from AI
+        rather than from the person who made it. It comes with a range, a stage-by-stage breakdown, and the reasoning
+        behind it. Here is exactly how it&apos;s built, and where it falls short.
       </p>
 
       <H2>What the tiers mean</H2>
@@ -65,7 +66,7 @@ export default function StandardPage() {
         ))}
       </ul>
       <p className="mt-5 leading-relaxed text-ink-soft">
-        Stages are weighted by what the buyer is paying for. In a poem the writing matters most. In an idea, the idea does.
+        Stages are weighted by what the work actually is. In a poem the writing matters most. In an idea, the idea does.
       </p>
       <div className="mt-4 overflow-x-auto no-scrollbar rounded-2xl border border-line bg-card">
         <table className="w-full min-w-[520px] text-left text-sm">
@@ -95,7 +96,7 @@ export default function StandardPage() {
       </div>
       <p className="mt-5 leading-relaxed text-ink-soft">
         <strong className="text-ink">The disclosure is the floor.</strong> Nothing we detect can bring a score below what
-        the creator admits to. New listings must disclose {Math.round(MAX_DISCLOSED * 100)}% AI or less.
+        the creator admits to. New posts and listings must disclose {Math.round(MAX_DISCLOSED * 100)}% AI or less.
       </p>
 
       <H2>2. We scan the work</H2>
@@ -104,7 +105,7 @@ export default function StandardPage() {
           <strong className="text-ink">Text and poetry</strong> are split into passages and checked for statistical habits
           of language models: stock vocabulary, formulaic constructions, very even sentence rhythm, stacked transition
           words. Each passage gets a probability, and the score is the share of the text that reads as machine-made. You
-          can see the passage-level result on every listing.
+          can see the passage-level result on every post and listing.
         </p>
         <p>
           <strong className="text-ink">Code</strong> is checked for tutorial habits: comments that narrate every line,
@@ -117,9 +118,11 @@ export default function StandardPage() {
           Credentials. A generator tag is strong evidence. No metadata means nothing; it gets stripped all the time.
         </p>
         <p>
-          The private deliverable is scanned along with the public preview, but only the preview&apos;s results are shown.
-          Scans can <strong className="text-ink">only raise</strong> a score above the disclosure, and only in proportion to
-          how confident they are.
+          On a listing, the private deliverable is scanned along with the public preview, but only the preview&apos;s
+          results are shown. <strong className="text-ink">Video</strong> can&apos;t be scanned, so a video post is marked
+          &ldquo;not scanned&rdquo; and rests on the disclosure and evidence alone. Scans can{" "}
+          <strong className="text-ink">only raise</strong> a score above the disclosure, and only in proportion to how
+          confident they are.
         </p>
       </div>
 
@@ -138,7 +141,7 @@ export default function StandardPage() {
       </ul>
       <p className="mt-4 leading-relaxed text-ink-soft">
         Only evidence with a file or link counts, because a note alone gives nobody anything to check. Strengths combine with
-        diminishing returns, up to 90%. At 50% or more a listing is marked{" "}
+        diminishing returns, up to 90%. At 50% or more a piece is marked{" "}
         <strong className="text-human">Evidence attached</strong>. That means the creator supplied it, not that we checked
         it, so open it before you rely on it. Evidence also softens detector suspicion. That&apos;s deliberate: a
         time-lapse of someone painting outweighs a pattern-matcher.
@@ -146,7 +149,7 @@ export default function StandardPage() {
 
       <H2 id="limits">What detection can&apos;t do</H2>
       <div className="prose-ink mt-4 leading-relaxed text-ink-soft">
-        <p>We want to be blunt about this, because a marketplace built on trust can&apos;t oversell its tools.</p>
+        <p>We want to be blunt about this, because a place built on trust can&apos;t oversell its tools.</p>
         <p>
           <strong className="text-ink">AI detectors are unreliable.</strong> OpenAI withdrew its own text classifier in 2023
           because of its low accuracy. A peer-reviewed comparison of 14 detectors (Weber-Wulff et al., 2023) found none
@@ -168,10 +171,10 @@ export default function StandardPage() {
       <ul className="mt-4 list-inside list-disc space-y-2 leading-relaxed text-ink-soft">
         <li>
           If automated checks find substantially more AI than disclosed, or a file&apos;s metadata says AI was used at a stage
-          disclosed as &ldquo;No AI&rdquo;, the listing is held for review instead of going live. The creator sees why and
-          can add evidence.
+          disclosed as &ldquo;No AI&rdquo;, the post or listing is held for review instead of going live. The creator sees
+          why and can add evidence.
         </li>
-        <li>Anyone signed in can report a listing. Reports go to moderators, never straight to removal.</li>
+        <li>Anyone signed in can report a post, listing or comment. Reports go to moderators, never straight to removal.</li>
         <li>
           Moderators look at the evidence, not just the number. Misrepresenting AI use is grounds for removal; an honest
           disclosure never is.
@@ -181,10 +184,15 @@ export default function StandardPage() {
 
       <div className="mt-14 rounded-2xl bg-ink p-8 text-paper">
         <p className="font-display text-2xl font-normal">Made something?</p>
-        <p className="mt-2 text-paper/80">You&apos;ll see your score before anything is published.</p>
-        <Link href="/sell" className="btn mt-5 bg-paper text-ink hover:bg-accent hover:text-accent-ink">
-          Start a listing
-        </Link>
+        <p className="mt-2 text-paper/80">Share it or sell it. You&apos;ll see your score before anything is published.</p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link href="/journal/new" className="btn bg-paper text-ink hover:bg-accent hover:text-accent-ink">
+            Share your work
+          </Link>
+          <Link href="/sell" className="btn border border-paper/40 text-paper hover:bg-paper/10">
+            Start a listing
+          </Link>
+        </div>
       </div>
     </article>
   );

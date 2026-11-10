@@ -13,10 +13,15 @@ import { computeScore } from "@/lib/scoring";
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 // A worked example for the hero: a short story with light AI help on the edit.
+// The evidence carries links, as real evidence must, so the card shows
+// "Evidence attached" rather than counting items that don't score.
 const EXAMPLE = computeScore({
   category: "writing",
   disclosure: { ideation: "none", creation: "none", refinement: "light", assets: "none" },
-  evidence: [{ kind: "drafts" }, { kind: "version-history" }],
+  evidence: [
+    { kind: "drafts", url: "https://example.com/drafts" },
+    { kind: "version-history", url: "https://example.com/history" },
+  ],
   detections: [{ stage: "creation", share: 0.04, confidence: 0.45, source: "builtin-text" }],
 });
 

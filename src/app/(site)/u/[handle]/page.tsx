@@ -16,9 +16,19 @@ import { followCounts, isFollowing, searchPosts } from "@/lib/journal";
 
 type Props = { params: Promise<{ handle: string }>; searchParams: Promise<{ tab?: string }> };
 
+// The name and bio give search engines and share previews something to show.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = await params;
-  return { title: `@${handle}` };
+  const data = await getCreator(handle.toLowerCase());
+  if (!data) return { title: `@${handle}`, robots: { index: false } };
+  const { creator } = data;
+  const description = creator.bio || `Work made by ${creator.name} on Unprompters, with how much AI was involved shown on every piece.`;
+  return {
+    title: `${creator.name} (@${creator.handle})`,
+    description,
+    alternates: { canonical: `/u/${creator.handle}` },
+    openGraph: { siteName: "Unprompters", title: creator.name, description, type: "profile" },
+  };
 }
 
 export default function CreatorPage({ params, searchParams }: Props) {

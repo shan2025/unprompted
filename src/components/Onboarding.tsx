@@ -25,7 +25,7 @@ const BUYER_AI = [
   { id: "5", label: "None", hint: "Human-made only: 0–5% AI." },
   { id: "20", label: "A little", hint: "Up to 20%: people made it, AI helped at the edges." },
   { id: "50", label: "Some", hint: "Up to 50%: real authorship with meaningful AI help." },
-  { id: "", label: "Show me everything", hint: "I'll decide listing by listing." },
+  { id: "", label: "Show me everything", hint: "I'll decide piece by piece." },
 ];
 
 // Everyday words people type, mapped to our categories.
@@ -76,7 +76,7 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
       : { title: "What are you looking for?", sub: "Pick as many as you like. We'll show you the work that fits." },
     creating
       ? { title: "How much AI goes into your work?", sub: "Be honest: it sets the floor of your score." }
-      : { title: "How much AI is okay?", sub: "Every listing shows its AI involvement, so the choice is yours." },
+      : { title: "How much AI is okay?", sub: "Every piece shows its AI involvement, so the choice is yours." },
   ];
 
   const ready = [goals.length > 0, categories.length > 0, ai !== null][step];

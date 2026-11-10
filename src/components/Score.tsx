@@ -1,4 +1,4 @@
-import { LEVELS, LEVEL_INFO, STAGE_INFO, TIER_INFO, type Score, type Tier } from "@/lib/scoring";
+import { LEVELS, LEVEL_INFO, scoreNotes, STAGE_INFO, TIER_INFO, type Score, type Tier } from "@/lib/scoring";
 
 const TIER_TEXT: Record<Tier, string> = {
   "human-made": "text-human",
@@ -130,6 +130,8 @@ function levelFor(value: number) {
 }
 
 export function ScoreCard({ score, evidenceCount, unscanned }: { score: Score; evidenceCount?: number; unscanned?: boolean }) {
+  // Rebuilt from the score rather than read from it, so stored scores show the current wording.
+  const notes = scoreNotes(score);
   return (
     <div className="card p-5">
       <div className="flex items-start justify-between gap-3">
@@ -192,9 +194,9 @@ export function ScoreCard({ score, evidenceCount, unscanned }: { score: Score; e
         )}
       </div>
 
-      {score.notes.length > 0 && (
+      {notes.length > 0 && (
         <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-muted">
-          {score.notes.map((n) => (
+          {notes.map((n) => (
             <li key={n}>· {n}</li>
           ))}
         </ul>

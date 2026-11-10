@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <p>
           {SITE.name} is run by {SITE.legalName} (&ldquo;we&rdquo;). This policy explains what personal data we collect when
           you use the site, why, and what you can do about it. We wrote it to follow India&apos;s Digital Personal Data
-          Protection Act, 2023. The short version: we collect only what the marketplace needs, we never sell your data, and
+          Protection Act, 2023. The short version: we collect only what the site needs, we never sell your data, and
           <strong className="text-ink"> we never use your work to train AI or share it with anyone who will.</strong>
         </p>
       }
@@ -26,15 +26,21 @@ export default function PrivacyPage() {
         <List>
           <li>
             <strong className="text-ink">Account details:</strong> your name, email address and a scrambled (hashed)
-            version of your password. We can&apos;t see your actual password.
+            version of your password. We can&apos;t see your actual password. If you log in with Google, we receive your
+            name and verified email address from Google instead of a password.
           </li>
           <li>
-            <strong className="text-ink">What you list:</strong> titles, descriptions, previews, the work you deliver to
-            buyers, images, your AI disclosure, process evidence files, links and notes.
+            <strong className="text-ink">Your profile:</strong> your handle, bio, profile photo and any links to your other
+            sites and profiles that you add.
           </li>
           <li>
-            <strong className="text-ink">Activity on the site:</strong> purchases, reports you file, questions you ask
-            creators, and the review history of your listings.
+            <strong className="text-ink">What you share or list:</strong> titles, descriptions, previews, the text of your
+            posts, video links, the work you deliver to buyers, images, your AI disclosure, process evidence files, links
+            and notes.
+          </li>
+          <li>
+            <strong className="text-ink">Activity on the site:</strong> purchases, comments, appreciations, who you follow,
+            reports you file, questions you ask creators, and the review history of your work.
           </li>
           <li>
             <strong className="text-ink">Visit statistics:</strong> pages viewed, where visitors came from, and general
@@ -60,12 +66,12 @@ export default function PrivacyPage() {
 
       <Section title="Why we use it">
         <List>
-          <li>To create and run your account and let you buy and sell.</li>
+          <li>To create and run your account and let you share, follow, comment, buy and sell.</li>
           <li>
-            To calculate each listing&apos;s AI-involvement score. Your text and image files are analysed by our own
-            software for this purpose only.
+            To calculate the AI-involvement score of each post and listing. Your text and image files are analysed by our
+            own software for this purpose only.
           </li>
-          <li>To review reported or flagged listings and keep the marketplace honest.</li>
+          <li>To review reported or flagged work and comments and keep the site honest.</li>
           <li>To contact you about your account, listings, purchases or a report.</li>
           <li>To keep the service secure and meet our legal obligations.</li>
         </List>
@@ -77,8 +83,10 @@ export default function PrivacyPage() {
 
       <Section title="What's public">
         <p>
-          Your name, profile handle, bio, published listings, their previews, AI scores and process evidence are public.
-          Your email address is never shown publicly. The full deliverable is shown only to buyers who have purchased it.
+          Your name, profile handle, bio, profile photo, the links you add, your published posts and listings, their
+          previews, AI scores and process evidence, your comments, and your follower and following counts are public.
+          Your email address is never shown publicly. The full deliverable of a listing is shown only to buyers who have
+          purchased it.
         </p>
       </Section>
 
@@ -94,6 +102,10 @@ export default function PrivacyPage() {
           <li>
             <strong className="text-ink">Resend</strong>: sends our emails, such as password resets and questions to
             creators.
+          </li>
+          <li>
+            <strong className="text-ink">Google</strong>: only if you choose &ldquo;Continue with Google&rdquo;. Google
+            tells us your name and email address, under Google&apos;s own privacy policy.
           </li>
           <li>
             The <strong className="text-ink">creator you ask a question</strong>: they see your name, profile handle, email
@@ -122,8 +134,8 @@ export default function PrivacyPage() {
 
       <Section title="Your work and AI">
         <p>
-          We will never sell, license or give your listings, previews, deliverables or images to anyone for training AI
-          models, and we do not train AI models on them ourselves.
+          We will never sell, license or give your posts, listings, previews, deliverables, evidence or images to anyone
+          for training AI models, and we do not train AI models on them ourselves.
         </p>
       </Section>
 

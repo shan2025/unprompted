@@ -39,7 +39,7 @@ export default function ContactPage() {
 
       <Section title="Quick links">
         <p>
-          To report a specific listing, use <strong className="text-ink">Report this listing</strong> on its page. For
+          To report a specific listing, post or comment, use <strong className="text-ink">Report</strong> on its page. For
           refunds, see the <Link href="/refunds" className="link text-ink">refund policy</Link>. For how your data is used, see
           the <Link href="/privacy" className="link text-ink">privacy policy</Link>.
         </p>

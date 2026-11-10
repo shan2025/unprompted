@@ -4,11 +4,11 @@
 
 ## Where we are
 
-**Built:** marketplace with AI-involvement scores, Journal posts for work shared for free, appreciations, comments and follows, sell form with score preview, seller payment links, review queue, reports, creator profiles, embeddable badges, password reset, legal pages, a switch to hide demo content, deployed on Vercel + Supabase at unprompters.com.
+**Built:** marketplace with AI-involvement scores, Journal posts for work shared for free (text, images and YouTube/Vimeo video), appreciations, comments and follows, one Explore feed across free posts and listings with a separate Marketplace for work for sale, "Ask the creator" on any work, sell form with score preview, seller payment links, review queue, reports, creator profiles with photos and links, post editing and deletion, embeddable badges for listings, log in with Google, password reset, sitemap, share images and structured data, Vercel Analytics, legal pages, a switch to hide demo content, deployed on Vercel + Supabase at unprompters.com.
 
-**Not built yet:** video posts, a way to ask a creator about buying a work, one explore feed across free and for-sale work, SEO basics (sitemap, share images, structured data), analytics, email verification, platform-run payments.
+**Not built yet:** email verification, platform-run payments, the "Founding Unprompter" badge, featured spots on the home page, notifications (new follower, comment, appreciation), a web app manifest so the site installs on phones, prices in any currency other than USD.
 
-**In progress:** a real `hello@unprompters.com` mailbox on Google Workspace, waiting on domain verification.
+**Live site, as of 10 November 2026:** two real Journal posts (both by the founder), nothing real for sale, no other creators yet. The Marketplace still shows the 10 demo listings. See `ROADMAP.md` for the current plan.
 
 **Biggest risk right now:** not the product, but an empty feed. People won't come back to explore if there's little to see, and creators won't post where nobody is looking.
 
@@ -159,21 +159,22 @@ There are real constraints for an India-based marketplace:
 
 ## 7. What's blocking us, in order
 
-| # | Blocker | Fix | Who |
-| --- | --- | --- | --- |
-| 1 | Site still says "marketplace" | Change the homepage and site description to the new message | I update |
-| 2 | Mailbox | Finish Google Workspace domain verification, then switch the mail records from ImprovMX | You verify; I update DNS |
-| 3 | No video or crafts | Add Film & video and Handicrafts categories. Creators paste a YouTube or Vimeo link and it plays on the post. Host films ourselves only once people are watching, because it gets expensive quickly | I build |
-| 4 | Can't ask about buying | "Ask the creator" button on any work | I build |
-| 5 | Exploring is split up | One feed across free posts and items for sale, each clearly marked | I build |
-| 6 | SEO basics | Sitemap, share images, structured data, category pages | I build |
-| 7 | No numbers | Privacy-friendly analytics (Vercel Analytics or Plausible) | I add |
-| 8 | Demo content | Turn on `HIDE_DEMO_CONTENT` once real work exists | You decide; I set it |
-| 9 | Unconfirmed accounts | Email verification | I build |
-| 10 | Legal pages | Published; have a lawyer review them, and check they still fit video and creator contact | I update; a lawyer reviews |
-| 11 | Business setup | Registration, current account, GST | You, with a CA |
+| # | Blocker | Fix | Who | Status (10 Nov 2026) |
+| --- | --- | --- | --- | --- |
+| 1 | Site still says "marketplace" | Change the homepage and site description to the new message | I update | Done; legal pages and the standard page updated to cover posts, comments and video too |
+| 2 | Mailbox | Finish Google Workspace domain verification, then switch the mail records from ImprovMX | You verify; I update DNS | Check |
+| 3 | No video or crafts | Film & video and Handicrafts categories; creators paste a YouTube or Vimeo link | I build | Done |
+| 4 | Can't ask about buying | "Ask the creator" button on any work | I build | Done |
+| 5 | Exploring is split up | One feed across free posts and listings; work for sale on its own Marketplace page | I build | Done |
+| 6 | SEO basics | Sitemap, share images, structured data | I build | Done; category landing pages with real text still to write |
+| 7 | No numbers | Vercel Analytics | I add | Done |
+| 8 | Demo content | `HIDE_DEMO_CONTENT` | You decide; I set it | **Off.** The live Marketplace still shows the 10 demo listings by fictional creators (Explore shows no demo posts). Set `HIDE_DEMO_CONTENT=true` on Vercel before any outreach |
+| 9 | Unconfirmed accounts | Email verification | I build | Not started |
+| 10 | Legal pages | Published; have a lawyer review them | I update; a lawyer reviews | Updated for posts, comments, video and Google login; lawyer review still needed |
+| 11 | Business setup | Registration, current account, GST | You, with a CA | Not started |
+| 12 | Empty feed | 25–30 real works before outreach, then the founding-creator push | You, with the outreach kit | 2 posts live |
 
-**Done since October:** domain live with the Unprompters name, seller payment links, password reset, sending email from the domain through Resend, a switch to hide demo content.
+**Done since October:** domain live with the Unprompters name, seller payment links, password reset, sending email from the domain through Resend, a switch to hide demo content, video posts, Ask the creator, one Explore feed, SEO basics, analytics, Google login, profile photos and links, post editing.
 
 ## 8. The next 90 days
 

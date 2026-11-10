@@ -1,8 +1,8 @@
 # Unprompters
 
-**A marketplace for work made by people: code, websites, writing, poetry, art, photography, design, music and ideas. Every listing shows how much AI was involved.**
+**A place to explore work made by people, and buy it if it's for sale: writing, poetry, art, photography, design, music, film, code, websites, handicrafts and ideas. Every piece shows how much AI was involved.**
 
-Each listing gets an **AI-involvement estimate**, for example *"3% · likely 2–13% · Human-made"*. It's built from three sources and shown with its reasoning:
+Each post or listing gets an **AI-involvement estimate**, for example *"3% · likely 2–13% · Human-made"*. It's built from three sources and shown with its reasoning:
 
 1. **Disclosure.** The creator says, stage by stage (idea, making, polish, supporting assets), whether AI was used: none, light, substantial or generated. This is the floor: we never show less AI than the creator admits to.
 2. **Automated analysis.** Text, poetry and code are scanned passage by passage for machine-writing patterns. Images are scanned for generator tags, IPTC "trained algorithmic media" markers and C2PA Content Credentials. Scans can only *raise* an estimate, in proportion to their confidence.
