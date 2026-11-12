@@ -247,16 +247,16 @@ input[type="file"]:active::file-selector-button {
   }
 }
 
-/* Scroll reveals, driven by <RevealOnScroll />. */
+/* Scroll reveals, driven by <Reveal />. Hidden instantly, revealed slowly. */
 .reveal {
   transition:
     opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
     filter 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-    translate 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.2s ease 0ms;
-  transition-delay: var(--d, 0ms), var(--d, 0ms), var(--d, 0ms), 0ms;
+    translate 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--d, 0ms);
 }
-.reveal-ready .reveal:not(.in) {
+.reveal[data-reveal="wait"] {
+  transition: none;
   opacity: 0;
   filter: blur(6px);
   translate: 0 28px;
@@ -271,7 +271,7 @@ input[type="file"]:active::file-selector-button {
   .reveal {
     transition: none;
   }
-  .reveal-ready .reveal:not(.in) {
+  .reveal[data-reveal="wait"] {
     opacity: 1;
     filter: none;
     translate: none;

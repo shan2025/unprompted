@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FeedGrid } from "@/components/FeedGrid";
 import { GridSkeleton } from "@/components/ListingCard";
-import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { Reveal } from "@/components/Reveal";
 import { ScoreCard } from "@/components/Score";
 import { CATEGORIES } from "@/lib/categories";
 import { usedCategories } from "@/lib/data";
@@ -50,7 +50,6 @@ const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
 export default function Home() {
   return (
     <>
-      <RevealOnScroll />
       <section className="mx-auto grid max-w-7xl items-center gap-16 px-4 pb-24 pt-20 sm:px-8 lg:grid-cols-[1.3fr_1fr] lg:pt-32">
         <div>
           <p className="eyebrow intro-rise">A place for human work</p>
@@ -82,36 +81,38 @@ export default function Home() {
       <section className="border-y border-line">
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-8 md:grid-cols-3">
           {STEPS.map((s, i) => (
-            <div key={s.n} className="reveal" style={d(i * 120)}>
+            <Reveal key={s.n} delay={i * 120}>
               <span className="text-sm text-muted">{s.n}</span>
               <h2 className="mt-3 text-3xl font-light">{s.title}</h2>
               <p className="mt-3 leading-relaxed text-ink-soft">{s.body}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
-        <div className="reveal mb-10 flex items-end justify-between gap-4">
+        <Reveal className="mb-10 flex items-end justify-between gap-4">
           <h2 className="text-4xl font-light">Recently shared</h2>
           <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
             See everything
           </Link>
-        </div>
+        </Reveal>
         <Suspense fallback={<GridSkeleton count={6} />}>
           <Recent />
         </Suspense>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
-        <h2 className="reveal text-4xl font-light">Browse by craft</h2>
+        <Reveal>
+          <h2 className="text-4xl font-light">Browse by craft</h2>
+        </Reveal>
         <Suspense fallback={<div className="mt-10 h-48 animate-pulse border border-line" />}>
           <Crafts />
         </Suspense>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
-        <div className="reveal grid gap-12 bg-ink p-10 text-white sm:p-16 lg:grid-cols-[1.2fr_1fr]">
+        <Reveal className="grid gap-12 bg-ink p-10 text-white sm:p-16 lg:grid-cols-[1.2fr_1fr]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">Honest by design</p>
             <h2 className="mt-4 text-4xl font-light sm:text-5xl">A range, not a verdict.</h2>
@@ -142,7 +143,7 @@ export default function Home() {
               reviewed by a moderator, and creators can respond with evidence.
             </li>
           </ul>
-        </div>
+        </Reveal>
       </section>
     </>
   );
@@ -158,15 +159,15 @@ async function Crafts() {
   return (
     <div className="mt-10 grid grid-cols-2 border-l border-t border-line sm:grid-cols-3 lg:grid-cols-4">
       {crafts.map((c, i) => (
-        <Link
-          key={c.id}
-          style={d((i % 4) * 70)}
-          href={`/${explore.includes(c.id) ? "explore" : "marketplace"}?category=${c.id}`}
-          className="reveal group border-b border-r border-line p-6 hover:bg-field"
-        >
-          <span className="text-lg">{c.label}</span>
-          <span className="mt-1 block text-xs leading-snug text-muted">{c.blurb}</span>
-        </Link>
+        <Reveal key={c.id} delay={(i % 4) * 70} className="grid border-b border-r border-line">
+          <Link
+            href={`/${explore.includes(c.id) ? "explore" : "marketplace"}?category=${c.id}`}
+            className="group p-6 transition-colors hover:bg-field"
+          >
+            <span className="text-lg">{c.label}</span>
+            <span className="mt-1 block text-xs leading-snug text-muted">{c.blurb}</span>
+          </Link>
+        </Reveal>
       ))}
     </div>
   );

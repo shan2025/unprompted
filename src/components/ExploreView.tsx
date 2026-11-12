@@ -152,10 +152,12 @@ export function ExploreView({
       >
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
-            <h1 className="text-4xl font-light">{title}</h1>
-            <p className="mt-1 text-ink-soft">{intro}</p>
+            <h1 className="intro-rise text-4xl font-light">{title}</h1>
+            <p className="intro-rise mt-1 text-ink-soft" style={{ "--d": "80ms" } as React.CSSProperties}>
+              {intro}
+            </p>
           </div>
-          <div className="relative w-full sm:w-80">
+          <div className="intro-rise relative w-full sm:w-80" style={{ "--d": "160ms" } as React.CSSProperties}>
             <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
               name="q"
@@ -172,7 +174,10 @@ export function ExploreView({
 
         {/* Phones scroll the chips sideways. Wide screens keep the filters on the
             right and let the chips wrap beside them, so none is hidden. */}
-        <div className="mt-6 flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-line pb-4 lg:flex-nowrap">
+        <div
+          className="intro-rise mt-6 flex flex-wrap items-start gap-x-6 gap-y-3 border-b border-line pb-4 lg:flex-nowrap"
+          style={{ "--d": "240ms" } as React.CSSProperties}
+        >
           {/* A picked category keeps its chip even if it's empty, so it can be turned off. */}
           {chipCategories.length > 1 && (
             <div className="-my-1 flex min-w-0 max-w-full gap-2 overflow-x-auto no-scrollbar py-1 lg:flex-1 lg:flex-wrap lg:overflow-visible">

@@ -77,7 +77,7 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
       {items.length > 0 && <p className="mb-4 text-sm text-muted">{plural(items.length, "work")}</p>}
       {items.length > 0 ? (
         <>
-          <FeedGrid items={items} />
+          <FeedGrid items={items} reveal />
           <p className="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-5 text-ink-soft">
             Looking to buy? Some creators sell their work.
             <Link href={marketplaceHref(params)} className="link text-ink">
