@@ -316,7 +316,22 @@ input[type="file"]:active::file-selector-button {
   animation-name: fade;
 }
 
+/* Bar charts growing up from their baseline, staggered with --d (the
+   dashboard's views chart). */
+@keyframes bar-grow {
+  from {
+    scale: 1 0;
+  }
+}
+.bar-grow {
+  transform-origin: bottom;
+  animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .bar-grow {
+    animation: none;
+  }
   :is(.reveal[data-reveal="in"], .cv-play) :is(.cv-draw, .cv-wipe, .cv-grow, .cv-pop, .cv-fade) {
     animation: none;
   }

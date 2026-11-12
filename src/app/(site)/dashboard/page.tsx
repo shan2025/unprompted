@@ -4,12 +4,13 @@ import { reviewOrder } from "@/app/actions/listings";
 import { Suspense } from "react";
 import { Avatar } from "@/components/Avatar";
 import { Cover } from "@/components/Cover";
+import { CountUp } from "@/components/CountUp";
 import { CommentIcon, HeartIcon } from "@/components/PostCard";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireUser } from "@/lib/auth";
 import { getDashboard, getInquiries } from "@/lib/data";
-import { formatDate, formatMoney, formatPrice, formatShortDate } from "@/lib/format";
+import { formatDate, formatPrice, formatShortDate } from "@/lib/format";
 import { getCreatorStats, getMyPosts, getRecentActivity } from "@/lib/journal";
 import { videoEmbed } from "@/lib/video";
 
@@ -64,18 +65,19 @@ async function Dashboard() {
   const statCards: React.ReactNode[] = [];
   if (sharer) {
     statCards.push(
-      <Stat key="views" label="Views" value={total("views")} change={stats.thisWeek.views}>
+      <Stat key="views" label="Views" value={total("views")} change={stats.thisWeek.views} index={0}>
         <Spark days={stats.lastSevenDays} />
       </Stat>,
-      <Stat key="works" label="Works shared" value={posts.length} />,
-      <Stat key="appreciations" label="Appreciations" value={total("appreciations")} change={stats.thisWeek.appreciations} />,
-      <Stat key="comments" label="Comments" value={total("comments")} change={stats.thisWeek.comments} />,
+      <Stat key="works" label="Works shared" value={posts.length} index={1} />,
+      <Stat key="appreciations" label="Appreciations" value={total("appreciations")} change={stats.thisWeek.appreciations} index={2} />,
+      <Stat key="comments" label="Comments" value={total("comments")} change={stats.thisWeek.comments} index={3} />,
     );
   }
   if (seller) {
+    const at = statCards.length;
     statCards.push(
-      <Stat key="sales" label="Sales" value={data.sales.count} />,
-      <Stat key="earned" label="Earned" value={formatMoney(data.sales.totalCents)} />,
+      <Stat key="sales" label="Sales" value={data.sales.count} index={at} />,
+      <Stat key="earned" label="Earned" value={data.sales.totalCents} money index={at + 1} />,
     );
   }
 
@@ -367,12 +369,34 @@ function WorkRow({ post: p, index }: { post: MyPost; index: number }) {
   );
 }
 
-function Stat({ label, value, change, children }: { label: string; value: number | string; change?: number; children?: React.ReactNode }) {
+// Each tile rises in after the one before it, and its number counts up.
+function Stat({
+  label,
+  value,
+  money = false,
+  index = 0,
+  change,
+  children,
+}: {
+  label: string;
+  value: number;
+  /** `value` is in cents. */
+  money?: boolean;
+  index?: number;
+  change?: number;
+  children?: React.ReactNode;
+}) {
+  const delay = index * 90;
   return (
-    <div className="card flex justify-between gap-4 p-5 [&>:last-child:not(:first-child)]:self-end">
+    <div
+      className="intro-rise card flex justify-between gap-4 p-5 [&>:last-child:not(:first-child)]:self-end"
+      style={{ "--d": `${delay}ms` } as React.CSSProperties}
+    >
       <div>
         <span className="eyebrow">{label}</span>
-        <span className="mt-1 block font-display text-3xl font-light">{typeof value === "number" ? value.toLocaleString("en-US") : value}</span>
+        <span className="mt-1 block font-display text-3xl font-light tabular-nums">
+          <CountUp to={value} delay={delay + 250} format={money ? "money" : "number"} />
+        </span>
         {change !== undefined && (
           <span className={`mt-0.5 block text-xs font-semibold ${change > 0 ? "text-human" : "text-muted"}`}>
             {change > 0 ? `+${change.toLocaleString("en-US")}` : "None"} this week
@@ -393,8 +417,8 @@ function Spark({ days }: { days: { day: string; views: number }[] }) {
         <span
           key={d.day}
           title={`${d.day}: ${d.views} ${d.views === 1 ? "view" : "views"}`}
-          className={`block w-[7px] ${i === days.length - 1 ? "bg-ink" : "bg-line"}`}
-          style={{ height: `${Math.max(8, (d.views / max) * 100)}%` }}
+          className={`bar-grow block w-[7px] ${i === days.length - 1 ? "bg-ink" : "bg-line"}`}
+          style={{ height: `${Math.max(8, (d.views / max) * 100)}%`, "--d": `${400 + i * 70}ms` } as React.CSSProperties}
         />
       ))}
     </div>
