@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { resolveFlag, reviewListing, reviewPost } from "@/app/actions/admin";
+import { CountUp } from "@/components/CountUp";
+import { Reveal } from "@/components/Reveal";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth";
@@ -23,9 +25,11 @@ const REASONS: Record<string, string> = {
 export default function AdminPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-      <p className="eyebrow">Moderation</p>
-      <h1 className="mt-1 text-4xl font-light">Review queue</h1>
-      <p className="mt-2 max-w-2xl text-ink-soft">
+      <p className="eyebrow intro-rise">Moderation</p>
+      <h1 className="intro-rise mt-1 text-4xl font-light" style={{ "--d": "80ms" } as React.CSSProperties}>
+        Review queue
+      </h1>
+      <p className="intro-rise mt-2 max-w-2xl text-ink-soft" style={{ "--d": "160ms" } as React.CSSProperties}>
         Listings and journal posts land here when automated checks disagree with the creator&apos;s disclosure, or when
         someone reports them.
         Look at the evidence, not just the number.
@@ -44,13 +48,18 @@ async function Queue() {
   return (
     <>
       <section className="mt-10">
-        <h2 className="text-2xl font-normal">Listings awaiting review ({pending.length})</h2>
+        <Reveal>
+          <h2 className="text-2xl font-normal">
+            Listings awaiting review (<CountUp to={pending.length} delay={150} inView />)
+          </h2>
+        </Reveal>
         {pending.length === 0 && <p className="mt-3 text-ink-soft">Nothing waiting.</p>}
         <ul className="mt-4 space-y-4">
           {pending.map(({ listing, creatorName, creatorHandle }) => {
             const s = listing.analysis.score;
             return (
-              <li key={listing.id} className="card p-5">
+              <li key={listing.id}>
+                <Reveal className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <Link href={`/listing/${listing.slug}`} className="font-display text-xl font-medium hover:text-accent">
@@ -88,6 +97,7 @@ async function Queue() {
                     Remove
                   </SubmitButton>
                 </form>
+              </Reveal>
               </li>
             );
           })}
@@ -95,11 +105,16 @@ async function Queue() {
       </section>
 
       <section className="mt-12">
-        <h2 className="text-2xl font-normal">Open reports ({openFlags.length})</h2>
+        <Reveal>
+          <h2 className="text-2xl font-normal">
+            Open reports (<CountUp to={openFlags.length} delay={150} inView />)
+          </h2>
+        </Reveal>
         {openFlags.length === 0 && <p className="mt-3 text-ink-soft">No open reports.</p>}
         <ul className="mt-4 space-y-4">
           {openFlags.map((f) => (
-            <li key={f.id} className="card p-5">
+            <li key={f.id}>
+                <Reveal className="card p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <Link href={`/listing/${f.listingSlug}`} className="font-semibold hover:text-accent">
@@ -121,19 +136,25 @@ async function Queue() {
                   Uphold &amp; remove listing
                 </SubmitButton>
               </form>
-            </li>
+            </Reveal>
+              </li>
           ))}
         </ul>
       </section>
 
       <section className="mt-12">
-        <h2 className="text-2xl font-normal">Journal posts awaiting review ({journal.pending.length})</h2>
+        <Reveal>
+          <h2 className="text-2xl font-normal">
+            Journal posts awaiting review (<CountUp to={journal.pending.length} delay={150} inView />)
+          </h2>
+        </Reveal>
         {journal.pending.length === 0 && <p className="mt-3 text-ink-soft">Nothing waiting.</p>}
         <ul className="mt-4 space-y-4">
           {journal.pending.map(({ post, authorName, authorHandle }) => {
             const s = post.analysis.score;
             return (
-              <li key={post.id} className="card p-5">
+              <li key={post.id}>
+                <Reveal className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <Link href={`/journal/${post.slug}`} className="font-display text-xl font-medium hover:text-accent">
@@ -164,6 +185,7 @@ async function Queue() {
                     Remove
                   </SubmitButton>
                 </form>
+              </Reveal>
               </li>
             );
           })}
@@ -171,11 +193,16 @@ async function Queue() {
       </section>
 
       <section className="mt-12">
-        <h2 className="text-2xl font-normal">Reports on posts and comments ({journal.postFlags.length + journal.commentFlags.length})</h2>
+        <Reveal>
+          <h2 className="text-2xl font-normal">
+            Reports on posts and comments (<CountUp to={journal.postFlags.length + journal.commentFlags.length} delay={150} inView />)
+          </h2>
+        </Reveal>
         {journal.postFlags.length + journal.commentFlags.length === 0 && <p className="mt-3 text-ink-soft">No open reports.</p>}
         <ul className="mt-4 space-y-4">
           {journal.postFlags.map((f) => (
-            <li key={f.id} className="card p-5">
+            <li key={f.id}>
+                <Reveal className="card p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <span className="eyebrow">Post</span>
@@ -198,10 +225,12 @@ async function Queue() {
                   Uphold &amp; remove post
                 </SubmitButton>
               </form>
-            </li>
+            </Reveal>
+              </li>
           ))}
           {journal.commentFlags.map((f) => (
-            <li key={f.id} className="card p-5">
+            <li key={f.id}>
+                <Reveal className="card p-5">
               <span className="eyebrow">Comment</span>
               <p className="text-sm text-muted">
                 On{" "}
@@ -222,7 +251,8 @@ async function Queue() {
                   Uphold &amp; remove comment
                 </SubmitButton>
               </form>
-            </li>
+            </Reveal>
+              </li>
           ))}
         </ul>
       </section>
