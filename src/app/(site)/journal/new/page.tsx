@@ -12,9 +12,11 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 export default function NewPostPage({ searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <p className="eyebrow">Journal</p>
-      <h1 className="mt-1 text-4xl font-light sm:text-5xl">Share something you made</h1>
-      <p className="mt-3 max-w-2xl text-lg text-ink-soft">
+      <p className="eyebrow intro-rise">Journal</p>
+      <h1 className="intro-rise mt-1 text-4xl font-light sm:text-5xl" style={{ "--d": "80ms" } as React.CSSProperties}>
+        Share something you made
+      </h1>
+      <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={{ "--d": "160ms" } as React.CSSProperties}>
         Not everything has to be for sale. Post an article, a poem, a sketch or a half-finished idea. It gets the same AI
         score as a listing, and you&apos;ll see yours before anything is published.
       </p>

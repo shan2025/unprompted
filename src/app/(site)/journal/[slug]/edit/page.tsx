@@ -13,9 +13,11 @@ type Props = { params: Promise<{ slug: string }> };
 export default function EditPostPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <p className="eyebrow">Journal</p>
-      <h1 className="mt-1 text-4xl font-light sm:text-5xl">Edit your post</h1>
-      <p className="mt-3 max-w-2xl text-lg text-ink-soft">
+      <p className="eyebrow intro-rise">Journal</p>
+      <h1 className="intro-rise mt-1 text-4xl font-light sm:text-5xl" style={{ "--d": "80ms" } as React.CSSProperties}>
+        Edit your post
+      </h1>
+      <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={{ "--d": "160ms" } as React.CSSProperties}>
         Change anything you like. When you save, the post is scored again and goes back up with your changes.
       </p>
       <div className="mt-10">
