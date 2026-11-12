@@ -30,7 +30,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
         <h3 className="mt-1.5 text-lg font-medium leading-snug text-ink group-hover:text-accent">{listing.title}</h3>
         <p className="mt-1 text-sm text-muted">by {listing.creatorName}</p>
         <div className="mt-auto flex items-center justify-between pt-4">
-          <span className="font-display text-lg font-medium">{formatPrice(listing.priceCents)}</span>
+          <span className="font-display text-lg font-medium">{formatPrice(listing.priceCents, listing.currency)}</span>
           <AiPill percent={listing.aiPercent} tier={listing.tier} verified={listing.processVerified} />
         </div>
       </div>

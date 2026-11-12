@@ -5,6 +5,8 @@ import { randomBytes } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { notifyAppreciation, notifyComment, notifyFollow } from "@/lib/notify";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
@@ -213,7 +215,7 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
 
 async function findPublishedPost(slug: string) {
   const [post] = await db
-    .select({ id: schema.posts.id, authorId: schema.posts.authorId, status: schema.posts.status })
+    .select({ id: schema.posts.id, authorId: schema.posts.authorId, status: schema.posts.status, slug: schema.posts.slug, title: schema.posts.title })
     .from(schema.posts)
     .where(eq(schema.posts.slug, slug))
     .limit(1);
@@ -231,7 +233,8 @@ export async function toggleAppreciation(slug: string) {
   const where = and(eq(schema.postAppreciations.postId, post.id), eq(schema.postAppreciations.userId, user.id));
   const removed = await db.delete(schema.postAppreciations).where(where).returning({ postId: schema.postAppreciations.postId });
   if (removed.length === 0) {
-    await db.insert(schema.postAppreciations).values({ postId: post.id, userId: user.id }).onConflictDoNothing();
+    const added = await db.insert(schema.postAppreciations).values({ postId: post.id, userId: user.id }).onConflictDoNothing().returning({ postId: schema.postAppreciations.postId });
+    if (added.length) after(() => notifyAppreciation(user, post).catch((e) => console.error("[notify] appreciation", e)));
   }
   revalidatePath(path);
 }
@@ -247,7 +250,8 @@ export async function toggleFollow(handle: string, returnTo: string) {
   const where = and(eq(schema.follows.followerId, user.id), eq(schema.follows.followingId, target.id));
   const removed = await db.delete(schema.follows).where(where).returning({ id: schema.follows.followerId });
   if (removed.length === 0) {
-    await db.insert(schema.follows).values({ followerId: user.id, followingId: target.id }).onConflictDoNothing();
+    const added = await db.insert(schema.follows).values({ followerId: user.id, followingId: target.id }).onConflictDoNothing().returning({ id: schema.follows.followerId });
+    if (added.length) after(() => notifyFollow(user, target.id).catch((e) => console.error("[notify] follow", e)));
   }
   revalidatePath(back);
 }
@@ -270,6 +274,7 @@ export async function addComment(_prev: CommentState, fd: FormData): Promise<Com
   }
 
   await db.insert(schema.postComments).values({ postId: post.id, authorId: user.id, body });
+  after(() => notifyComment(user, post, body).catch((e) => console.error("[notify] comment", e)));
   revalidatePath(`/journal/${slug}`);
   // A new key tells the form to clear itself.
   return { ok: true, key: Date.now() };

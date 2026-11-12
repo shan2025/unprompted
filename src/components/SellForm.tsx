@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState, useTransition } from "react";
 import { createListing, previewAssessment } from "@/app/actions/listings";
 import { CATEGORIES, LICENSES } from "@/lib/categories";
+import { CURRENCIES, FORM_CURRENCY, type Currency } from "@/lib/currency";
 import type { FieldErrors, PreviewState } from "@/lib/listing-form";
 import type { Level } from "@/lib/scoring";
 import { CoverThemeField, DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
@@ -14,6 +15,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
   const [checking, startChecking] = useTransition();
   const [, startPublishing] = useTransition();
   const [tooBig, setTooBig] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<Currency>(FORM_CURRENCY);
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
   const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
@@ -71,13 +73,30 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             </div>
             <div>
               <label htmlFor="price" className="label">
-                Price (USD)
+                Price
               </label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">$</span>
-                <input id="price" name="price" inputMode="decimal" className="field pl-7" placeholder="25" />
+              <div className="flex gap-2">
+                <select
+                  id="currency"
+                  name="currency"
+                  aria-label="Currency"
+                  className="field w-[108px] shrink-0"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as Currency)}
+                >
+                  {Object.entries(CURRENCIES).map(([code, c]) => (
+                    <option key={code} value={code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="relative min-w-0 flex-1">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{CURRENCIES[currency].symbol}</span>
+                  <input id="price" name="price" inputMode="decimal" className="field pl-7" placeholder={currency === "INR" ? "500" : "25"} />
+                </div>
               </div>
-              <p className="hint">Use 0 to give it away.</p>
+              <p className="hint">Use the currency your payment link charges in. Buyers see the price exactly as you enter it. Use 0 to give it away.</p>
+              <FieldError errors={errors} name="currency" />
               <FieldError errors={errors} name="price" />
             </div>
           </div>

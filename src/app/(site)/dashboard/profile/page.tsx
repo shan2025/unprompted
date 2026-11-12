@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { Suspense } from "react";
+import { NotificationSwitch } from "@/components/NotificationSwitch";
 import { ProfileForm } from "@/components/ProfileForm";
 import { requireUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
@@ -22,7 +23,7 @@ export default function EditProfilePage() {
 async function EditProfile() {
   const user = await requireUser("/dashboard/profile");
   const [row] = await db
-    .select({ bio: schema.users.bio, links: schema.users.links, createdAt: schema.users.createdAt })
+    .select({ bio: schema.users.bio, links: schema.users.links, createdAt: schema.users.createdAt, emailNotifications: schema.users.emailNotifications })
     .from(schema.users)
     .where(eq(schema.users.id, user.id))
     .limit(1);
@@ -50,6 +51,7 @@ async function EditProfile() {
         links={row?.links ?? []}
         avatarFile={user.avatarFile}
       />
+      <NotificationSwitch initial={row?.emailNotifications ?? true} />
     </>
   );
 }

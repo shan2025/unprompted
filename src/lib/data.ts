@@ -21,6 +21,7 @@ const cardFields = {
   category: listings.category,
   summary: listings.summary,
   priceCents: listings.priceCents,
+  currency: listings.currency,
   coverFile: listings.coverFile,
   coverTheme: listings.coverTheme,
   coverPattern: listings.coverPattern,
@@ -195,6 +196,7 @@ export async function getDashboard(userId: number) {
       aiPercent: listings.aiPercent,
       tier: listings.tier,
       priceCents: listings.priceCents,
+      currency: listings.currency,
       createdAt: listings.createdAt,
       // Explicit table names: without a join drizzle leaves columns unqualified,
       // so "listing_id" = "id" would compare two columns of orders.
@@ -204,16 +206,19 @@ export async function getDashboard(userId: number) {
     .where(eq(listings.creatorId, userId))
     .orderBy(desc(listings.createdAt));
 
-  const [revenue] = await db
-    .select({ total: sum(orders.amountCents), n: count(orders.id) })
+  // One total per currency: rupees and dollars are never added together.
+  const revenue = await db
+    .select({ currency: orders.currency, total: sum(orders.amountCents), n: count(orders.id) })
     .from(orders)
     .innerJoin(listings, eq(orders.listingId, listings.id))
-    .where(and(eq(listings.creatorId, userId), inArray(orders.status, COMPLETED_ORDERS)));
+    .where(and(eq(listings.creatorId, userId), inArray(orders.status, COMPLETED_ORDERS)))
+    .groupBy(orders.currency);
 
   const waiting = await db
     .select({
       id: orders.id,
       amountCents: orders.amountCents,
+      currency: orders.currency,
       reference: orders.paymentReference,
       createdAt: orders.createdAt,
       slug: listings.slug,
@@ -232,6 +237,7 @@ export async function getDashboard(userId: number) {
       slug: listings.slug,
       title: listings.title,
       amountCents: orders.amountCents,
+      currency: orders.currency,
       status: orders.status,
       createdAt: orders.createdAt,
       creatorName: users.name,
@@ -244,7 +250,10 @@ export async function getDashboard(userId: number) {
 
   return {
     listings: mine,
-    sales: { count: revenue?.n ?? 0, totalCents: Number(revenue?.total ?? 0) },
+    sales: {
+      count: revenue.reduce((n, r) => n + r.n, 0),
+      totals: revenue.map((r) => ({ currency: r.currency, cents: Number(r.total ?? 0) })).sort((a, b) => b.cents - a.cents),
+    },
     waiting,
     purchases,
   };

@@ -10,7 +10,7 @@ import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireUser } from "@/lib/auth";
 import { getDashboard, getInquiries } from "@/lib/data";
-import { formatDate, formatPrice, formatShortDate } from "@/lib/format";
+import { formatDate, formatMoney, formatPrice, formatShortDate } from "@/lib/format";
 import { getCreatorStats, getMyPosts, getRecentActivity } from "@/lib/journal";
 import { videoEmbed } from "@/lib/video";
 
@@ -77,7 +77,15 @@ async function Dashboard() {
     const at = statCards.length;
     statCards.push(
       <Stat key="sales" label="Sales" value={data.sales.count} index={at} />,
-      <Stat key="earned" label="Earned" value={data.sales.totalCents} money index={at + 1} />,
+      // One figure per currency sold in, largest first. Nothing sold yet shows nothing earned.
+      <Stat
+        key="earned"
+        label="Earned"
+        value={data.sales.totals[0]?.cents ?? 0}
+        money={data.sales.totals[0]?.currency ?? "INR"}
+        extra={data.sales.totals.slice(1).map((t) => formatMoney(t.cents, t.currency))}
+        index={at + 1}
+      />,
     );
   }
 
@@ -120,7 +128,7 @@ async function Dashboard() {
                     {o.title}
                   </Link>
                   <p className="text-sm text-ink-soft">
-                    {formatPrice(o.amountCents)} from{" "}
+                    {formatPrice(o.amountCents, o.currency)} from{" "}
                     <Link href={`/u/${o.buyerHandle}`} className="link">
                       {o.buyerName}
                     </Link>{" "}
@@ -268,7 +276,7 @@ async function Dashboard() {
                       <td className="px-4 py-3">
                         <AiPill percent={l.aiPercent} tier={l.tier} />
                       </td>
-                      <td className="px-4 py-3 text-right">{formatPrice(l.priceCents)}</td>
+                      <td className="px-4 py-3 text-right">{formatPrice(l.priceCents, l.currency)}</td>
                       <td className="px-4 py-3 text-right">{l.sales}</td>
                     </tr>
                   ))}
@@ -309,7 +317,7 @@ async function Dashboard() {
                     {p.status === "pending" && <span className="block text-xs font-semibold text-assist">Waiting for the seller to confirm</span>}
                     {p.status === "declined" && <span className="block text-xs font-semibold text-heavy">Payment not confirmed</span>}
                   </span>
-                  <span className="text-sm font-semibold">{formatPrice(p.amountCents)}</span>
+                  <span className="text-sm font-semibold">{formatPrice(p.amountCents, p.currency)}</span>
                 </Link>
               </li>
             ))}
@@ -373,15 +381,18 @@ function WorkRow({ post: p, index }: { post: MyPost; index: number }) {
 function Stat({
   label,
   value,
-  money = false,
+  money,
+  extra = [],
   index = 0,
   change,
   children,
 }: {
   label: string;
   value: number;
-  /** `value` is in cents. */
-  money?: boolean;
+  /** A currency code makes `value` an amount in cents in that currency. */
+  money?: string;
+  /** Further amounts shown under the number, such as totals in other currencies. */
+  extra?: string[];
   index?: number;
   change?: number;
   children?: React.ReactNode;
@@ -395,8 +406,9 @@ function Stat({
       <div>
         <span className="eyebrow">{label}</span>
         <span className="mt-1 block font-display text-3xl font-light tabular-nums">
-          <CountUp to={value} delay={delay + 250} format={money ? "money" : "number"} />
+          <CountUp to={value} delay={delay + 250} format={money ? "money" : "number"} currency={money} />
         </span>
+        {extra.length > 0 && <span className="mt-0.5 block text-sm text-ink-soft tabular-nums">+ {extra.join(" + ")}</span>}
         {change !== undefined && (
           <span className={`mt-0.5 block text-xs font-semibold ${change > 0 ? "text-human" : "text-muted"}`}>
             {change > 0 ? `+${change.toLocaleString("en-US")}` : "None"} this week

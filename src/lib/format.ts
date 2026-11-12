@@ -1,13 +1,15 @@
-/** A price tag: a zero price reads "Free". */
-export function formatPrice(cents: number) {
-  return cents === 0 ? "Free" : formatMoney(cents);
+import { currencyOf } from "./currency";
+
+/** A price tag: a zero price reads "Free". `currency` is the listing's own, shown as entered. */
+export function formatPrice(cents: number, currency?: string) {
+  return cents === 0 ? "Free" : formatMoney(cents, currency);
 }
 
-/** An amount of money, such as a total, where zero is "$0". */
-export function formatMoney(cents: number) {
+/** An amount of money, such as a total, where zero is "$0". Amounts are in the smallest unit (cents, paise). */
+export function formatMoney(cents: number, currency?: string) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: currencyOf(currency),
     minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
   }).format(cents / 100);
 }

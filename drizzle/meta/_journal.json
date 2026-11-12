@@ -78,6 +78,13 @@
       "when": 1794455545490,
       "tag": "0010_cover_patterns",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794474018411,
+      "tag": "0011_currency_and_notifications",
+      "breakpoints": true
     }
   ]
 }

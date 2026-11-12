@@ -83,7 +83,7 @@ async function ListingView({ params, searchParams }: Props) {
     <div className="card p-5">
       <div className="flex items-baseline justify-between">
         <span className="font-display text-4xl font-light tabular-nums">
-          {listing.priceCents > 0 ? <CountUp to={listing.priceCents} delay={350} format="money" /> : formatPrice(listing.priceCents)}
+          {listing.priceCents > 0 ? <CountUp to={listing.priceCents} delay={350} format="money" currency={listing.currency} /> : formatPrice(listing.priceCents)}
         </span>
         <span className="text-sm text-muted">{plural(sales, "sale")}</span>
       </div>
@@ -107,7 +107,7 @@ async function ListingView({ params, searchParams }: Props) {
         ) : instantBuy ? (
           <form action={buyListing.bind(null, listing.slug)}>
             <SubmitButton className="btn-accent w-full py-3 text-[15px]" pendingText="Processing…">
-              {listing.priceCents === 0 ? "Get it free" : `Buy for ${formatPrice(listing.priceCents)}`}
+              {listing.priceCents === 0 ? "Get it free" : `Buy for ${formatPrice(listing.priceCents, listing.currency)}`}
             </SubmitButton>
             {listing.priceCents > 0 && <p className="mt-2 text-center text-xs text-muted">Demo listing: no money changes hands.</p>}
           </form>
@@ -126,7 +126,7 @@ async function ListingView({ params, searchParams }: Props) {
             )}
             <div>
               <a href={listing.paymentUrl} target="_blank" rel="nofollow noopener noreferrer" className="btn-accent block w-full py-3 text-center text-[15px]">
-                Pay {formatPrice(listing.priceCents)} with {paymentProvider(listing.paymentUrl)}
+                Pay {formatPrice(listing.priceCents, listing.currency)} with {paymentProvider(listing.paymentUrl)}
               </a>
               {upi && <p className="mt-2 text-center text-xs text-muted">On a computer? Pay from your UPI app to {upi}.</p>}
               <p className="mt-2 text-xs leading-relaxed text-muted">
@@ -157,7 +157,7 @@ async function ListingView({ params, searchParams }: Props) {
             offers: {
               "@type": "Offer",
               price: (listing.priceCents / 100).toFixed(2),
-              priceCurrency: "USD",
+              priceCurrency: listing.currency,
               availability: listing.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
               url: `${siteUrl()}/listing/${listing.slug}`,
             },

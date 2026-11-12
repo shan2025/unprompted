@@ -1,4 +1,5 @@
 import { isCategory, isLicense, type CategoryId, type LicenseId } from "./categories";
+import { CURRENCIES, isCurrency, type Currency } from "./currency";
 import { sniffImageType } from "./analysis/media";
 import type { MediaScan } from "./analysis/media";
 import type { ContentKind, Segment } from "./analysis/text";
@@ -31,6 +32,7 @@ export interface ParsedListing {
   preview: string;
   locked: string;
   priceCents: number;
+  currency: Currency;
   paymentUrl: string | null;
   license: LicenseId;
   aiNotes: string;
@@ -150,10 +152,16 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
   const aiNotes = str(fd, "aiNotes");
   if (aiNotes.length > 1000) errors.aiNotes = "Keep this under 1,000 characters.";
 
-  const priceText = str(fd, "price").replace(/^\$/, "");
+  const currencyText = str(fd, "currency");
+  if (!isCurrency(currencyText)) errors.currency = "Pick a currency.";
+  const currency: Currency = isCurrency(currencyText) ? currencyText : "USD";
+  const max = CURRENCIES[currency].max;
+
+  // People type "1,500" or "₹1500"; both mean 1500.
+  const priceText = str(fd, "price").replace(/^[$₹€£]\s*/, "").replace(/,/g, "");
   const price = Number(priceText);
-  if (priceText === "" || !Number.isFinite(price) || price < 0 || price > 10_000) {
-    errors.price = "Enter a price from 0 to 10,000.";
+  if (priceText === "" || !Number.isFinite(price) || price < 0 || price > max) {
+    errors.price = `Enter a price from 0 to ${max.toLocaleString("en-US")}.`;
   }
 
   const paymentLink = str(fd, "paymentUrl");
@@ -186,6 +194,7 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
     preview,
     locked,
     priceCents: Math.round(price * 100),
+    currency,
     paymentUrl: price > 0 ? paymentUrl : null,
     license: license as LicenseId,
     aiNotes,

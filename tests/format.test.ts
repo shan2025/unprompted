@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { safeNext } from "@/lib/format";
+import { formatMoney, formatPrice, safeNext } from "@/lib/format";
+
+describe("formatPrice", () => {
+  it("shows each listing in its own currency, unconverted", () => {
+    expect(formatPrice(50000, "INR")).toBe("₹500");
+    expect(formatPrice(2500, "USD")).toBe("$25");
+    expect(formatPrice(1999, "EUR")).toBe("€19.99");
+    expect(formatPrice(1200, "GBP")).toBe("£12");
+  });
+
+  it("reads zero as Free in any currency", () => {
+    expect(formatPrice(0, "INR")).toBe("Free");
+  });
+
+  it("treats listings from before currencies existed, or a bad code, as dollars", () => {
+    expect(formatPrice(2500)).toBe("$25");
+    expect(formatMoney(2500, "XYZ")).toBe("$25");
+  });
+});
 
 describe("safeNext", () => {
   it("keeps paths on this site", () => {

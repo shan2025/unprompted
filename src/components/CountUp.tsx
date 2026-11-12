@@ -12,12 +12,15 @@ export function CountUp({
   delay = 0,
   duration = 900,
   format,
+  currency,
   inView = false,
 }: {
   to: number;
   delay?: number;
   duration?: number;
   format?: "number" | "money";
+  /** For "money": the ISO currency code. Defaults to US dollars. */
+  currency?: string;
   inView?: boolean;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -58,7 +61,7 @@ export function CountUp({
     };
   }, [to, delay, duration, format, inView]);
 
-  const text = format === "money" ? formatMoney(n) : format === "number" ? n.toLocaleString("en-US") : n;
+  const text = format === "money" ? formatMoney(n, currency) : format === "number" ? n.toLocaleString("en-US") : n;
   return inView ? <span ref={ref}>{text}</span> : <>{text}</>;
 }
 

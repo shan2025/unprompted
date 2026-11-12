@@ -61,6 +61,14 @@ export async function updateProfile(_prev: ProfileState, fd: FormData): Promise<
   return { saved: true, photoSaved: hasPhoto };
 }
 
+/** The switch for follower, comment and appreciation emails. Saves as soon as it's flipped. */
+export async function setEmailNotifications(on: boolean): Promise<{ ok: boolean }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  await db.update(schema.users).set({ emailNotifications: on === true }).where(eq(schema.users.id, user.id));
+  return { ok: true };
+}
+
 /** Live check for the profile link field: null when the handle is free for this person. */
 export async function checkHandle(raw: string): Promise<string | null> {
   const user = await getCurrentUser();

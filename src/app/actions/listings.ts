@@ -93,6 +93,7 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
       locked: v.locked,
       aiNotes: v.aiNotes,
       priceCents: v.priceCents,
+      currency: v.currency,
       paymentUrl: v.paymentUrl,
       license: v.license,
       coverFile,
@@ -125,7 +126,7 @@ export async function buyListing(slug: string) {
 
     const [order] = await tx
       .insert(schema.orders)
-      .values({ listingId: listing.id, buyerId: user.id, amountCents: listing.priceCents, status: listing.isDemo ? "demo" : "paid" })
+      .values({ listingId: listing.id, buyerId: user.id, amountCents: listing.priceCents, currency: listing.currency, status: listing.isDemo ? "demo" : "paid" })
       // Already bought by this user (orders_listing_buyer_idx).
       .onConflictDoNothing()
       .returning({ id: schema.orders.id });
@@ -198,12 +199,12 @@ export async function claimPayment(_prev: PaymentState, fd: FormData): Promise<P
     }
     const [order] = await tx
       .insert(schema.orders)
-      .values({ listingId: listing.id, buyerId: user.id, amountCents: listing.priceCents, status: "pending", paymentReference: reference })
+      .values({ listingId: listing.id, buyerId: user.id, amountCents: listing.priceCents, currency: listing.currency, status: "pending", paymentReference: reference })
       // A declined buyer can try again. Anything else already stands. The claim's
       // date restarts, since it's what the hold on an exclusive listing counts from.
       .onConflictDoUpdate({
         target: [schema.orders.listingId, schema.orders.buyerId],
-        set: { status: "pending", amountCents: listing.priceCents, paymentReference: reference, createdAt: new Date() },
+        set: { status: "pending", amountCents: listing.priceCents, currency: listing.currency, paymentReference: reference, createdAt: new Date() },
         setWhere: eq(schema.orders.status, "declined"),
       })
       .returning({ id: schema.orders.id });

@@ -37,6 +37,8 @@ export const users = pgTable("users", {
   /** Links to the person's other profiles and sites, in the order they chose. */
   links: jsonb("links").$type<string[]>().notNull().default([]),
   role: text("role", { enum: ["member", "admin"] }).notNull().default("member"),
+  /** Emails about new followers, comments and appreciations. Orders and questions always send. */
+  emailNotifications: boolean("email_notifications").notNull().default(true),
   createdAt: createdAt(),
 }).enableRLS();
 
@@ -74,6 +76,8 @@ export const listings = pgTable(
     locked: text("locked").notNull().default(""),
     aiNotes: text("ai_notes").notNull().default(""),
     priceCents: integer("price_cents").notNull(),
+    // ISO code the seller priced it in (see currency.ts). Shown as entered, never converted.
+    currency: text("currency").notNull().default("USD"),
     license: text("license").notNull(),
     coverFile: text("cover_file"),
     /** Colour theme for the generated cover when there's no image (cover-themes.ts). Null picks from the slug. */
@@ -110,6 +114,8 @@ export const orders = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     amountCents: integer("amount_cents").notNull(),
+    // The listing's currency when the order was made, so totals never mix rupees and dollars.
+    currency: text("currency").notNull().default("USD"),
     // Buyers pay sellers directly, so we can't see the money. An order is "pending"
     // from the buyer saying they've paid until the seller marks it "paid" or
     // "declined". Free listings are "paid" at once; seeded demo listings are "demo".
