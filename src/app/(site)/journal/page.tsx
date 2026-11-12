@@ -15,19 +15,24 @@ export const metadata: Metadata = {
 
 type Params = Record<string, string | string[] | undefined>;
 
+// Stagger delay for the intro animations in globals.css.
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
+
 export default function JournalPage({ searchParams }: { searchParams: Promise<Params> }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Journal</p>
-          <h1 className="mt-1 text-4xl font-light sm:text-5xl">Shared, not sold</h1>
-          <p className="mt-3 max-w-2xl text-lg text-ink-soft">
+          <p className="eyebrow intro-rise">Journal</p>
+          <h1 className="intro-rise mt-1 text-4xl font-light sm:text-5xl" style={d(80)}>
+            Shared, not sold
+          </h1>
+          <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={d(160)}>
             Articles, poems, sketches, films, process notes and ideas from the people who make things here. Same honesty
             rules as the marketplace: every post shows how much AI was involved.
           </p>
         </div>
-        <Link href="/journal/new" className="btn-ghost">
+        <Link href="/journal/new" className="btn-ghost intro-rise" style={d(220)}>
           Share your work
         </Link>
       </div>
@@ -67,7 +72,7 @@ async function Feed({ searchParams }: { searchParams: Promise<Params> }) {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center gap-6 border-b border-line">
+      <div className="intro-rise mb-6 flex flex-wrap items-center gap-6 border-b border-line" style={d(280)}>
         {(["everyone", "following"] as const).map((t) => (
           <Link
             key={t}
@@ -88,7 +93,7 @@ async function Feed({ searchParams }: { searchParams: Promise<Params> }) {
         </form>
       </div>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+      <div className="intro-rise mb-6 flex gap-2 overflow-x-auto no-scrollbar pb-1" style={d(340)}>
         <Chip href={feedHref({ tab, q })} active={!category}>
           All
         </Chip>
