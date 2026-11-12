@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CountedText } from "@/components/CountUp";
+import { Reveal } from "@/components/Reveal";
 import { TierStamp } from "@/components/Score";
 import { CATEGORIES, STAGE_WEIGHTS } from "@/lib/categories";
 import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, MAX_DISCLOSED, STAGES, STAGE_INFO, TIER_INFO, type Tier } from "@/lib/scoring";
@@ -9,20 +11,28 @@ export const metadata: Metadata = {
   description: "How Unprompters estimates AI involvement, what the number means, and what detection can't do.",
 };
 
+// Section headings rise in as they scroll into view.
 function H2({ id, children }: { id?: string; children: React.ReactNode }) {
   return (
-    <h2 id={id} className="mt-14 scroll-mt-8 text-3xl font-light">
-      {children}
-    </h2>
+    <Reveal className="mt-14">
+      <h2 id={id} className="scroll-mt-8 text-3xl font-light">
+        {children}
+      </h2>
+    </Reveal>
   );
 }
+
+// Stagger delay for the intro animations in globals.css.
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
 
 export default function StandardPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
-      <p className="eyebrow">The Unprompters standard</p>
-      <h1 className="mt-2 text-5xl font-light leading-tight">How scoring works</h1>
-      <p className="mt-5 text-lg leading-relaxed text-ink-soft">
+      <p className="eyebrow intro-rise">The Unprompters standard</p>
+      <h1 className="intro-rise mt-2 text-5xl font-light leading-tight" style={d(80)}>
+        How scoring works
+      </h1>
+      <p className="intro-rise mt-5 text-lg leading-relaxed text-ink-soft" style={d(180)}>
         Every piece on Unprompters, shared for free or for sale, carries an{" "}
         <strong className="text-ink">AI-involvement estimate</strong>: roughly how much of the creative work came from AI
         rather than from the person who made it. It comes with a range, a stage-by-stage breakdown, and the reasoning
@@ -31,14 +41,16 @@ export default function StandardPage() {
 
       <H2>What the tiers mean</H2>
       <div className="mt-5 overflow-hidden rounded-2xl border border-line">
-        {(Object.keys(TIER_INFO) as Tier[]).map((t) => (
-          <div key={t} className="flex flex-wrap items-center gap-4 border-b border-line bg-card px-5 py-4 last:border-0">
+        {(Object.keys(TIER_INFO) as Tier[]).map((t, i) => (
+          <Reveal key={t} delay={i * 90} className="flex flex-wrap items-center gap-4 border-b border-line bg-card px-5 py-4 last:border-0">
             <div className="w-32">
               <TierStamp tier={t} />
             </div>
-            <span className="w-16 font-semibold">{TIER_INFO[t].range}</span>
+            <span className="w-16 font-semibold tabular-nums">
+              <CountedText text={TIER_INFO[t].range} delay={i * 90 + 150} />
+            </span>
             <span className="flex-1 text-ink-soft">{TIER_INFO[t].blurb}</span>
-          </div>
+          </Reveal>
         ))}
       </div>
 
@@ -50,9 +62,11 @@ export default function StandardPage() {
         </p>
       </div>
       <ul className="mt-4 space-y-2">
-        {STAGES.map((s) => (
-          <li key={s} className="card px-4 py-3 text-sm">
-            <strong>{STAGE_INFO[s].label}</strong> <span className="text-muted">· {STAGE_INFO[s].hint}</span>
+        {STAGES.map((s, i) => (
+          <li key={s}>
+            <Reveal delay={i * 80} className="card px-4 py-3 text-sm">
+              <strong>{STAGE_INFO[s].label}</strong> <span className="text-muted">· {STAGE_INFO[s].hint}</span>
+            </Reveal>
           </li>
         ))}
       </ul>
@@ -60,7 +74,7 @@ export default function StandardPage() {
       <ul className="mt-3 space-y-2">
         {LEVELS.map((l) => (
           <li key={l} className="text-sm text-ink-soft">
-            <strong className="text-ink">{LEVEL_INFO[l].label}</strong> ({Math.round(LEVEL_INFO[l].value * 100)}% of that
+            <strong className="text-ink">{LEVEL_INFO[l].label}</strong> (<CountedText text={`${Math.round(LEVEL_INFO[l].value * 100)}%`} /> of that
             stage): {LEVEL_INFO[l].hint}.
           </li>
         ))}
@@ -68,7 +82,7 @@ export default function StandardPage() {
       <p className="mt-5 leading-relaxed text-ink-soft">
         Stages are weighted by what the work actually is. In a poem the writing matters most. In an idea, the idea does.
       </p>
-      <div className="mt-4 overflow-x-auto no-scrollbar rounded-2xl border border-line bg-card">
+      <Reveal className="mt-4 overflow-x-auto no-scrollbar rounded-2xl border border-line bg-card">
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
             <tr>
@@ -86,17 +100,17 @@ export default function StandardPage() {
                 <td className="px-4 py-2.5 font-medium">{c.label}</td>
                 {STAGES.map((s) => (
                   <td key={s} className="px-4 py-2.5 text-right tabular-nums text-ink-soft">
-                    {Math.round(STAGE_WEIGHTS[c.id][s] * 100)}%
+                    <CountedText text={`${Math.round(STAGE_WEIGHTS[c.id][s] * 100)}%`} />
                   </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </Reveal>
       <p className="mt-5 leading-relaxed text-ink-soft">
         <strong className="text-ink">The disclosure is the floor.</strong> Nothing we detect can bring a score below what
-        the creator admits to. New posts and listings must disclose {Math.round(MAX_DISCLOSED * 100)}% AI or less.
+        the creator admits to. New posts and listings must disclose <CountedText text={`${Math.round(MAX_DISCLOSED * 100)}%`} /> AI or less.
       </p>
 
       <H2>2. We scan the work</H2>
@@ -132,10 +146,14 @@ export default function StandardPage() {
         so anyone can check it:
       </p>
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-        {Object.values(EVIDENCE_KINDS).map((e) => (
-          <li key={e.label} className="card px-4 py-3 text-sm">
-            {e.label}
-            <span className="float-right text-muted">+{Math.round(e.strength * 100)}</span>
+        {Object.values(EVIDENCE_KINDS).map((e, i) => (
+          <li key={e.label}>
+            <Reveal delay={(i % 2) * 90} className="card px-4 py-3 text-sm">
+              {e.label}
+              <span className="float-right tabular-nums text-muted">
+                <CountedText text={`+${Math.round(e.strength * 100)}`} delay={(i % 2) * 90 + 150} />
+              </span>
+            </Reveal>
           </li>
         ))}
       </ul>
@@ -182,7 +200,7 @@ export default function StandardPage() {
         <li>Creators can appeal any decision with additional process evidence.</li>
       </ul>
 
-      <div className="mt-14 rounded-2xl bg-ink p-8 text-paper">
+      <Reveal className="mt-14 rounded-2xl bg-ink p-8 text-paper">
         <p className="font-display text-2xl font-normal">Made something?</p>
         <p className="mt-2 text-paper/80">Share it or sell it. You&apos;ll see your score before anything is published.</p>
         <div className="mt-5 flex flex-wrap gap-3">
@@ -193,7 +211,7 @@ export default function StandardPage() {
             Start a listing
           </Link>
         </div>
-      </div>
+      </Reveal>
     </article>
   );
 }

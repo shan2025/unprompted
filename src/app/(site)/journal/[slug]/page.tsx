@@ -112,9 +112,13 @@ async function PostView({ params, searchParams }: Props) {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <article className="min-w-0">
-          <h1 className="text-4xl font-light leading-tight sm:text-5xl">{post.title}</h1>
-          {post.subtitle && <p className="mt-3 text-xl leading-relaxed text-ink-soft">{post.subtitle}</p>}
-          <p className="mt-3 text-ink-soft">
+          <h1 className="intro-rise text-4xl font-light leading-tight sm:text-5xl">{post.title}</h1>
+          {post.subtitle && (
+            <p className="intro-rise mt-3 text-xl leading-relaxed text-ink-soft" style={{ "--d": "80ms" } as React.CSSProperties}>
+              {post.subtitle}
+            </p>
+          )}
+          <p className="intro-rise mt-3 text-ink-soft" style={{ "--d": "160ms" } as React.CSSProperties}>
             by{" "}
             <Link href={`/u/${author.handle}`} className="link font-semibold text-ink">
               {author.name}
@@ -150,20 +154,20 @@ async function PostView({ params, searchParams }: Props) {
           )}
 
           {post.body && (
-            <div className="mt-8 max-w-[68ch]">
+            <Reveal className="mt-8 max-w-[68ch]">
               <SegmentView
                 text={post.body}
                 segments={analysis.previewSegments}
                 kind={analysis.previewKind}
                 textClass="text-[17px] leading-[1.75]"
               />
-            </div>
+            </Reveal>
           )}
 
           {/* On small screens the score follows the writing, so reading comes first. */}
-          <div className="mt-10 lg:hidden">
+          <Reveal className="mt-10 lg:hidden">
             <ScoreCard score={analysis.score} evidenceCount={evidence.length} unscanned={Boolean(post.videoUrl)} />
-          </div>
+          </Reveal>
 
           <div className="mt-10 flex flex-wrap items-center gap-3 border-y border-line py-4">
             <AppreciateButton slug={post.slug} count={activity.appreciations} appreciated={activity.appreciated} disabled={isAuthor || !isPublished} />
@@ -171,10 +175,10 @@ async function PostView({ params, searchParams }: Props) {
           </div>
 
           {post.aiNotes && (
-            <section className="mt-10">
+            <Reveal className="mt-10">
               <h2 className="text-2xl font-normal">AI use, in the author&apos;s words</h2>
               <blockquote className="mt-4 border-l-2 border-accent pl-4 italic leading-relaxed text-ink-soft">{post.aiNotes}</blockquote>
-            </section>
+            </Reveal>
           )}
 
           {evidence.length > 0 && (
@@ -182,10 +186,12 @@ async function PostView({ params, searchParams }: Props) {
               <h2 className="text-2xl font-normal">Process evidence</h2>
               <ul className="mt-4 space-y-3">
                 {evidence.map((e, i) => (
-                  <li key={i} className="card flex flex-col gap-1 p-4">
-                    <span className="text-sm font-semibold">{EVIDENCE_KINDS[e.kind]?.label ?? e.kind}</span>
-                    <EvidenceSource evidence={e} />
-                    {e.note && <span className="text-sm text-muted">{e.note}</span>}
+                  <li key={i}>
+                    <Reveal delay={Math.min(i, 4) * 80} className="card flex flex-col gap-1 p-4">
+                      <span className="text-sm font-semibold">{EVIDENCE_KINDS[e.kind]?.label ?? e.kind}</span>
+                      <EvidenceSource evidence={e} />
+                      {e.note && <span className="text-sm text-muted">{e.note}</span>}
+                    </Reveal>
                   </li>
                 ))}
               </ul>
@@ -196,8 +202,9 @@ async function PostView({ params, searchParams }: Props) {
             <h2 className="text-2xl font-normal">Comments</h2>
             {activity.comments.length === 0 && <p className="mt-3 text-ink-soft">No comments yet.</p>}
             <ul className="mt-4 space-y-4">
-              {activity.comments.map((c) => (
-                <li key={c.id} className="card flex gap-3 p-4">
+              {activity.comments.map((c, i) => (
+                <li key={c.id}>
+                  <Reveal delay={Math.min(i, 4) * 80} className="card flex gap-3 p-4">
                   {/* The name beside it is the same link, so this one stays out of the tab order. */}
                   <Link href={`/u/${c.authorHandle}`} tabIndex={-1} aria-hidden="true" className="shrink-0">
                     <Avatar name={c.authorName} file={c.authorAvatarFile} className="h-10 w-10 text-sm" />
@@ -218,6 +225,7 @@ async function PostView({ params, searchParams }: Props) {
                       {user && user.id !== c.authorId && <FlagForm target="comment" id={c.id} compact />}
                     </div>
                   </div>
+                  </Reveal>
                 </li>
               ))}
             </ul>
@@ -239,8 +247,9 @@ async function PostView({ params, searchParams }: Props) {
         </article>
 
         <aside className="space-y-5">
-          <div className="hidden lg:block">
-            <ScoreCard score={analysis.score} evidenceCount={evidence.length} unscanned={Boolean(post.videoUrl)} />
+          {/* Beside the post on wide screens, the score card forms as the page opens. */}
+          <div className="intro-open hidden lg:block" style={{ "--d": "200ms" } as React.CSSProperties}>
+            <ScoreCard score={analysis.score} evidenceCount={evidence.length} unscanned={Boolean(post.videoUrl)} intro />
           </div>
 
           <div className="card p-5">
