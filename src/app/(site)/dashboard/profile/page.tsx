@@ -29,13 +29,13 @@ async function EditProfile() {
   const profilePath = `/u/${user.handle}`;
   return (
     <>
-      <Link href={profilePath} className="inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink">
+      <Link href={profilePath} className="intro-rise inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink">
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M15 5l-7 7 7 7" />
         </svg>
         Your profile
       </Link>
-      <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+      <div className="intro-rise mt-4 flex flex-wrap items-end justify-between gap-4" style={{ "--d": "70ms" } as React.CSSProperties}>
         <h1 className="text-4xl font-light">Edit profile</h1>
         <Link href={profilePath} className="link text-sm">
           View public profile

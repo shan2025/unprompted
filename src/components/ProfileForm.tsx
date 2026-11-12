@@ -8,6 +8,7 @@ import { Avatar } from "./Avatar";
 import { CopyLink } from "./CopyLink";
 import { keepFields } from "./keepFields";
 import { PhotoCropper } from "./PhotoCropper";
+import { Reveal } from "./Reveal";
 import { SiteIcon } from "./SiteIcon";
 
 const NAME_MAX = 60;
@@ -295,7 +296,7 @@ export function ProfileForm({
           )}
         </Section>
 
-        <Section title="About you" hint="Shown on your profile, your posts and your listings.">
+        <Section index={1} title="About you" hint="Shown on your profile, your posts and your listings.">
           <div className="space-y-6">
             <div>
               <FieldTop htmlFor="name" label="Name" count={name.length} max={NAME_MAX} />
@@ -352,7 +353,7 @@ export function ProfileForm({
           </div>
         </Section>
 
-        <Section title="Links" hint={`Up to ${MAX_LINKS}. We show the site's name and icon, like Instagram or GitHub.`}>
+        <Section index={2} title="Links" hint={`Up to ${MAX_LINKS}. We show the site's name and icon, like Instagram or GitHub.`}>
           <ul className="space-y-2.5">
             {links.map((row, i) => {
               const url = normalizeLink(row.value);
@@ -453,7 +454,7 @@ export function ProfileForm({
         </div>
       </div>
 
-      <aside aria-label="Preview of your profile" className="lg:sticky lg:top-6">
+      <aside aria-label="Preview of your profile" className="intro-rise lg:sticky lg:top-6" style={{ "--d": "250ms" } as React.CSSProperties}>
         <div className="mb-3 flex items-baseline justify-between gap-3">
           <span className="eyebrow">Preview</span>
           <span className="text-[13px] text-muted">How visitors see you</span>
@@ -494,8 +495,10 @@ export function ProfileForm({
   );
 }
 
-function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+// Each section rises in as it scrolls into view, the first few one after another.
+function Section({ title, hint, index = 0, children }: { title: string; hint: string; index?: number; children: ReactNode }) {
   return (
+    <Reveal delay={120 + index * 90}>
     <section className="grid gap-x-8 gap-y-4 border-t border-line py-7 md:grid-cols-[180px_minmax(0,1fr)]">
       <div>
         <h2 className="text-[17px] font-semibold tracking-normal">{title}</h2>
@@ -503,6 +506,7 @@ function Section({ title, hint, children }: { title: string; hint: string; child
       </div>
       <div className="min-w-0">{children}</div>
     </section>
+    </Reveal>
   );
 }
 
