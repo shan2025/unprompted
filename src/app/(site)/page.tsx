@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FeedGrid } from "@/components/FeedGrid";
 import { GridSkeleton } from "@/components/ListingCard";
+import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { ScoreCard } from "@/components/Score";
 import { CATEGORIES } from "@/lib/categories";
 import { usedCategories } from "@/lib/data";
@@ -43,23 +44,27 @@ const STEPS = [
   },
 ];
 
+// Stagger delay for the intro animations in globals.css.
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
+
 export default function Home() {
   return (
     <>
+      <RevealOnScroll />
       <section className="mx-auto grid max-w-7xl items-center gap-16 px-4 pb-24 pt-20 sm:px-8 lg:grid-cols-[1.3fr_1fr] lg:pt-32">
         <div>
-          <p className="eyebrow">A place for human work</p>
-          <h1 className="mt-6 text-[44px] font-light leading-[1.04] sm:text-6xl lg:text-[76px]">
+          <p className="eyebrow intro-rise">A place for human work</p>
+          <h1 style={d(80)} className="intro-rise mt-6 text-[44px] font-light leading-[1.04] sm:text-6xl lg:text-[76px]">
             Work made by people.
             <br />
             See how it was made.
           </h1>
-          <p className="mt-8 max-w-xl text-lg leading-relaxed text-ink-soft">
+          <p style={d(220)} className="intro-rise mt-8 max-w-xl text-lg leading-relaxed text-ink-soft">
             Explore writing, art, film, code, handicrafts and anything else people make themselves. Each piece shows how
             much AI was involved, as a number with a range and the reasoning behind it. If it&apos;s for sale, you can buy
             it.
           </p>
-          <div className="mt-10 flex flex-wrap gap-3">
+          <div style={d(340)} className="intro-rise mt-10 flex flex-wrap gap-3">
             <Link href="/explore" className="btn-primary px-8 py-4">
               Explore the work
             </Link>
@@ -68,16 +73,16 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div>
+        <div style={d(300)} className="intro-open">
           <p className="mb-3 text-xs text-muted">Example: a short story, lightly copy-edited with AI</p>
-          <ScoreCard score={EXAMPLE} evidenceCount={2} />
+          <ScoreCard score={EXAMPLE} evidenceCount={2} intro />
         </div>
       </section>
 
       <section className="border-y border-line">
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-8 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <div key={s.n}>
+          {STEPS.map((s, i) => (
+            <div key={s.n} className="reveal" style={d(i * 120)}>
               <span className="text-sm text-muted">{s.n}</span>
               <h2 className="mt-3 text-3xl font-light">{s.title}</h2>
               <p className="mt-3 leading-relaxed text-ink-soft">{s.body}</p>
@@ -87,7 +92,7 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
-        <div className="mb-10 flex items-end justify-between gap-4">
+        <div className="reveal mb-10 flex items-end justify-between gap-4">
           <h2 className="text-4xl font-light">Recently shared</h2>
           <Link href="/explore" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
             See everything
@@ -99,14 +104,14 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
-        <h2 className="text-4xl font-light">Browse by craft</h2>
+        <h2 className="reveal text-4xl font-light">Browse by craft</h2>
         <Suspense fallback={<div className="mt-10 h-48 animate-pulse border border-line" />}>
           <Crafts />
         </Suspense>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
-        <div className="grid gap-12 bg-ink p-10 text-white sm:p-16 lg:grid-cols-[1.2fr_1fr]">
+        <div className="reveal grid gap-12 bg-ink p-10 text-white sm:p-16 lg:grid-cols-[1.2fr_1fr]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">Honest by design</p>
             <h2 className="mt-4 text-4xl font-light sm:text-5xl">A range, not a verdict.</h2>
@@ -152,11 +157,12 @@ async function Crafts() {
   if (crafts.length === 0) return <p className="mt-6 text-ink-soft">Nothing shared yet.</p>;
   return (
     <div className="mt-10 grid grid-cols-2 border-l border-t border-line sm:grid-cols-3 lg:grid-cols-4">
-      {crafts.map((c) => (
+      {crafts.map((c, i) => (
         <Link
           key={c.id}
+          style={d((i % 4) * 70)}
           href={`/${explore.includes(c.id) ? "explore" : "marketplace"}?category=${c.id}`}
-          className="group border-b border-r border-line p-6 transition-colors hover:bg-field"
+          className="reveal group border-b border-r border-line p-6 hover:bg-field"
         >
           <span className="text-lg">{c.label}</span>
           <span className="mt-1 block text-xs leading-snug text-muted">{c.blurb}</span>
@@ -179,5 +185,5 @@ async function Recent() {
       </p>
     );
   }
-  return <FeedGrid items={items} />;
+  return <FeedGrid items={items} reveal />;
 }

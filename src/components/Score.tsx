@@ -1,3 +1,4 @@
+import { CountUp } from "./CountUp";
 import { LEVELS, LEVEL_INFO, scoreNotes, STAGE_INFO, TIER_INFO, type Score, type Tier } from "@/lib/scoring";
 
 const TIER_TEXT: Record<Tier, string> = {
@@ -75,6 +76,12 @@ const STOPS: [number, number][] = [
   [100, 100],
 ];
 
+// With `intro`, returns the animation class and stagger delay for one piece of
+// the forming card (keyframes in globals.css); otherwise nothing.
+function introFx(intro: boolean | undefined, cls: string, ms: number) {
+  return intro ? { cls: ` ${cls}`, style: { "--d": `${ms}ms` } as React.CSSProperties } : { cls: "", style: undefined };
+}
+
 function position(percent: number) {
   for (let i = 1; i < STOPS.length; i++) {
     const [v0, p0] = STOPS[i - 1];
@@ -84,9 +91,13 @@ function position(percent: number) {
   return 100;
 }
 
-export function AiMeter({ percent, low, high }: { percent: number; low: number; high: number }) {
+export function AiMeter({ percent, low, high, intro }: { percent: number; low: number; high: number; intro?: boolean }) {
   const lo = position(low);
   const hi = position(high);
+  const track = introFx(intro, "si-grow", 750);
+  const band = introFx(intro, "si-grow", 1000);
+  const mark = introFx(intro, "si-slide", 1050);
+  const ticks = introFx(intro, "si-rise", 900);
   return (
     <div>
       <div
@@ -94,22 +105,22 @@ export function AiMeter({ percent, low, high }: { percent: number; low: number; 
         role="img"
         aria-label={`Estimated ${percent}% AI involvement, likely between ${low}% and ${high}%`}
       >
-        <div className="absolute inset-0 flex overflow-hidden rounded-full">
+        <div className={`absolute inset-0 flex overflow-hidden rounded-full${track.cls}`} style={track.style}>
           <div className="h-full w-[15%] bg-human/25" />
           <div className="h-full w-[25%] bg-led/25" />
           <div className="h-full w-[30%] bg-assist/25" />
           <div className="h-full w-[30%] bg-heavy/25" />
         </div>
         <div
-          className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-ink/35"
-          style={{ left: `${lo}%`, width: `${Math.max(hi - lo, 1)}%` }}
+          className={`absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-ink/35${band.cls}`}
+          style={{ ...band.style, left: `${lo}%`, width: `${Math.max(hi - lo, 1)}%` }}
         />
         <div
-          className="absolute top-1/2 h-5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink ring-2 ring-card"
-          style={{ left: `${position(percent)}%` }}
+          className={`absolute top-1/2 h-5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink ring-2 ring-card${mark.cls}`}
+          style={{ ...mark.style, left: `${position(percent)}%` }}
         />
       </div>
-      <div className="relative mt-1.5 h-4 text-[10px] font-medium text-muted">
+      <div className={`relative mt-1.5 h-4 text-[10px] font-medium text-muted${ticks.cls}`} style={ticks.style}>
         {STOPS.map(([v, p]) => (
           <span
             key={v}
@@ -129,19 +140,36 @@ function levelFor(value: number) {
   return LEVELS.find((l) => LEVEL_INFO[l].value === value) ?? "none";
 }
 
-export function ScoreCard({ score, evidenceCount, unscanned }: { score: Score; evidenceCount?: number; unscanned?: boolean }) {
+/** `intro` plays the card forming once on load: used for the home page example. */
+export function ScoreCard({
+  score,
+  evidenceCount,
+  unscanned,
+  intro,
+}: {
+  score: Score;
+  evidenceCount?: number;
+  unscanned?: boolean;
+  intro?: boolean;
+}) {
   // Rebuilt from the score rather than read from it, so stored scores show the current wording.
   const notes = scoreNotes(score);
+  const stamp = introFx(intro, "si-pop", 700);
+  const head = introFx(intro, "si-rise", 600);
+  const label = introFx(intro, "si-rise", 1150);
+  const foot = introFx(intro, "si-rise", 1250 + score.stages.length * 80);
   return (
     <div className="card p-5">
       <div className="flex items-start justify-between gap-3">
         <span className="eyebrow">AI involvement</span>
-        <TierStamp tier={score.tier} />
+        <span className={stamp.cls.trim() || undefined} style={stamp.style}>
+          <TierStamp tier={score.tier} />
+        </span>
       </div>
       {unscanned && <p className="mt-2 rounded-lg bg-paper px-3 py-2 text-xs leading-relaxed text-ink-soft">{UNSCANNED_NOTE}</p>}
 
-      <div className="mt-2 flex items-baseline gap-3">
-        <span className={`font-display text-5xl font-light tracking-tight ${tierColor(score.tier)}`}>{score.percent}%</span>
+      <div className={`mt-2 flex items-baseline gap-3${head.cls}`} style={head.style}>
+        <span className={`font-display text-5xl font-light tracking-tight ${tierColor(score.tier)}`}>{intro ? <CountUp to={score.percent} delay={700} /> : score.percent}%</span>
         <span className="text-sm text-ink-soft">
           estimated
           <br />
@@ -150,16 +178,19 @@ export function ScoreCard({ score, evidenceCount, unscanned }: { score: Score; e
       </div>
 
       <div className="mt-4">
-        <AiMeter percent={score.percent} low={score.low} high={score.high} />
+        <AiMeter percent={score.percent} low={score.low} high={score.high} intro={intro} />
       </div>
 
       <div className="mt-5 border-t border-line pt-4">
-        <span className="eyebrow">Where AI was used</span>
+        <span className={`eyebrow block${label.cls}`} style={label.style}>
+          Where AI was used
+        </span>
         <ul className="mt-2 space-y-2.5">
-          {score.stages.map((s) => {
+          {score.stages.map((s, i) => {
             const level = levelFor(s.disclosed);
+            const row = introFx(intro, "si-rise", 1250 + i * 80);
             return (
-              <li key={s.stage} className="text-sm">
+              <li key={s.stage} className={`text-sm${row.cls}`} style={row.style}>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-ink-soft">{STAGE_INFO[s.stage].label}</span>
                   <span className={`font-semibold ${level === "none" ? "text-human" : "text-ink"}`}>
@@ -178,7 +209,7 @@ export function ScoreCard({ score, evidenceCount, unscanned }: { score: Score; e
         </ul>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 border-t border-line pt-4 text-sm">
+      <div className={`mt-4 flex items-center gap-2 border-t border-line pt-4 text-sm${foot.cls}`} style={foot.style}>
         {score.processVerified ? (
           <>
             <CheckIcon className="h-4 w-4 text-human" />
