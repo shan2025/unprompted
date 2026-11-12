@@ -1,5 +1,6 @@
 "use server";
 
+import { parseCoverPattern, parseCoverTheme } from "@/lib/cover-themes";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";

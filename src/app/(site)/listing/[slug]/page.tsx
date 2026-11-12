@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { buyListing } from "@/app/actions/listings";
 import { AskCreator } from "@/components/AskCreator";
 import { Cover } from "@/components/Cover";
+import { Reveal } from "@/components/Reveal";
 import { EvidenceSource } from "@/components/EvidenceSource";
 import { FlagForm } from "@/components/FlagForm";
 import { JsonLd } from "@/components/JsonLd";
@@ -182,9 +183,16 @@ async function ListingView({ params, searchParams }: Props) {
             {listing.isDemo && <span className="ml-2 rounded bg-line/70 px-1.5 py-0.5 text-[11px] font-semibold text-muted">DEMO LISTING</span>}
           </p>
 
-          <div className="card mt-6 aspect-[16/9] overflow-hidden">
-            <Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} title={listing.title} />
-          </div>
+          <Reveal className="card mt-6 aspect-[16/9] overflow-hidden">
+            <Cover
+              slug={listing.slug}
+              category={listing.category}
+              coverFile={listing.coverFile}
+              theme={listing.coverTheme}
+              pattern={listing.coverPattern}
+              title={listing.title}
+            />
+          </Reveal>
 
           <p className="mt-6 text-lg leading-relaxed text-ink-soft">{listing.summary}</p>
 

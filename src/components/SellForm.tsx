@@ -5,7 +5,7 @@ import { createListing, previewAssessment } from "@/app/actions/listings";
 import { CATEGORIES, LICENSES } from "@/lib/categories";
 import type { FieldErrors, PreviewState } from "@/lib/listing-form";
 import type { Level } from "@/lib/scoring";
-import { DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
+import { CoverThemeField, DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
 export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: string; defaultAi?: Level }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -124,6 +124,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             errors={errors}
             hint="Up to 4 MB. Upload the file you exported, not a screenshot: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px, so link the full-resolution file under “What the buyer gets”."
           />
+          <CoverThemeField hint="Without an image, your listing gets a drawn cover. Leave both on their defaults, or make it yours." />
         </Section>
 
         <Section step="02" title="Content" intro="Both parts are scanned. Only the preview is ever shown publicly.">

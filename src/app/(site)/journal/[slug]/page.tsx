@@ -8,6 +8,7 @@ import { AskCreator } from "@/components/AskCreator";
 import { Avatar } from "@/components/Avatar";
 import { CommentForm } from "@/components/CommentForm";
 import { Cover } from "@/components/Cover";
+import { Reveal } from "@/components/Reveal";
 import { DeleteCommentButton } from "@/components/DeleteCommentButton";
 import { DeletePostButton } from "@/components/DeletePostButton";
 import { EvidenceSource } from "@/components/EvidenceSource";
@@ -133,10 +134,19 @@ async function PostView({ params, searchParams }: Props) {
 
           {post.videoUrl && <VideoPlayer link={post.videoUrl} title={post.title} />}
 
-          {post.coverFile && !post.videoUrl && (
-            <div className="card mt-6 overflow-hidden">
-              <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} title={post.title} className="max-h-[560px]" />
-            </div>
+          {/* A chosen theme or pattern gives a post without an image a drawn cover. */}
+          {(post.coverFile || post.coverTheme || post.coverPattern) && !post.videoUrl && (
+            <Reveal className={`card mt-6 overflow-hidden ${post.coverFile ? "" : "aspect-[16/9]"}`}>
+              <Cover
+                slug={post.slug}
+                category={post.category}
+                coverFile={post.coverFile}
+                theme={post.coverTheme}
+                pattern={post.coverPattern}
+                title={post.title}
+                className="max-h-[560px]"
+              />
+            </Reveal>
           )}
 
           {post.body && (

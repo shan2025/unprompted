@@ -6,6 +6,7 @@ import { videoEmbed } from "@/lib/video";
 import { Avatar } from "./Avatar";
 import { Cover } from "./Cover";
 import { PostOwnerMenu } from "./PostOwnerMenu";
+import { Reveal } from "./Reveal";
 import { AiPill } from "./Score";
 
 /** About how long a piece takes to read, at 220 words a minute. */
@@ -26,7 +27,8 @@ export function PostCard({ post, ownerReturnTo }: { post: PostCardData; ownerRet
 
 function PostCardLink({ post }: { post: PostCardData }) {
   const video = post.videoUrl ? videoEmbed(post.videoUrl) : null;
-  const hasPicture = Boolean(post.coverFile || video);
+  // A chosen cover theme or pattern gives a post without an image a generated cover.
+  const hasPicture = Boolean(post.coverFile || video || post.coverTheme || post.coverPattern);
   const aiPill = <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} />;
   return (
     <Link
@@ -39,7 +41,7 @@ function PostCardLink({ post }: { post: PostCardData }) {
             // eslint-disable-next-line @next/next/no-img-element -- thumbnails come straight from the video's host
             <img src={video.thumbnail} alt={post.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
           ) : (
-            <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} title={post.title} />
+            <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} theme={post.coverTheme} pattern={post.coverPattern} title={post.title} />
           )}
           {/* The AI score sits on the picture so it's seen while scanning the grid. */}
           <span className="absolute left-3 top-3 rounded-full bg-card/95 px-2.5 py-1">{aiPill}</span>
@@ -90,12 +92,19 @@ function PlayBadge() {
   );
 }
 
-export function PostGrid({ posts }: { posts: PostCardData[] }) {
+/** `reveal` staggers each card in as it scrolls into view. */
+export function PostGrid({ posts, reveal = false }: { posts: PostCardData[]; reveal?: boolean }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {posts.map((p) => (
-        <PostCard key={p.id} post={p} />
-      ))}
+      {posts.map((p, i) =>
+        reveal ? (
+          <Reveal key={p.id} delay={(i % 3) * 90} className="grid">
+            <PostCard post={p} />
+          </Reveal>
+        ) : (
+          <PostCard key={p.id} post={p} />
+        ),
+      )}
     </div>
   );
 }

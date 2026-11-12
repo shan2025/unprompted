@@ -32,6 +32,8 @@ export interface EditablePost {
   videoUrl: string | null;
   aiNotes: string;
   coverFile: string | null;
+  coverTheme: string | null;
+  coverPattern: string | null;
   disclosure: Disclosure;
   /** Evidence the author added, with its place in the saved list so they can choose what to keep. */
   evidence: (Evidence & { index: number })[];

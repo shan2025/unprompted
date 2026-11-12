@@ -7,7 +7,7 @@ import { CATEGORIES } from "@/lib/categories";
 import type { FieldErrors } from "@/lib/listing-form";
 import type { EditablePost, PostPreviewState } from "@/lib/post-form";
 import type { Level } from "@/lib/scoring";
-import { DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
+import { CoverThemeField, DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
 export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory?: string; defaultAi?: Level; post?: EditablePost }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -127,6 +127,11 @@ export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory
             errors={errors}
             currentFile={post?.coverFile}
             hint="A photo of the work, a sketch, or a cover, up to 4 MB. For art and photography, upload the file you exported: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px."
+          />
+          <CoverThemeField
+            saved={post?.coverTheme}
+            savedPattern={post?.coverPattern}
+            hint="Posts without an image or video show as text. Pick a pattern or colours to give yours a drawn cover instead."
           />
         </Section>
 

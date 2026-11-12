@@ -44,6 +44,8 @@ async function Gate({ params }: Props) {
     videoUrl: post.videoUrl,
     aiNotes: post.aiNotes,
     coverFile: post.coverFile,
+    coverTheme: post.coverTheme,
+    coverPattern: post.coverPattern,
     disclosure: post.disclosure,
     evidence: post.evidence.map((e, index) => ({ ...e, index })).filter((e) => !isAutoEvidence(e)),
   };

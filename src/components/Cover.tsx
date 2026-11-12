@@ -1,14 +1,9 @@
-// Listings without an uploaded image get a generated pattern cover, drawn
-// from the listing slug so it stays the same everywhere.
+// Work without an uploaded image gets a generated pattern cover, drawn from
+// the slug so it stays the same everywhere, in the creator's chosen theme.
 
-const PALETTES = [
-  { bg: "#e9dcc6", ink: "#3d2f1f", accent: "#b5441b" },
-  { bg: "#d8e0d1", ink: "#24352a", accent: "#4f7a3a" },
-  { bg: "#d9dde4", ink: "#1f2a3a", accent: "#3a6189" },
-  { bg: "#ecd5cc", ink: "#3b211b", accent: "#a33a2a" },
-  { bg: "#e6e0cf", ink: "#2d2a20", accent: "#8a6a17" },
-  { bg: "#dcd3e0", ink: "#2c2133", accent: "#6b4785" },
-];
+import { COVER_THEMES } from "@/lib/cover-themes";
+
+const PALETTES = COVER_THEMES;
 
 function rng(seed: string) {
   let h = 1779033703 ^ seed.length;
@@ -29,6 +24,8 @@ export function Cover({
   coverFile,
   title,
   palette,
+  theme,
+  pattern,
   className = "",
 }: {
   slug: string;
@@ -37,6 +34,10 @@ export function Cover({
   title: string;
   /** Fix the colour palette instead of deriving it from the slug. */
   palette?: number;
+  /** A theme id from cover-themes.ts; unknown or missing means pick from the slug. */
+  theme?: string | null;
+  /** A pattern id from cover-themes.ts; missing means the category's own pattern. */
+  pattern?: string | null;
   className?: string;
 }) {
   if (coverFile) {
@@ -48,12 +49,13 @@ export function Cover({
 
   const r = rng(slug);
   const pick = Math.floor(r() * PALETTES.length);
-  const p = PALETTES[palette ?? pick];
+  const chosen = PALETTES.findIndex((t) => t.id === theme);
+  const p = PALETTES[palette ?? (chosen >= 0 ? chosen : pick)];
 
   return (
     <svg viewBox="0 0 400 300" className={`h-full w-full ${className}`} role={title ? "img" : undefined} aria-hidden={title ? undefined : true} aria-label={title || undefined} preserveAspectRatio="xMidYMid slice">
       <rect width="400" height="300" fill={p.bg} />
-      <Pattern category={category} slug={slug} ink={p.ink} accent={p.accent} bg={p.bg} />
+      <Pattern category={pattern || category} slug={slug} ink={p.ink} accent={p.accent} bg={p.bg} />
     </svg>
   );
 }
@@ -139,7 +141,9 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
       return (
         <>
           {Array.from({ length: 38 }, (_, i) => {
-            const h = 10 + Math.abs(Math.sin(i * 0.45 + r() * 2)) * 110 * (0.4 + r() * 0.6);
+            // Rounded: Math.sin can differ in the last digit between the server
+            // and the browser, which would break hydration where covers render in client forms.
+            const h = Math.round((10 + Math.abs(Math.sin(i * 0.45 + r() * 2)) * 110 * (0.4 + r() * 0.6)) * 10) / 10;
             return <rect key={i} {...fx("grow", i * 0.5)} x={48 + i * 8.2} y={150 - h / 2} width={4} height={h} rx={2} fill={i % 9 === 0 ? accent : ink} fillOpacity={0.7} />;
           })}
         </>

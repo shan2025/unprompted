@@ -64,6 +64,20 @@
       "when": 1793991414697,
       "tag": "0008_post_views",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794455281469,
+      "tag": "0009_cover_themes",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794455545490,
+      "tag": "0010_cover_patterns",
+      "breakpoints": true
     }
   ]
 }

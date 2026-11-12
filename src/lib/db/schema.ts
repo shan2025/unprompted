@@ -76,6 +76,10 @@ export const listings = pgTable(
     priceCents: integer("price_cents").notNull(),
     license: text("license").notNull(),
     coverFile: text("cover_file"),
+    /** Colour theme for the generated cover when there's no image (cover-themes.ts). Null picks from the slug. */
+    coverTheme: text("cover_theme"),
+    /** Pattern for the generated cover (cover-themes.ts). Null draws the pattern of the work's category. */
+    coverPattern: text("cover_pattern"),
     // Where buyers pay the seller directly. Empty on free and demo listings.
     paymentUrl: text("payment_url"),
     status: text("status", { enum: ["published", "in_review", "sold", "removed"] })
@@ -133,6 +137,10 @@ export const posts = pgTable(
     body: text("body").notNull().default(""),
     aiNotes: text("ai_notes").notNull().default(""),
     coverFile: text("cover_file"),
+    /** Colour theme for the generated cover when there's no image (cover-themes.ts). Null picks from the slug. */
+    coverTheme: text("cover_theme"),
+    /** Pattern for the generated cover (cover-themes.ts). Null draws the pattern of the work's category. */
+    coverPattern: text("cover_pattern"),
     // A tidied YouTube or Vimeo link (see video.ts). We don't host video ourselves.
     videoUrl: text("video_url"),
     status: text("status", { enum: ["published", "in_review", "removed"] })

@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_EVIDENCE, MAX_FILES_BYTES, MAX_IMAGE_BYTES, type FieldErrors, type PreviewResult } from "@/lib/listing-form";
 import { MAX_PUBLIC_EDGE } from "@/lib/public-image-size";
 import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Disclosure, type Evidence, type Level } from "@/lib/scoring";
+import { COVER_PATTERNS, COVER_THEMES } from "@/lib/cover-themes";
+import { Cover } from "./Cover";
 import { ScoreCard } from "./Score";
 import { SegmentView } from "./SegmentView";
 
@@ -96,6 +98,88 @@ export function Section({ step, title, intro, children }: { step: string; title:
       </div>
       <div className="space-y-5">{children}</div>
     </section>
+  );
+}
+
+const SWATCH =
+  "block aspect-[4/3] overflow-hidden rounded-lg border border-line transition-[border-color,box-shadow] peer-checked:border-ink peer-checked:shadow-[0_0_0_1px_var(--color-ink)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2";
+
+/**
+ * Picks the pattern and colours of the generated cover shown when there's no
+ * image. Every swatch is a small live cover: patterns in the chosen colours,
+ * colours in the chosen pattern (or the category's own).
+ */
+export function CoverThemeField({
+  saved,
+  savedPattern,
+  hint,
+}: {
+  saved?: string | null;
+  savedPattern?: string | null;
+  hint: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [category, setCategory] = useState("writing");
+  const [theme, setTheme] = useState(saved ?? "");
+  const [pattern, setPattern] = useState(savedPattern ?? "");
+  const shown = pattern || category;
+
+  useEffect(() => {
+    const form = ref.current?.closest("form");
+    const select = form?.elements.namedItem("category");
+    if (!(select instanceof HTMLSelectElement)) return;
+    const sync = () => setCategory(select.value || "writing");
+    sync();
+    select.addEventListener("change", sync);
+    return () => select.removeEventListener("change", sync);
+  }, []);
+
+  return (
+    <div ref={ref} className="space-y-4">
+      <fieldset>
+        <legend className="label">
+          Cover pattern <span className="font-normal text-muted">(used when there&apos;s no image)</span>
+        </legend>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+          <label className="flex cursor-pointer flex-col gap-1.5">
+            <input type="radio" name="cover_pattern" value="" checked={!pattern} onChange={() => setPattern("")} className="peer sr-only" />
+            <span className={SWATCH}>
+              <Cover slug="pattern-auto" category={category} theme={theme || "clay"} title="" />
+            </span>
+            <span className="text-center text-xs text-ink-soft">Match craft</span>
+          </label>
+          {COVER_PATTERNS.map((p) => (
+            <label key={p.id} className="flex cursor-pointer flex-col gap-1.5">
+              <input type="radio" name="cover_pattern" value={p.id} checked={pattern === p.id} onChange={() => setPattern(p.id)} className="peer sr-only" />
+              <span className={SWATCH}>
+                <Cover slug={`pattern-${p.id}`} category={p.id} theme={theme || "clay"} title="" />
+              </span>
+              <span className="text-center text-xs text-ink-soft">{p.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend className="label">Cover colours</legend>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+          <label className="flex cursor-pointer flex-col gap-1.5">
+            <input type="radio" name="cover_theme" value="" checked={!theme} onChange={() => setTheme("")} className="peer sr-only" />
+            <span className={`${SWATCH} flex items-center justify-center border-dashed text-xs text-muted`}>Auto</span>
+            <span className="text-center text-xs text-ink-soft">Surprise me</span>
+          </label>
+          {COVER_THEMES.map((t) => (
+            <label key={t.id} className="flex cursor-pointer flex-col gap-1.5">
+              <input type="radio" name="cover_theme" value={t.id} checked={theme === t.id} onChange={() => setTheme(t.id)} className="peer sr-only" />
+              <span className={SWATCH}>
+                <Cover slug={`theme-${t.id}`} category={shown} theme={t.id} title="" />
+              </span>
+              <span className="text-center text-xs text-ink-soft">{t.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="hint">{hint}</p>
+      </fieldset>
+    </div>
   );
 }
 

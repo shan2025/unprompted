@@ -12,7 +12,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
       className="group card flex flex-col overflow-hidden transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgb(60_40_20/0.25)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden border-b border-line">
-        <Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} title={listing.title} />
+        <Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} />
         <div className="absolute left-3 top-3 rounded-[6px] bg-card/90 px-1.5 py-1 backdrop-blur-sm">
           <TierStamp tier={listing.tier} size="sm" />
         </div>

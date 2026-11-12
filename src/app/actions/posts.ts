@@ -1,5 +1,6 @@
 "use server";
 
+import { parseCoverPattern, parseCoverTheme } from "@/lib/cover-themes";
 import { randomBytes } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -128,6 +129,8 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
       videoUrl: v.videoUrl,
       aiNotes: v.aiNotes,
       coverFile,
+      coverTheme: parseCoverTheme(fd.get("cover_theme")),
+      coverPattern: parseCoverPattern(fd.get("cover_pattern")),
       status: result.score.needsReview ? "in_review" : "published",
       disclosure: v.disclosure,
       ...scoreColumns(result),
@@ -187,6 +190,8 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
         videoUrl: v.videoUrl,
         aiNotes: v.aiNotes,
         coverFile,
+        coverTheme: parseCoverTheme(fd.get("cover_theme")),
+        coverPattern: parseCoverPattern(fd.get("cover_pattern")),
         status: result.score.needsReview ? "in_review" : "published",
         disclosure: v.disclosure,
         ...scoreColumns(result),

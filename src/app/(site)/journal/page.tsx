@@ -110,7 +110,7 @@ async function Feed({ searchParams }: { searchParams: Promise<Params> }) {
           </p>
         </div>
       ) : posts.length > 0 ? (
-        <PostGrid posts={posts} />
+        <PostGrid posts={posts} reveal />
       ) : (
         <div className="card p-10 text-center">
           <p className="font-display text-xl font-medium">

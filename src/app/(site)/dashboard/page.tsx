@@ -330,7 +330,7 @@ function WorkRow({ post: p }: { post: MyPost }) {
           // eslint-disable-next-line @next/next/no-img-element -- thumbnails come straight from the video's host
           <img src={video.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
         ) : (
-          <Cover slug={p.slug} category={p.category} coverFile={p.coverFile} title="" />
+          <Cover slug={p.slug} category={p.category} coverFile={p.coverFile} theme={p.coverTheme} pattern={p.coverPattern} title="" />
         )}
       </Link>
       <div className="min-w-0 flex-1">

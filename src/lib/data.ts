@@ -22,6 +22,8 @@ const cardFields = {
   summary: listings.summary,
   priceCents: listings.priceCents,
   coverFile: listings.coverFile,
+  coverTheme: listings.coverTheme,
+  coverPattern: listings.coverPattern,
   aiPercent: listings.aiPercent,
   aiLow: listings.aiLow,
   aiHigh: listings.aiHigh,
