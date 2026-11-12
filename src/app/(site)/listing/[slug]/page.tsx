@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { buyListing } from "@/app/actions/listings";
 import { AskCreator } from "@/components/AskCreator";
 import { Cover } from "@/components/Cover";
+import { CountedText, CountUp } from "@/components/CountUp";
 import { Reveal } from "@/components/Reveal";
 import { EvidenceSource } from "@/components/EvidenceSource";
 import { FlagForm } from "@/components/FlagForm";
@@ -81,7 +82,9 @@ async function ListingView({ params, searchParams }: Props) {
   const purchase = (
     <div className="card p-5">
       <div className="flex items-baseline justify-between">
-        <span className="font-display text-4xl font-light">{formatPrice(listing.priceCents)}</span>
+        <span className="font-display text-4xl font-light tabular-nums">
+          {listing.priceCents > 0 ? <CountUp to={listing.priceCents} delay={350} format="money" /> : formatPrice(listing.priceCents)}
+        </span>
         <span className="text-sm text-muted">{plural(sales, "sale")}</span>
       </div>
       <p className="mt-1 text-sm text-ink-soft">{licenseLabel(listing.license)}</p>
@@ -137,6 +140,8 @@ async function ListingView({ params, searchParams }: Props) {
     </div>
   );
   const scoreCard = <ScoreCard score={analysis.score} evidenceCount={evidence.length} />;
+  // Beside the listing on wide screens, the score card forms as the page opens.
+  const scoreCardIntro = <ScoreCard score={analysis.score} evidenceCount={evidence.length} intro />;
 
   return (
     <>
@@ -173,8 +178,8 @@ async function ListingView({ params, searchParams }: Props) {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
-          <h1 className="text-4xl font-light leading-tight sm:text-5xl">{listing.title}</h1>
-          <p className="mt-3 text-ink-soft">
+          <h1 className="intro-rise text-4xl font-light leading-tight sm:text-5xl">{listing.title}</h1>
+          <p className="intro-rise mt-3 text-ink-soft" style={{ "--d": "80ms" } as React.CSSProperties}>
             by{" "}
             <Link href={`/u/${creator.handle}`} className="link font-semibold text-ink">
               {creator.name}
@@ -194,24 +199,26 @@ async function ListingView({ params, searchParams }: Props) {
             />
           </Reveal>
 
-          <p className="mt-6 text-lg leading-relaxed text-ink-soft">{listing.summary}</p>
+          <p className="intro-rise mt-6 text-lg leading-relaxed text-ink-soft" style={{ "--d": "200ms" } as React.CSSProperties}>
+            {listing.summary}
+          </p>
 
           {/* On small screens, price and score come before the long content. */}
-          <div className="mt-6 space-y-5 lg:hidden">
+          <Reveal className="mt-6 space-y-5 lg:hidden">
             {purchase}
             {scoreCard}
-          </div>
+          </Reveal>
 
           {listing.preview && (
-            <section className="mt-10">
+            <Reveal className="mt-10">
               <h2 className="text-2xl font-normal">Preview</h2>
               <div className="card mt-4 p-5 sm:p-6">
                 <SegmentView text={listing.preview} segments={analysis.previewSegments} kind={analysis.previewKind} />
               </div>
-            </section>
+            </Reveal>
           )}
 
-          <section className="mt-10">
+          <Reveal className="mt-10">
             <h2 className="text-2xl font-normal">What you get</h2>
             {canSeeDeliverable ? (
               <div className="card mt-4 p-5 sm:p-6">
@@ -237,40 +244,49 @@ async function ListingView({ params, searchParams }: Props) {
               License: <strong className="text-ink">{licenseLabel(listing.license)}</strong>.{" "}
               {LICENSES.find((l) => l.id === listing.license)?.blurb}
             </p>
-          </section>
+          </Reveal>
 
           {listing.aiNotes && (
-            <section className="mt-10">
+            <Reveal className="mt-10">
               <h2 className="text-2xl font-normal">AI use, in the creator&apos;s words</h2>
               <blockquote className="mt-4 border-l-2 border-accent pl-4 italic leading-relaxed text-ink-soft">{listing.aiNotes}</blockquote>
-            </section>
+            </Reveal>
           )}
 
-          <section className="mt-10">
+          <Reveal className="mt-10">
             <h2 className="text-2xl font-normal">Process evidence</h2>
             {evidence.length === 0 ? (
               <p className="mt-3 text-ink-soft">The creator hasn&apos;t attached any process evidence yet.</p>
             ) : (
               <ul className="mt-4 space-y-3">
                 {evidence.map((e, i) => (
-                  <li key={i} className="card flex flex-col gap-1 p-4">
-                    <span className="text-sm font-semibold">{EVIDENCE_KINDS[e.kind]?.label ?? e.kind}</span>
-                    <EvidenceSource evidence={e} />
-                    {e.note && <span className="text-sm text-muted">{e.note}</span>}
+                  <li key={i}>
+                    <Reveal delay={Math.min(i, 4) * 80} className="card flex flex-col gap-1 p-4">
+                      <span className="text-sm font-semibold">{EVIDENCE_KINDS[e.kind]?.label ?? e.kind}</span>
+                      <EvidenceSource evidence={e} />
+                      {e.note && <span className="text-sm text-muted">{e.note}</span>}
+                    </Reveal>
                   </li>
                 ))}
               </ul>
             )}
             <p className="mt-3 text-xs text-muted">Evidence is supplied by the creator. Check it yourself, and report anything that doesn&apos;t add up.</p>
-          </section>
+          </Reveal>
 
-          <section className="mt-10">
+          <Reveal className="mt-10">
             <h2 className="text-2xl font-normal">How this was scored</h2>
             <div className="card mt-4 space-y-4 p-5 text-sm leading-relaxed text-ink-soft">
               <p>
-                Disclosed by the creator: <strong className="text-ink">{analysis.score.disclosedPercent}%</strong>. Estimate
-                after automated checks and evidence: <strong className="text-ink">{analysis.score.percent}%</strong> (likely{" "}
-                {analysis.score.low}–{analysis.score.high}%).
+                Disclosed by the creator:{" "}
+                <strong className="text-ink">
+                  <CountedText text={`${analysis.score.disclosedPercent}%`} delay={150} />
+                </strong>
+                . Estimate after automated checks and evidence:{" "}
+                <strong className="text-ink">
+                  <CountedText text={`${analysis.score.percent}%`} delay={250} />
+                </strong>{" "}
+                (likely <CountedText text={`${analysis.score.low}–${analysis.score.high}%`} delay={350} />
+                ).
               </p>
               {analysis.sources.length > 0 && (
                 <div>
@@ -306,23 +322,25 @@ async function ListingView({ params, searchParams }: Props) {
                 Automated checks are signals, not proof. <Link href="/standard" className="link">Read the full method</Link>.
               </p>
             </div>
-          </section>
+          </Reveal>
         </div>
 
         <aside className="space-y-5">
           <div className="hidden space-y-5 lg:block">
-            {purchase}
-            {scoreCard}
+            <div className="intro-rise" style={{ "--d": "150ms" } as React.CSSProperties}>{purchase}</div>
+            <div className="intro-open" style={{ "--d": "250ms" } as React.CSSProperties}>
+              {scoreCardIntro}
+            </div>
           </div>
 
-          <div className="card p-5">
+          <Reveal className="card p-5">
             <span className="eyebrow">Creator</span>
             <Link href={`/u/${creator.handle}`} className="mt-2 block font-display text-xl font-medium hover:text-accent">
               {creator.name}
             </Link>
             <p className="text-sm text-muted">@{creator.handle}</p>
             {creator.bio && <p className="mt-2 text-sm leading-relaxed text-ink-soft">{creator.bio}</p>}
-          </div>
+          </Reveal>
 
           {(listing.status === "published" || listing.status === "sold") && !isOwner && !listing.isDemo && (
             <AskCreator target="listing" slug={listing.slug} creatorName={creator.name} loginHref={user ? undefined : `/login?next=${encodeURIComponent(`/listing/${listing.slug}`)}`} />
