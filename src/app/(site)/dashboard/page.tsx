@@ -83,7 +83,7 @@ async function Dashboard() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-light">Hi, {user.name.split(" ")[0]}</h1>
+          <h1 className="intro-rise text-4xl font-light">Hi, {user.name.split(" ")[0]}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-ink-soft">
             <Link href={`/u/${user.handle}`} className="link">
               View your public profile
@@ -192,8 +192,8 @@ async function Dashboard() {
               </p>
             ) : (
               <ul className="mt-4 border-b border-line">
-                {posts.map((p) => (
-                  <WorkRow key={p.id} post={p} />
+                {posts.map((p, i) => (
+                  <WorkRow key={p.id} post={p} index={i} />
                 ))}
               </ul>
             )}
@@ -320,12 +320,15 @@ async function Dashboard() {
 
 type MyPost = Awaited<ReturnType<typeof getMyPosts>>[number];
 
-function WorkRow({ post: p }: { post: MyPost }) {
+// Thumbnails draw themselves in on load, one after another (.cv-play in globals.css).
+function WorkRow({ post: p, index }: { post: MyPost; index: number }) {
   const video = p.videoUrl ? videoEmbed(p.videoUrl) : null;
   const status = POST_STATUS[p.status];
   return (
     <li className="flex items-center gap-4 border-t border-line py-3.5">
-      <Link href={`/journal/${p.slug}`} tabIndex={-1} aria-hidden="true" className="hidden h-16 w-[88px] shrink-0 overflow-hidden bg-field sm:block">
+      <Link href={`/journal/${p.slug}`} tabIndex={-1} aria-hidden="true" className="cv-play hidden h-16 w-[88px] shrink-0 overflow-hidden bg-field sm:block"
+        style={{ "--d": `${Math.min(index, 8) * 120}ms` } as React.CSSProperties}
+      >
         {!p.coverFile && video?.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element -- thumbnails come straight from the video's host
           <img src={video.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />

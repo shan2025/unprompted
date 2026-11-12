@@ -171,14 +171,15 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
   );
 }
 
-// The new cover fades in over the old one, so the panel never flashes empty.
+// The new cover fades in over the old one, so the panel never flashes empty,
+// and draws itself in as it does (.cv-play).
 function CoverPanel({ category }: { category: CategoryId | null }) {
   const [layers, setLayers] = useState([{ id: 0, category }]);
   const top = layers[layers.length - 1];
   if (top.category !== category) setLayers([top, { id: top.id + 1, category }]);
 
   return layers.map((layer) => (
-    <div key={layer.id} className="fade absolute inset-0">
+    <div key={layer.id} className="fade cv-play absolute inset-0">
       <Cover slug={`start-${layer.category ?? "welcome"}`} category={layer.category ?? "writing"} title="" palette={0} className="h-full" />
     </div>
   ));

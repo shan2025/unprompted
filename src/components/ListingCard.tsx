@@ -3,6 +3,7 @@ import { categoryLabel } from "@/lib/categories";
 import type { ListingCard as ListingCardData } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { Cover } from "./Cover";
+import { Reveal } from "./Reveal";
 import { AiPill, TierStamp } from "./Score";
 
 export function ListingCard({ listing }: { listing: ListingCardData }) {
@@ -37,12 +38,19 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
   );
 }
 
-export function ListingGrid({ listings }: { listings: ListingCardData[] }) {
+/** `reveal` staggers each card in as it scrolls into view. */
+export function ListingGrid({ listings, reveal = false }: { listings: ListingCardData[]; reveal?: boolean }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {listings.map((l) => (
-        <ListingCard key={l.id} listing={l} />
-      ))}
+      {listings.map((l, i) =>
+        reveal ? (
+          <Reveal key={l.id} delay={(i % 3) * 90} className="grid">
+            <ListingCard listing={l} />
+          </Reveal>
+        ) : (
+          <ListingCard key={l.id} listing={l} />
+        ),
+      )}
     </div>
   );
 }

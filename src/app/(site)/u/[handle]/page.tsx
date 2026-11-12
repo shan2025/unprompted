@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { CopyLink } from "@/components/CopyLink";
 import { GridSkeleton, ListingGrid } from "@/components/ListingCard";
 import { PostCard } from "@/components/PostCard";
+import { Reveal } from "@/components/Reveal";
 import { SiteIcon } from "@/components/SiteIcon";
 import { FollowButton } from "@/components/Social";
 import { getCurrentUser } from "@/lib/auth";
@@ -152,11 +153,13 @@ async function Creator({ params, searchParams }: Props) {
           </div>
           <div className="mt-6">
             {showing === "for-sale" ? (
-              <ListingGrid listings={listings} />
+              <ListingGrid listings={listings} reveal />
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {posts.map((p) => (
-                  <PostCard key={p.id} post={p} ownerReturnTo={isSelf ? `/u/${creator.handle}` : undefined} />
+                {posts.map((p, i) => (
+                  <Reveal key={p.id} delay={(i % 3) * 90} className="grid">
+                    <PostCard post={p} ownerReturnTo={isSelf ? `/u/${creator.handle}` : undefined} />
+                  </Reveal>
                 ))}
                 {isSelf && <ShareSlot />}
               </div>
