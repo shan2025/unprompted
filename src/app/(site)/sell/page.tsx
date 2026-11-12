@@ -8,16 +8,21 @@ import { LEVELS, type Level } from "@/lib/scoring";
 
 export const metadata: Metadata = { title: "Sell your work" };
 
+// Stagger delay for the intro animations in globals.css.
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
+
 export default function SellPage({ searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <p className="eyebrow">New listing</p>
-      <h1 className="mt-1 text-4xl font-light sm:text-5xl">List something you made</h1>
-      <p className="mt-3 max-w-2xl text-lg text-ink-soft">
+      <p className="eyebrow intro-rise">New listing</p>
+      <h1 className="intro-rise mt-1 text-4xl font-light sm:text-5xl" style={d(80)}>
+        List something you made
+      </h1>
+      <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={d(160)}>
         Tell buyers what it is, where AI was and wasn&apos;t involved, and show how you made it. You&apos;ll see your score
         before anything is published.
       </p>
-      <p className="mt-3 text-ink-soft">
+      <p className="intro-rise mt-3 text-ink-soft" style={d(220)}>
         Not ready to sell?{" "}
         <Link href="/explore" className="link font-semibold text-ink">
           Skip this and explore other people&apos;s work

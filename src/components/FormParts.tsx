@@ -9,6 +9,7 @@ import { MAX_PUBLIC_EDGE } from "@/lib/public-image-size";
 import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Disclosure, type Evidence, type Level } from "@/lib/scoring";
 import { COVER_PATTERNS, COVER_THEMES } from "@/lib/cover-themes";
 import { Cover } from "./Cover";
+import { Reveal } from "./Reveal";
 import { ScoreCard } from "./Score";
 import { SegmentView } from "./SegmentView";
 
@@ -86,9 +87,10 @@ export function FieldError({ errors, name }: { errors: FieldErrors; name: string
   return <p className="mt-1.5 text-sm font-medium text-heavy">{errors[name]}</p>;
 }
 
+// Each form section rises in as it scrolls into view.
 export function Section({ step, title, intro, children }: { step: string; title: string; intro?: string; children: React.ReactNode }) {
   return (
-    <section className="card p-5 sm:p-7">
+    <Reveal className="card p-5 sm:p-7">
       <div className="mb-5 flex items-baseline gap-3">
         <span className="font-display text-sm font-light text-accent">{step}</span>
         <div>
@@ -97,7 +99,7 @@ export function Section({ step, title, intro, children }: { step: string; title:
         </div>
       </div>
       <div className="space-y-5">{children}</div>
-    </section>
+    </Reveal>
   );
 }
 
@@ -413,7 +415,10 @@ export function ScorePreview({
   }
   return (
     <div className="space-y-4">
-      <ScoreCard score={result.score} />
+      {/* Forms like the home page example each time a new score comes in. */}
+      <div key={`${result.score.percent}-${result.score.low}-${result.score.high}`} className="intro-open">
+        <ScoreCard score={result.score} intro />
+      </div>
       {result.score.needsReview && <p className="rounded-xl border border-assist/40 bg-card p-4 text-sm text-ink-soft">{reviewNote}</p>}
       {result.media && (
         <div className="card p-4 text-sm">

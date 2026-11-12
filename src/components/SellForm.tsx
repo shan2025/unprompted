@@ -187,7 +187,10 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
         </section>
       </div>
 
-      <aside className="lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:self-start lg:overflow-y-auto no-scrollbar">
+      <aside
+        className="intro-rise lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:self-start lg:overflow-y-auto no-scrollbar"
+        style={{ "--d": "300ms" } as React.CSSProperties}
+      >
         <ScorePreview
           result={preview?.ok ? preview.result : null}
           reviewNote="This would go to a human reviewer before it appears in the market. Adding process evidence helps the review go quickly."
