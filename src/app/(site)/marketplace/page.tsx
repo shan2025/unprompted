@@ -58,7 +58,7 @@ async function Results({ searchParams }: { searchParams: Promise<Params> }) {
     <ExploreView page="marketplace" available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show: "all" }}>
       {items.length > 0 && <p className="mb-4 text-sm text-muted">{plural(items.length, "piece")} for sale</p>}
       {items.length > 0 ? (
-        <FeedGrid items={items} />
+        <FeedGrid items={items} reveal />
       ) : (
         <div className="card p-10 text-center">
           <p className="font-display text-xl font-medium">Nothing for sale here yet.</p>

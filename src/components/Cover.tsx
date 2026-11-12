@@ -58,6 +58,18 @@ export function Cover({
   );
 }
 
+// Animation hooks for each mark in the pattern. They only play once the card
+// around the cover reveals (see .cv-* in globals.css), so covers elsewhere stay
+// still. `i` staggers the marks.
+type Fx = "draw" | "wipe" | "grow" | "pop" | "fade";
+function fx(kind: Fx, i: number) {
+  return {
+    className: `cv-${kind}`,
+    style: { "--i": i } as React.CSSProperties,
+    ...(kind === "draw" ? { pathLength: 1 } : {}),
+  };
+}
+
 function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: string; ink: string; accent: string; bg: string }) {
   // Pattern draws from its own copy of the sequence (past the palette pick),
   // so rendering it twice can never shift the random values.
@@ -69,15 +81,15 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
       const lines = Array.from({ length: 9 }, (_, i) => {
         const y = 70 + i * 22;
         const w = i === 8 ? 90 + r() * 80 : 220 + r() * 90;
-        return <path key={i} d={`M60 ${y} q ${w / 2} ${r() * 4 - 2} ${w} 0`} stroke={ink} strokeOpacity={0.55} strokeWidth="2.5" fill="none" strokeLinecap="round" />;
+        return <path key={i} {...fx("draw", i)} d={`M60 ${y} q ${w / 2} ${r() * 4 - 2} ${w} 0`} stroke={ink} strokeOpacity={0.55} strokeWidth="2.5" fill="none" strokeLinecap="round" />;
       });
       return (
         <>
           {lines}
           {category === "idea" ? (
-            <circle cx={300 + r() * 40} cy={70} r={22} fill="none" stroke={accent} strokeWidth="3" />
+            <circle {...fx("draw", 9)} cx={300 + r() * 40} cy={70} r={22} fill="none" stroke={accent} strokeWidth="3" />
           ) : (
-            <path d="M48 50 v200" stroke={accent} strokeWidth="2" />
+            <path {...fx("draw", 0)} d="M48 50 v200" stroke={accent} strokeWidth="2" />
           )}
         </>
       );
@@ -89,11 +101,11 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
             Array.from({ length: 3 }, (_, l) => {
               const y = 60 + s * 58 + l * 15;
               return (
-                <path key={`${s}-${l}`} d={`M${110 + (l % 2) * 18} ${y} h ${70 + r() * 110}`} stroke={ink} strokeOpacity={0.6} strokeWidth="2.5" strokeLinecap="round" />
+                <path key={`${s}-${l}`} {...fx("draw", s * 3 + l)} d={`M${110 + (l % 2) * 18} ${y} h ${70 + r() * 110}`} stroke={ink} strokeOpacity={0.6} strokeWidth="2.5" strokeLinecap="round" />
               );
             }),
           )}
-          <path d={`M70 ${80 + r() * 100} c 10 -30, 30 -30, 20 10`} stroke={accent} strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path {...fx("draw", 12)} d={`M70 ${80 + r() * 100} c 10 -30, 30 -30, 20 10`} stroke={accent} strokeWidth="3" fill="none" strokeLinecap="round" />
         </>
       );
     }
@@ -105,7 +117,7 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
         let x = 70 + indent;
         return Array.from({ length: segs }, (_, j) => {
           const w = 24 + r() * 70;
-          const el = <rect key={`${i}-${j}`} x={x} y={62 + i * 19} width={w} height={8} rx={4} fill={j === 0 && r() > 0.6 ? accent : ink} fillOpacity={j === 0 ? 0.75 : 0.35} />;
+          const el = <rect key={`${i}-${j}`} {...fx("wipe", i + j)} x={x} y={62 + i * 19} width={w} height={8} rx={4} fill={j === 0 && r() > 0.6 ? accent : ink} fillOpacity={j === 0 ? 0.75 : 0.35} />;
           x += w + 10;
           return el;
         });
@@ -114,9 +126,9 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
         <>
           {category === "website" && (
             <>
-              <rect x="40" y="30" width="320" height="240" rx="10" fill="none" stroke={ink} strokeOpacity="0.5" strokeWidth="2" />
-              <path d="M40 50 h320" stroke={ink} strokeOpacity="0.5" strokeWidth="2" />
-              <circle cx="54" cy="40" r="3.5" fill={accent} />
+              <rect {...fx("draw", 0)} x="40" y="30" width="320" height="240" rx="10" fill="none" stroke={ink} strokeOpacity="0.5" strokeWidth="2" />
+              <path {...fx("draw", 2)} d="M40 50 h320" stroke={ink} strokeOpacity="0.5" strokeWidth="2" />
+              <circle {...fx("pop", 4)} cx="54" cy="40" r="3.5" fill={accent} />
             </>
           )}
           {rows}
@@ -128,7 +140,7 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
         <>
           {Array.from({ length: 38 }, (_, i) => {
             const h = 10 + Math.abs(Math.sin(i * 0.45 + r() * 2)) * 110 * (0.4 + r() * 0.6);
-            return <rect key={i} x={48 + i * 8.2} y={150 - h / 2} width={4} height={h} rx={2} fill={i % 9 === 0 ? accent : ink} fillOpacity={0.7} />;
+            return <rect key={i} {...fx("grow", i * 0.5)} x={48 + i * 8.2} y={150 - h / 2} width={4} height={h} rx={2} fill={i % 9 === 0 ? accent : ink} fillOpacity={0.7} />;
           })}
         </>
       );
@@ -139,23 +151,23 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
       return (
         <>
           {[110, 80, 50, 22].map((rad, i) => (
-            <circle key={rad} cx={cx} cy={cy} r={rad} fill="none" stroke={i === 3 ? accent : ink} strokeOpacity={i === 3 ? 1 : 0.45} strokeWidth={i === 3 ? 4 : 2} />
+            <circle key={rad} {...fx("pop", 3 - i)} cx={cx} cy={cy} r={rad} fill="none" stroke={i === 3 ? accent : ink} strokeOpacity={i === 3 ? 1 : 0.45} strokeWidth={i === 3 ? 4 : 2} />
           ))}
-          <rect x="24" y="24" width="352" height="252" fill="none" stroke={ink} strokeOpacity="0.3" strokeWidth="2" strokeDasharray="2 8" />
+          <rect {...fx("fade", 4)} x="24" y="24" width="352" height="252" fill="none" stroke={ink} strokeOpacity="0.3" strokeWidth="2" strokeDasharray="2 8" />
         </>
       );
     }
     case "film": {
       return (
         <>
-          <rect x="40" y="60" width="320" height="180" fill={ink} fillOpacity="0.85" />
+          <rect {...fx("fade", 0)} x="40" y="60" width="320" height="180" fill={ink} fillOpacity="0.85" />
           {Array.from({ length: 11 }, (_, i) => (
-            <g key={i}>
+            <g key={i} {...fx("fade", 2 + i * 0.5)}>
               <rect x={50 + i * 28} y="68" width="14" height="10" rx="2" fill={bg} />
               <rect x={50 + i * 28} y="222" width="14" height="10" rx="2" fill={bg} />
             </g>
           ))}
-          <path d={`M${180 + r() * 8} 118 v64 l54 -32 z`} fill={accent} />
+          <path {...fx("pop", 9)} d={`M${180 + r() * 8} 118 v64 l54 -32 z`} fill={accent} />
         </>
       );
     }
@@ -166,6 +178,7 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
             Array.from({ length: 13 }, (_, col) => (
               <rect
                 key={`${row}-${col}`}
+                {...fx("pop", (row + col) * 0.6)}
                 x={32 + col * 26}
                 y={36 + row * 26}
                 width="22"
@@ -183,11 +196,11 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
       return (
         <>
           {Array.from({ length: 5 }, (_, i) => (
-            <path key={`v${i}`} d={`M${80 + i * 60} 30 v240`} stroke={ink} strokeOpacity="0.15" />
+            <path key={`v${i}`} {...fx("draw", i)} d={`M${80 + i * 60} 30 v240`} stroke={ink} strokeOpacity="0.15" />
           ))}
-          <rect x={90 + r() * 30} y={70} width={110} height={110} fill={ink} fillOpacity="0.8" />
-          <circle cx={240 + r() * 30} cy={170} r={55} fill={accent} fillOpacity="0.85" />
-          <path d={`M110 240 L 170 200 L 230 240 Z`} fill="none" stroke={ink} strokeWidth="3" />
+          <rect {...fx("pop", 4)} x={90 + r() * 30} y={70} width={110} height={110} fill={ink} fillOpacity="0.8" />
+          <circle {...fx("pop", 6)} cx={240 + r() * 30} cy={170} r={55} fill={accent} fillOpacity="0.85" />
+          <path {...fx("draw", 8)} d={`M110 240 L 170 200 L 230 240 Z`} fill="none" stroke={ink} strokeWidth="3" />
         </>
       );
     }
@@ -201,6 +214,7 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
             return (
               <path
                 key={i}
+                {...fx("pop", i * 1.5)}
                 d={`M${x} ${y} c ${w * 0.5} ${-w * 0.6}, ${w * 1.2} ${-w * 0.1}, ${w} ${w * 0.5} s ${-w * 0.9} ${w * 0.7}, ${-w} 0 z`}
                 fill={i % 3 === 0 ? accent : ink}
                 fillOpacity={i % 3 === 0 ? 0.75 : 0.25 + r() * 0.35}
@@ -214,7 +228,7 @@ function Pattern({ category, slug, ink, accent, bg }: { category: string; slug: 
       return (
         <>
           {Array.from({ length: 12 }, (_, i) => (
-            <path key={i} d={`M${-60 + i * 40} 300 L ${60 + i * 40} 0`} stroke={i % 4 === 0 ? accent : ink} strokeOpacity={i % 4 === 0 ? 0.8 : 0.3} strokeWidth="6" />
+            <path key={i} {...fx("draw", i)} d={`M${-60 + i * 40} 300 L ${60 + i * 40} 0`} stroke={i % 4 === 0 ? accent : ink} strokeOpacity={i % 4 === 0 ? 0.8 : 0.3} strokeWidth="6" />
           ))}
         </>
       );
