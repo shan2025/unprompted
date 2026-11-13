@@ -8,7 +8,7 @@ import { Suspense } from "react";
  * Sell doesn't point at the page you're already on. The path is only known at
  * request time, so the children show until it streams in.
  */
-export function HideOnPath({ path, children }: { path: string; children: React.ReactNode }) {
+export function HideOnPath({ path, children }: { path: string | string[]; children: React.ReactNode }) {
   return (
     <Suspense fallback={children}>
       <Check path={path}>{children}</Check>
@@ -16,6 +16,7 @@ export function HideOnPath({ path, children }: { path: string; children: React.R
   );
 }
 
-function Check({ path, children }: { path: string; children: React.ReactNode }) {
-  return usePathname() === path ? null : children;
+function Check({ path, children }: { path: string | string[]; children: React.ReactNode }) {
+  const pathname = usePathname();
+  return (Array.isArray(path) ? path.includes(pathname) : pathname === path) ? null : children;
 }

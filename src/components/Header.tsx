@@ -42,12 +42,16 @@ async function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-3.5 whitespace-nowrap sm:gap-6">
-        <Link href="/login" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
-          Log in
-        </Link>
-        <Link href="/start" className="btn-primary px-4 py-2.5 sm:px-5 sm:py-3">
-          Get started
-        </Link>
+        <HideOnPath path="/login">
+          <Link href="/login" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
+            Log in
+          </Link>
+        </HideOnPath>
+        <HideOnPath path={["/start", "/signup"]}>
+          <Link href="/start" className="btn-primary px-4 py-2.5 sm:px-5 sm:py-3">
+            Get started
+          </Link>
+        </HideOnPath>
       </div>
     );
   }
