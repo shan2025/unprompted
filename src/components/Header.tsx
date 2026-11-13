@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { isCreator } from "@/lib/data";
 import { AccountMenu } from "./AccountMenu";
+import { HideOnPath } from "./HideOnPath";
 import { Logo } from "./Logo";
 import { NavLink } from "./NavLink";
 
@@ -59,12 +60,16 @@ async function UserMenu() {
     <div className="flex items-center gap-3.5 whitespace-nowrap sm:gap-6">
       {creator && (
         <>
-          <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 lg:inline-flex">
-            Share
-          </Link>
-          <Link href="/sell" className="btn-primary px-4 py-2.5 md:px-5 md:py-3">
-            Sell
-          </Link>
+          <HideOnPath path="/journal/new">
+            <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 lg:inline-flex">
+              Share
+            </Link>
+          </HideOnPath>
+          <HideOnPath path="/sell">
+            <Link href="/sell" className="btn-primary px-4 py-2.5 md:px-5 md:py-3">
+              Sell
+            </Link>
+          </HideOnPath>
         </>
       )}
       <AccountMenu name={user.name} handle={user.handle} avatarFile={user.avatarFile} isAdmin={user.role === "admin"} creator={creator} />
