@@ -16,7 +16,8 @@ import { SegmentView } from "@/components/SegmentView";
 import { SubmitButton } from "@/components/SubmitButton";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryLabel, LICENSES, licenseLabel } from "@/lib/categories";
-import { getListing, getOrderStatus, hasPendingOrder, salesCount } from "@/lib/data";
+import { ListingCard } from "@/components/ListingCard";
+import { getListing, getOrderStatus, hasPendingOrder, salesCount, searchListings } from "@/lib/data";
 import { formatDate, formatPrice, plural, siteUrl } from "@/lib/format";
 import { paymentProvider, upiId } from "@/lib/payment-link";
 import { EVIDENCE_KINDS, TIER_INFO, type Tier } from "@/lib/scoring";
@@ -73,6 +74,7 @@ async function ListingView({ params, searchParams }: Props) {
   const instantBuy = listing.priceCents === 0 || listing.isDemo;
   const upi = listing.paymentUrl && upiId(listing.paymentUrl);
   const canSeeDeliverable = isOwner || purchased || isAdmin;
+  const showBuyBar = listing.status === "published" && !isOwner && !purchased && orderStatus !== "pending";
   const { analysis } = listing;
   const evidence = listing.evidence;
 
@@ -177,7 +179,8 @@ async function ListingView({ params, searchParams }: Props) {
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="min-w-0">
+        {/* Phones and tablets open on the picture, like a shop: picture, title, price, buy. */}
+        <div className="flex min-w-0 flex-col">
           <h1 className="intro-rise text-4xl font-light leading-tight sm:text-5xl">{listing.title}</h1>
           <p className="intro-rise mt-3 text-ink-soft" style={{ "--d": "80ms" } as React.CSSProperties}>
             by{" "}
@@ -188,7 +191,7 @@ async function ListingView({ params, searchParams }: Props) {
             {listing.isDemo && <span className="ml-2 rounded bg-line/70 px-1.5 py-0.5 text-[11px] font-semibold text-muted">DEMO LISTING</span>}
           </p>
 
-          <Reveal className="card mt-6 aspect-[16/9] overflow-hidden">
+          <Reveal className="card mt-6 aspect-[16/9] overflow-hidden max-lg:order-first max-lg:mb-6 max-lg:mt-0 max-sm:-mx-4 max-sm:aspect-square max-sm:border-x-0">
             <Cover
               slug={listing.slug}
               category={listing.category}
@@ -204,10 +207,12 @@ async function ListingView({ params, searchParams }: Props) {
           </p>
 
           {/* On small screens, price and score come before the long content. */}
-          <Reveal className="mt-6 space-y-5 lg:hidden">
-            {purchase}
-            {scoreCard}
-          </Reveal>
+          <div id="buy" className="scroll-mt-20 lg:hidden">
+            <Reveal className="mt-6 space-y-5">
+              {purchase}
+              {scoreCard}
+            </Reveal>
+          </div>
 
           {listing.preview && (
             <Reveal className="mt-10">
@@ -364,7 +369,52 @@ async function ListingView({ params, searchParams }: Props) {
           )}
         </aside>
       </div>
+
+      <Suspense fallback={null}>
+        <MoreLikeThis id={listing.id} category={listing.category} />
+      </Suspense>
+
+      {/* Phones and tablets keep the price and a Buy button in reach while scrolling. */}
+      {showBuyBar && (
+        <>
+          <div aria-hidden="true" className="h-20 lg:hidden" />
+          <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-paper/95 backdrop-blur md:bottom-0 md:pb-[env(safe-area-inset-bottom)] lg:hidden">
+            <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:px-6">
+              <div className="min-w-0">
+                <p className="font-display text-xl font-medium leading-tight tabular-nums">{formatPrice(listing.priceCents, listing.currency)}</p>
+                <p className="truncate text-xs text-muted">{licenseLabel(listing.license)}</p>
+              </div>
+              <a href="#buy" className="btn-primary ml-auto shrink-0 px-6 py-3">
+                {listing.priceCents === 0 ? "Get it" : "Buy now"}
+              </a>
+            </div>
+          </div>
+        </>
+      )}
     </>
+  );
+}
+
+// Other work for sale in the same craft, a row that swipes sideways on phones.
+async function MoreLikeThis({ id, category }: { id: number; category: string }) {
+  const items = (await searchListings({ categories: [category], price: "paid", sort: "new", limit: 9 })).filter((l) => l.id !== id).slice(0, 8);
+  if (items.length === 0) return null;
+  return (
+    <section className="mt-16 border-t border-line pt-10">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <h2 className="text-2xl font-normal">More {categoryLabel(category).toLowerCase()} for sale</h2>
+        <Link href={`/marketplace?category=${category}`} className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
+          See all
+        </Link>
+      </div>
+      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 no-scrollbar sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
+        {items.map((l) => (
+          <div key={l.id} className="flex w-[70%] shrink-0 snap-start sm:w-[42%] lg:w-auto [&>a]:border-x">
+            <ListingCard listing={l} />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

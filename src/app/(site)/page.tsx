@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FeedGrid } from "@/components/FeedGrid";
+import { HomeFeed, HomeFeedSkeleton } from "@/components/HomeFeed";
 import { GridSkeleton } from "@/components/ListingCard";
 import { Reveal } from "@/components/Reveal";
 import { ScoreCard } from "@/components/Score";
@@ -52,6 +53,13 @@ const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
 export default function Home() {
   return (
     <>
+      {/* Phones get a feed to scroll down, like a social app. */}
+      <div className="md:hidden">
+        <Suspense fallback={<HomeFeedSkeleton />}>
+          <HomeFeed />
+        </Suspense>
+      </div>
+      <div className="hidden md:block">
       <section className="mx-auto grid max-w-7xl items-center gap-16 px-4 pb-24 pt-20 sm:px-8 lg:grid-cols-[1.3fr_1fr] lg:pt-32">
         <div>
           <p className="eyebrow intro-rise">A place for human work</p>
@@ -155,6 +163,7 @@ export default function Home() {
           </ul>
         </Reveal>
       </section>
+      </div>
     </>
   );
 }
