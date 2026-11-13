@@ -69,7 +69,8 @@ async function UserMenu() {
               Share
             </Link>
           </HideOnPath>
-          <HideOnPath path="/sell">
+          {/* Sharing and selling are both "post something" pages; neither needs a Sell button on top. */}
+          <HideOnPath path={["/sell", "/journal/new"]}>
             <Link href="/sell" className="btn-primary px-4 py-2.5 md:px-5 md:py-3">
               Sell
             </Link>
