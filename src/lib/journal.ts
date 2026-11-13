@@ -28,11 +28,13 @@ const cardFields = {
   tier: posts.tier,
   processVerified: posts.processVerified,
   isDemo: posts.isDemo,
+  featuredAt: posts.featuredAt,
   createdAt: posts.createdAt,
   words: sql<number>`coalesce(array_length(regexp_split_to_array(nullif(trim(${posts.body}), ''), '\\s+'), 1), 0)`,
   authorName: users.name,
   authorHandle: users.handle,
   authorAvatarFile: users.avatarFile,
+  authorFounding: users.founding,
   appreciations: appreciationCount,
   comments: commentCount,
 };
@@ -47,6 +49,8 @@ export interface PostFilters {
   sort?: "new" | "least-ai";
   /** Only posts by people this user follows. */
   followedBy?: number;
+  /** Only posts a moderator has featured, newest feature first. */
+  featured?: boolean;
   authorId?: number;
   limit?: number;
 }
@@ -73,13 +77,14 @@ export async function searchPosts(filters: PostFilters) {
       ),
     );
   }
+  if (filters.featured) where.push(isNotNull(posts.featuredAt));
 
   return db
     .select(cardFields)
     .from(posts)
     .innerJoin(users, eq(posts.authorId, users.id))
     .where(and(...where))
-    .orderBy(...(filters.sort === "least-ai" ? [asc(posts.aiPercent), desc(posts.createdAt)] : [desc(posts.createdAt)]))
+    .orderBy(...(filters.featured ? [desc(posts.featuredAt)] : filters.sort === "least-ai" ? [asc(posts.aiPercent), desc(posts.createdAt)] : [desc(posts.createdAt)]))
     .limit(filters.limit ?? 60);
 }
 

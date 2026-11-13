@@ -3,6 +3,7 @@ import { categoryLabel } from "@/lib/categories";
 import type { ListingCard as ListingCardData } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { Cover } from "./Cover";
+import { FoundingBadge } from "./FoundingBadge";
 import { Reveal } from "./Reveal";
 import { AiPill, TierStamp } from "./Score";
 
@@ -28,7 +29,15 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
           {listing.priceCents > 0 && listing.status !== "sold" && <span className="ml-auto text-xs font-medium text-muted">For sale</span>}
         </div>
         <h3 className="mt-1.5 text-lg font-medium leading-snug text-ink group-hover:text-accent">{listing.title}</h3>
-        <p className="mt-1 text-sm text-muted">by {listing.creatorName}</p>
+        <p className="mt-1 text-sm text-muted">
+          by {listing.creatorName}
+          {listing.creatorFounding && (
+            <>
+              {" "}
+              <FoundingBadge />
+            </>
+          )}
+        </p>
         <div className="mt-auto flex items-center justify-between pt-4">
           <span className="font-display text-lg font-medium">{formatPrice(listing.priceCents, listing.currency)}</span>
           <AiPill percent={listing.aiPercent} tier={listing.tier} verified={listing.processVerified} />

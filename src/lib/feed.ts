@@ -58,3 +58,20 @@ export async function searchFeed({ show = "all", ...filters }: FeedFilters) {
   if (sort === "least-ai") items.sort((a, b) => aiShare(a) - aiShare(b) || created(b) - created(a));
   return items.slice(0, limit);
 }
+
+/**
+ * The home page's Featured row: posts and listings (for sale or not) that a
+ * moderator picked, most recently featured first.
+ */
+export async function featuredFeed(limit = 6) {
+  const [listings, posts] = await Promise.all([
+    searchListings({ featured: true, limit }),
+    searchPosts({ featured: true, limit }),
+  ]);
+  const at = (item: FeedItem) => (item.kind === "listing" ? item.listing.featuredAt : item.post.featuredAt)?.getTime() ?? 0;
+  const items: FeedItem[] = [
+    ...listings.map((listing) => ({ kind: "listing" as const, listing })),
+    ...posts.map((post) => ({ kind: "post" as const, post })),
+  ];
+  return items.sort((a, b) => at(b) - at(a)).slice(0, limit);
+}

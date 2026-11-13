@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, avg, count, desc, eq, gt, ilike, inArray, lte, or, sql, sum } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gt, ilike, inArray, isNotNull, lte, or, sql, sum } from "drizzle-orm";
 import { isCategory } from "./categories";
 import type { Sort } from "./sorts";
 import { hideDemo } from "./demo";
@@ -32,9 +32,11 @@ const cardFields = {
   processVerified: listings.processVerified,
   status: listings.status,
   isDemo: listings.isDemo,
+  featuredAt: listings.featuredAt,
   createdAt: listings.createdAt,
   creatorName: users.name,
   creatorHandle: users.handle,
+  creatorFounding: users.founding,
 };
 
 export { SORTS, type Sort } from "./sorts";
@@ -49,6 +51,8 @@ export interface ListingFilters {
   sort?: Sort;
   /** Only listings by people this user follows. */
   followedBy?: number;
+  /** Only listings a moderator has featured, newest feature first. */
+  featured?: boolean;
   limit?: number;
 }
 
@@ -73,8 +77,9 @@ export async function searchListings(filters: ListingFilters) {
       ),
     );
   }
+  if (filters.featured) where.push(isNotNull(listings.featuredAt));
 
-  const order = {
+  const order = filters.featured ? [desc(listings.featuredAt)] : {
     new: [desc(listings.createdAt)],
     "least-ai": [asc(listings.aiPercent), desc(listings.createdAt)],
     "price-low": [asc(listings.priceCents), desc(listings.createdAt)],
@@ -163,7 +168,7 @@ export async function salesCount(listingId: number) {
 
 export async function getCreator(handle: string) {
   const [creator] = await db
-    .select({ id: users.id, name: users.name, handle: users.handle, bio: users.bio, avatarFile: users.avatarFile, links: users.links, createdAt: users.createdAt })
+    .select({ id: users.id, name: users.name, handle: users.handle, bio: users.bio, avatarFile: users.avatarFile, links: users.links, founding: users.founding, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.handle, handle))
     .limit(1);
@@ -334,6 +339,15 @@ export async function getReviewQueue() {
     .orderBy(asc(flags.createdAt));
 
   return { pending, openFlags };
+}
+
+/** Everyone with the Founding Unprompter badge, for the moderator's list. */
+export async function getFoundingMembers() {
+  return db
+    .select({ id: users.id, name: users.name, handle: users.handle })
+    .from(users)
+    .where(eq(users.founding, true))
+    .orderBy(asc(users.name));
 }
 
 export async function marketStats() {

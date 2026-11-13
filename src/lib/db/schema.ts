@@ -39,6 +39,8 @@ export const users = pgTable("users", {
   role: text("role", { enum: ["member", "admin"] }).notNull().default("member"),
   /** Emails about new followers, comments and appreciations. Orders and questions always send. */
   emailNotifications: boolean("email_notifications").notNull().default(true),
+  /** One of the hand-picked first creators. Shown as a permanent badge; a moderator sets it. */
+  founding: boolean("founding").notNull().default(false),
   createdAt: createdAt(),
 }).enableRLS();
 
@@ -98,6 +100,8 @@ export const listings = pgTable(
     evidence: jsonb("evidence").$type<Evidence[]>().notNull(),
     analysis: jsonb("analysis").$type<StoredAnalysis>().notNull(),
     isDemo: boolean("is_demo").notNull().default(false),
+    /** When a moderator put it in the home page's Featured row. Null when it isn't featured. */
+    featuredAt: timestamp("featured_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("listings_status_idx").on(t.status, t.createdAt), index("listings_creator_idx").on(t.creatorId)],
@@ -161,6 +165,8 @@ export const posts = pgTable(
     evidence: jsonb("evidence").$type<Evidence[]>().notNull(),
     analysis: jsonb("analysis").$type<StoredAnalysis>().notNull(),
     isDemo: boolean("is_demo").notNull().default(false),
+    /** When a moderator put it in the home page's Featured row. Null when it isn't featured. */
+    featuredAt: timestamp("featured_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("posts_status_idx").on(t.status, t.createdAt), index("posts_author_idx").on(t.authorId)],

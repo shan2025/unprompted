@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { resolveFlag, reviewListing, reviewPost } from "@/app/actions/admin";
+import { removeFounding, resolveFlag, reviewListing, reviewPost, unfeatureWork } from "@/app/actions/admin";
 import { CountUp } from "@/components/CountUp";
+import { FeatureForm, FoundingForm } from "@/components/CurationForms";
 import { Reveal } from "@/components/Reveal";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth";
-import { getReviewQueue } from "@/lib/data";
+import { getFoundingMembers, getReviewQueue } from "@/lib/data";
+import { featuredFeed } from "@/lib/feed";
 import { formatDate } from "@/lib/format";
 import { getPostReviewQueue } from "@/lib/journal";
 import { EVIDENCE_KINDS } from "@/lib/scoring";
@@ -37,6 +39,69 @@ export default function AdminPage() {
       <Suspense fallback={<div className="card mt-8 h-64 animate-pulse" />}>
         <Queue />
       </Suspense>
+      <Suspense fallback={<div className="card mt-12 h-48 animate-pulse" />}>
+        <Curation />
+      </Suspense>
+    </div>
+  );
+}
+
+// The Founding Unprompters promised in the outreach kit, and the home page's Featured row.
+async function Curation() {
+  await requireAdmin();
+  const [founders, featured] = await Promise.all([getFoundingMembers(), featuredFeed(24)]);
+  return (
+    <div className="mt-16 grid gap-10 border-t border-line pt-12 md:grid-cols-2">
+      <section>
+        <h2 className="text-2xl font-normal">Founding Unprompters ({founders.length})</h2>
+        <p className="mt-1 text-sm text-ink-soft">A permanent badge on their profile and on every card of their work.</p>
+        <div className="mt-4">
+          <FoundingForm />
+        </div>
+        <ul className="mt-4 divide-y divide-line border-y border-line">
+          {founders.map((f) => (
+            <li key={f.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+              <Link href={`/u/${f.handle}`} className="min-w-0 truncate hover:text-accent">
+                {f.name} <span className="text-muted">@{f.handle}</span>
+              </Link>
+              <form action={removeFounding}>
+                <input type="hidden" name="id" value={f.id} />
+                <SubmitButton className="text-xs font-semibold text-muted hover:text-ink">Remove</SubmitButton>
+              </form>
+            </li>
+          ))}
+          {founders.length === 0 && <li className="py-2.5 text-sm text-muted">No one yet.</li>}
+        </ul>
+      </section>
+      <section>
+        <h2 className="text-2xl font-normal">Featured on the home page ({featured.length})</h2>
+        <p className="mt-1 text-sm text-ink-soft">The six most recently featured show on the home page.</p>
+        <div className="mt-4">
+          <FeatureForm />
+        </div>
+        <ul className="mt-4 divide-y divide-line border-y border-line">
+          {featured.map((item, i) => {
+            const w =
+              item.kind === "post"
+                ? { id: item.post.id, title: item.post.title, href: `/journal/${item.post.slug}`, by: item.post.authorName }
+                : { id: item.listing.id, title: item.listing.title, href: `/listing/${item.listing.slug}`, by: item.listing.creatorName };
+            return (
+              <li key={`${item.kind}-${w.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <Link href={w.href} className="min-w-0 truncate hover:text-accent">
+                  {w.title} <span className="text-muted">by {w.by}</span>
+                  {i >= 6 && <span className="ml-1 text-xs text-muted">(not shown)</span>}
+                </Link>
+                <form action={unfeatureWork}>
+                  <input type="hidden" name="id" value={w.id} />
+                  <input type="hidden" name="kind" value={item.kind} />
+                  <SubmitButton className="text-xs font-semibold text-muted hover:text-ink">Unfeature</SubmitButton>
+                </form>
+              </li>
+            );
+          })}
+          {featured.length === 0 && <li className="py-2.5 text-sm text-muted">Nothing featured. The row is hidden until something is.</li>}
+        </ul>
+      </section>
     </div>
   );
 }

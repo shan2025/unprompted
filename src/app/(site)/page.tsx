@@ -9,7 +9,7 @@ import { ScoreCard } from "@/components/Score";
 import { CATEGORIES } from "@/lib/categories";
 import { usedCategories } from "@/lib/data";
 import { getCurrentUser } from "@/lib/auth";
-import { searchFeed } from "@/lib/feed";
+import { featuredFeed, searchFeed } from "@/lib/feed";
 import { followCounts } from "@/lib/journal";
 import { computeScore } from "@/lib/scoring";
 
@@ -91,6 +91,10 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <Suspense fallback={null}>
+        <Featured />
+      </Suspense>
 
       <Suspense fallback={null}>
         <Following />
@@ -176,6 +180,22 @@ async function Crafts() {
         </Reveal>
       ))}
     </div>
+  );
+}
+
+// Work a moderator picked from /admin. Hidden until something is featured.
+async function Featured() {
+  await connection();
+  const items = await featuredFeed(6);
+  if (items.length === 0) return null;
+  return (
+    <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
+      <Reveal className="mb-10">
+        <p className="eyebrow">Picked by us</p>
+        <h2 className="mt-2 text-4xl font-light">Featured</h2>
+      </Reveal>
+      <FeedGrid items={items} reveal />
+    </section>
   );
 }
 

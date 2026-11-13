@@ -5,6 +5,7 @@ import type { PostCard as PostCardData } from "@/lib/journal";
 import { videoEmbed } from "@/lib/video";
 import { Avatar } from "./Avatar";
 import { Cover } from "./Cover";
+import { FoundingBadge } from "./FoundingBadge";
 import { PostOwnerMenu } from "./PostOwnerMenu";
 import { Reveal } from "./Reveal";
 import { AiPill } from "./Score";
@@ -64,7 +65,14 @@ function PostCardLink({ post }: { post: PostCardData }) {
         <div className="mt-auto flex items-center gap-2 pt-4 text-sm text-ink-soft">
           <Avatar name={post.authorName} file={post.authorAvatarFile} className="h-6 w-6 shrink-0 text-[11px]" />
           <span className="min-w-0 truncate">
-            {post.authorName} <span className="text-muted">· {formatShortDate(post.createdAt)}</span>
+            {post.authorName}
+            {post.authorFounding && (
+              <>
+                {" "}
+                <FoundingBadge />
+              </>
+            )}{" "}
+            <span className="text-muted">· {formatShortDate(post.createdAt)}</span>
           </span>
           <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs font-semibold" title="Appreciations">
             <HeartIcon className="h-3.5 w-3.5" />

@@ -8,6 +8,7 @@ import { GridSkeleton, ListingGrid } from "@/components/ListingCard";
 import { PostCard } from "@/components/PostCard";
 import { Reveal } from "@/components/Reveal";
 import { SiteIcon } from "@/components/SiteIcon";
+import { FoundingBadge } from "@/components/FoundingBadge";
 import { FollowButton } from "@/components/Social";
 import { getCurrentUser } from "@/lib/auth";
 import { getCreator } from "@/lib/data";
@@ -84,6 +85,11 @@ async function Creator({ params, searchParams }: Props) {
           <p className="mt-1.5 text-muted">
             @{creator.handle} · Joined {formatDate(creator.createdAt)}
           </p>
+          {creator.founding && (
+            <div className="mt-3">
+              <FoundingBadge variant="pill" />
+            </div>
+          )}
           {creator.bio && <p className="mt-4 max-w-2xl whitespace-pre-line text-lg leading-relaxed text-ink-soft">{creator.bio}</p>}
           {creator.links.length > 0 && (
             <ul className="mt-4 flex flex-wrap gap-2" aria-label={`${creator.name} elsewhere`}>
