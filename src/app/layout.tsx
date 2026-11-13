@@ -27,6 +27,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Draw under the notch and home indicator; the header and tab bar pad themselves with safe-area insets.
+  viewportFit: "cover",
   themeColor: "#ffffff",
 };
 

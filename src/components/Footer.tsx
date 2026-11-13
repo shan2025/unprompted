@@ -4,7 +4,7 @@ import { Mark } from "./Logo";
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-line">
+    <footer className="mt-12 border-t border-line md:mt-24">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 text-sm text-ink-soft sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div className="max-w-sm">
           <Mark className="mb-3 h-8 w-8 text-ink" />

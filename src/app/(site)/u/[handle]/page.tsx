@@ -155,7 +155,7 @@ async function Creator({ params, searchParams }: Props) {
             {showing === "for-sale" ? (
               <ListingGrid listings={listings} reveal />
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                 {posts.map((p, i) => (
                   <Reveal key={p.id} delay={(i % 3) * 90} className="grid">
                     <PostCard post={p} ownerReturnTo={isSelf ? `/u/${creator.handle}` : undefined} />
@@ -171,7 +171,7 @@ async function Creator({ params, searchParams }: Props) {
       {!makes && (
         <div className="mt-10">
           {isSelf ? (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
               <ShareSlot first />
             </div>
           ) : (

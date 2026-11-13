@@ -152,7 +152,7 @@ export function ExploreView({
       >
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
-            <h1 className="intro-rise text-4xl font-light">{title}</h1>
+            <h1 className="intro-rise text-3xl font-light sm:text-4xl">{title}</h1>
             <p className="intro-rise mt-1 text-ink-soft" style={{ "--d": "80ms" } as React.CSSProperties}>
               {intro}
             </p>
@@ -180,7 +180,7 @@ export function ExploreView({
         >
           {/* A picked category keeps its chip even if it's empty, so it can be turned off. */}
           {chipCategories.length > 1 && (
-            <div className="-my-1 flex min-w-0 max-w-full gap-2 overflow-x-auto no-scrollbar py-1 lg:flex-1 lg:flex-wrap lg:overflow-visible">
+            <div className="-mx-4 -my-1 flex min-w-0 w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 py-1 no-scrollbar sm:mx-0 sm:w-auto sm:max-w-full sm:px-0 lg:flex-1 lg:flex-wrap lg:overflow-visible">
               {chip({ categories: [] }, { active: categories.length === 0, children: "All" })}
               {chipCategories.map((c) => {
                 const on = categories.includes(c.id);
@@ -191,7 +191,8 @@ export function ExploreView({
               })}
             </div>
           )}
-          <div className="ml-auto flex flex-wrap items-center gap-2 lg:shrink-0 lg:flex-nowrap">
+          {/* Phones: one row that swipes sideways, running to the screen edges. */}
+          <div className="-mx-4 -my-1 flex w-[calc(100%+2rem)] items-center gap-2 overflow-x-auto px-4 py-1 no-scrollbar sm:mx-0 sm:my-0 sm:ml-auto sm:w-auto sm:flex-wrap sm:overflow-visible sm:p-0 lg:shrink-0 lg:flex-nowrap">
             {!market && (
               <PillSelect name="show" defaultValue={fields.show} label="What to show">
                 {Object.entries(SHOWS).map(([v, l]) => (
@@ -216,7 +217,7 @@ export function ExploreView({
               ))}
             </PillSelect>
             <label
-              className="flex items-center gap-2 rounded-full border border-line px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:text-ink"
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:text-ink"
               title="Only show work with process evidence attached"
             >
               <input type="checkbox" name="verified" value="1" defaultChecked={fields.verified} className="h-3.5 w-3.5 accent-[var(--accent)]" />
@@ -238,7 +239,7 @@ export function ExploreView({
 
 function PillSelect({ name, defaultValue, label, children }: { name: string; defaultValue: string; label: string; children: React.ReactNode }) {
   return (
-    <span className="relative">
+    <span className="relative shrink-0">
       <select
         name={name}
         defaultValue={defaultValue}

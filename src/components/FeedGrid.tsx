@@ -7,7 +7,7 @@ import { PostCard } from "./PostCard";
 // `reveal` staggers each card in as it scrolls into view.
 export function FeedGrid({ items, reveal = false }: { items: FeedItem[]; reveal?: boolean }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {items.map((item, i) => {
         const card =
           item.kind === "listing" ? <ListingCard listing={item.listing} /> : <PostCard post={item.post} />;

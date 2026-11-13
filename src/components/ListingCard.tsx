@@ -10,7 +10,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
   return (
     <Link
       href={`/listing/${listing.slug}`}
-      className="group card flex flex-col overflow-hidden transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgb(60_40_20/0.25)]"
+      className="group card flex flex-col overflow-hidden max-sm:border-x-0 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgb(60_40_20/0.25)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden border-b border-line">
         <Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} />
@@ -41,7 +41,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
 /** `reveal` staggers each card in as it scrolls into view. */
 export function ListingGrid({ listings, reveal = false }: { listings: ListingCardData[]; reveal?: boolean }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {listings.map((l, i) =>
         reveal ? (
           <Reveal key={l.id} delay={(i % 3) * 90} className="grid">
@@ -57,7 +57,7 @@ export function ListingGrid({ listings, reveal = false }: { listings: ListingCar
 
 export function GridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading listings">
+    <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3" aria-busy="true" aria-label="Loading listings">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="card overflow-hidden">
           <div className="aspect-[4/3] animate-pulse bg-line/50" />

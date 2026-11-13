@@ -54,7 +54,7 @@ export function AccountMenu({
         onClick={() => setOpen((o) => !o)}
         className="block rounded-full hover:opacity-80"
       >
-        <Avatar name={name} file={avatarFile} className="h-10 w-10 text-sm" />
+        <Avatar name={name} file={avatarFile} className="h-8 w-8 text-xs md:h-10 md:w-10 md:text-sm" />
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-56 border border-line bg-white py-1 shadow-lg">

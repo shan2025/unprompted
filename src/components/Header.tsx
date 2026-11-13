@@ -6,13 +6,14 @@ import { AccountMenu } from "./AccountMenu";
 import { Logo } from "./Logo";
 import { NavLink } from "./NavLink";
 
-// Wide screens put the sections next to the logo; narrower ones give them a
-// second row. Posting tools appear as the screen widens; anything hidden here
-// is also reachable from the account menu, the dashboard or the footer.
+// Wide screens put the sections next to the logo; phones get them in the
+// bottom tab bar (TabBar) and keep a slim bar up top, pinned like an app's.
+// Posting tools appear as the screen widens; anything hidden here is also
+// reachable from the tab bar, the account menu, the dashboard or the footer.
 export function Header() {
   return (
-    <header className="border-b border-line bg-white">
-      <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-8 lg:gap-10">
+    <header className="sticky top-0 z-40 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur md:static md:bg-white md:backdrop-blur-none">
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-8 md:h-[72px] lg:gap-10">
         <Link href="/" aria-label="Unprompters home" className="shrink-0">
           <Logo compact />
         </Link>
@@ -30,15 +31,6 @@ export function Header() {
           </Suspense>
         </div>
       </div>
-      {/* Phones and small tablets: the main sections get their own row, so none is left out. */}
-      <nav
-        aria-label="Sections"
-        className="flex h-11 items-center gap-6 overflow-x-auto whitespace-nowrap border-t border-line px-4 text-[13px] font-semibold uppercase tracking-[0.08em] no-scrollbar sm:px-8 md:hidden"
-      >
-        <NavLink href="/explore">Explore</NavLink>
-        <NavLink href="/marketplace">Marketplace</NavLink>
-        <NavLink href="/journal">Journal</NavLink>
-      </nav>
     </header>
   );
 }
@@ -70,7 +62,7 @@ async function UserMenu() {
           <Link href="/journal/new" className="btn-ghost hidden px-5 py-3 lg:inline-flex">
             Share
           </Link>
-          <Link href="/sell" className="btn-primary px-5 py-3">
+          <Link href="/sell" className="btn-primary px-4 py-2.5 md:px-5 md:py-3">
             Sell
           </Link>
         </>

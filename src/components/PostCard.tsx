@@ -33,7 +33,7 @@ function PostCardLink({ post }: { post: PostCardData }) {
   return (
     <Link
       href={`/journal/${post.slug}`}
-      className="group card flex flex-col overflow-hidden transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgb(60_40_20/0.25)]"
+      className="group card flex flex-col overflow-hidden max-sm:border-x-0 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgb(60_40_20/0.25)]"
     >
       {hasPicture && (
         <div className="relative aspect-[4/3] overflow-hidden border-b border-line">
@@ -95,7 +95,7 @@ function PlayBadge() {
 /** `reveal` staggers each card in as it scrolls into view. */
 export function PostGrid({ posts, reveal = false }: { posts: PostCardData[]; reveal?: boolean }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {posts.map((p, i) =>
         reveal ? (
           <Reveal key={p.id} delay={(i % 3) * 90} className="grid">
@@ -111,7 +111,7 @@ export function PostGrid({ posts, reveal = false }: { posts: PostCardData[]; rev
 
 export function PostGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading posts">
+    <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3" aria-busy="true" aria-label="Loading posts">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="card space-y-3 p-5">
           <div className="h-3 w-16 animate-pulse rounded bg-line/70" />
