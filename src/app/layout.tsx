@@ -1,5 +1,5 @@
 import { Analytics } from "@vercel/analytics/next";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/figtree";
 import "./globals.css";
 import { siteUrl } from "@/lib/format";
@@ -18,6 +18,16 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: { card: "summary_large_image" },
+  applicationName: "Unprompters",
+  // iOS home-screen install: open full screen with a white status bar and a short title.
+  appleWebApp: { capable: true, title: "Unprompters", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
