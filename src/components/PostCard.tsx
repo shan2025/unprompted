@@ -9,14 +9,29 @@ import { FoundingBadge } from "./FoundingBadge";
 import { PostOwnerMenu } from "./PostOwnerMenu";
 import { Reveal } from "./Reveal";
 import { AiPill } from "./Score";
+import { StoryCard } from "./StoryCard";
 
 /** About how long a piece takes to read, at 220 words a minute. */
 function readingTime(words: number) {
   return `${Math.max(1, Math.round(words / 220))} min read`;
 }
 
-/** With `ownerReturnTo`, the author sees a menu to edit or delete the post; deleting comes back to that page. */
-export function PostCard({ post, ownerReturnTo }: { post: PostCardData; ownerReturnTo?: string }) {
+/**
+ * With `ownerReturnTo`, the author sees a menu to edit or delete the post; deleting comes back to that page.
+ * With `story`, picture posts on phones show as the home feed's photo card instead (wider screens keep the grid card).
+ */
+export function PostCard({ post, ownerReturnTo, story = false }: { post: PostCardData; ownerReturnTo?: string; story?: boolean }) {
+  const hasPicture = Boolean(post.coverFile || post.videoUrl || post.coverTheme || post.coverPattern);
+  if (story && hasPicture && !ownerReturnTo) {
+    return (
+      <>
+        <PostStory post={post} />
+        <div className="grid max-sm:hidden">
+          <PostCardLink post={post} />
+        </div>
+      </>
+    );
+  }
   if (!ownerReturnTo) return <PostCardLink post={post} />;
   return (
     <div className="relative flex flex-col">
@@ -90,9 +105,63 @@ function PostCardLink({ post }: { post: PostCardData }) {
   );
 }
 
-function PlayBadge() {
+/** A picture post as the phone home feed shows it: who and when, the photo card, then its counts. */
+function PostStory({ post }: { post: PostCardData }) {
+  const href = `/journal/${post.slug}`;
+  const video = post.videoUrl ? videoEmbed(post.videoUrl) : null;
+  const kicker = video ? `${categoryLabel(post.category)} · Video` : post.words >= 100 ? `${categoryLabel(post.category)} · ${readingTime(post.words)}` : categoryLabel(post.category);
+  const cover =
+    !post.coverFile && video?.thumbnail ? (
+      // eslint-disable-next-line @next/next/no-img-element -- thumbnails come straight from the video's host
+      <img src={video.thumbnail} alt={post.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+    ) : (
+      <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} theme={post.coverTheme} pattern={post.coverPattern} title={post.title} />
+    );
   return (
-    <span className="absolute bottom-3 left-3 flex h-9 w-9 items-center justify-center rounded-full bg-ink/85 text-paper" aria-hidden="true">
+    <article className="bg-paper pb-4 sm:hidden">
+      <header className="flex items-center gap-2.5 px-4 pb-3 pt-4">
+        <Link href={`/u/${post.authorHandle}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+          <Avatar name={post.authorName} file={post.authorAvatarFile} className="h-10 w-10 shrink-0 text-sm" />
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[15px] font-bold text-ink">
+              {post.authorName}
+              {post.authorFounding && (
+                <>
+                  {" "}
+                  <FoundingBadge />
+                </>
+              )}
+            </span>
+            <span className="mt-0.5 block truncate text-[13px] text-muted">{formatShortDate(post.createdAt)}</span>
+          </span>
+        </Link>
+        <span className="shrink-0">
+          <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} tinted />
+        </span>
+      </header>
+      <StoryCard href={href} cover={cover} kicker={kicker} title={post.title} lines={post.excerpt}>
+        {video && <PlayBadge top />}
+      </StoryCard>
+      <div className="flex items-center gap-5 px-4 pt-3 text-sm font-semibold text-ink">
+        <span className="inline-flex items-center gap-1.5" title="Appreciations">
+          <HeartIcon className="h-5 w-5" />
+          {post.appreciations}
+          <span className="sr-only">appreciations</span>
+        </span>
+        <Link href={`${href}#comments`} className="inline-flex items-center gap-1.5" title="Comments">
+          <CommentIcon className="h-5 w-5" />
+          {post.comments}
+          <span className="sr-only">comments</span>
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+/** `top` puts it in the corner, clear of a story card's caption. */
+function PlayBadge({ top = false }: { top?: boolean }) {
+  return (
+    <span className={`absolute ${top ? "right-3.5 top-3.5" : "bottom-3 left-3"} flex h-9 w-9 items-center justify-center rounded-full bg-ink/85 text-paper`} aria-hidden="true">
       <svg viewBox="0 0 24 24" className="ml-0.5 h-4 w-4" fill="currentColor">
         <path d="M7 4.5v15l13-7.5z" />
       </svg>
@@ -100,17 +169,18 @@ function PlayBadge() {
   );
 }
 
-/** `reveal` staggers each card in as it scrolls into view. */
-export function PostGrid({ posts, reveal = false }: { posts: PostCardData[]; reveal?: boolean }) {
+/** `reveal` staggers each card in as it scrolls into view. `story`: see PostCard. */
+export function PostGrid({ posts, reveal = false, story = false }: { posts: PostCardData[]; reveal?: boolean; story?: boolean }) {
   return (
-    <div className="grid gap-3 max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+    // In story mode the phone gaps show the field color, the same grey bands as the home feed.
+    <div className={`grid max-sm:-mx-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 ${story ? "gap-2 max-sm:bg-field" : "gap-3"}`}>
       {posts.map((p, i) =>
         reveal ? (
           <Reveal key={p.id} delay={(i % 3) * 90} className="grid">
-            <PostCard post={p} />
+            <PostCard post={p} story={story} />
           </Reveal>
         ) : (
-          <PostCard key={p.id} post={p} />
+          <PostCard key={p.id} post={p} story={story} />
         ),
       )}
     </div>
