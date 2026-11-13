@@ -283,9 +283,14 @@ export async function isCreator(userId: number) {
   return Boolean(listing || post);
 }
 
-/** Where someone lands after logging in, unless they were on their way somewhere. */
-export async function homePath(userId: number) {
-  return (await isCreator(userId)) ? "/dashboard" : "/explore";
+/**
+ * Where someone lands after logging in, unless they were on their way
+ * somewhere: Explore, for creators too, since enjoying the work comes first.
+ * The dashboard stays a tap away in the account menu.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept so the landing can depend on the person again
+export async function homePath(_userId: number) {
+  return "/explore";
 }
 
 /** Questions people have asked about this creator's work, newest first. */
