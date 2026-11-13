@@ -88,12 +88,16 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
           />
         </div>
       ) : hasPicture ? (
-        <Link href={href} className="block aspect-[4/5] overflow-hidden bg-field">
-          <Cover slug={post.slug} category={post.category} coverFile={post.coverFile} theme={post.coverTheme} pattern={post.coverPattern} title={post.title} />
-        </Link>
+        <StoryCard
+          href={href}
+          cover={<Cover slug={post.slug} category={post.category} coverFile={post.coverFile} theme={post.coverTheme} pattern={post.coverPattern} title={post.title} />}
+          kicker={categoryLabel(post.category)}
+          title={post.title}
+          lines={post.excerpt}
+        />
       ) : null}
 
-      {/* Writing with no picture reads first, like a text post; media posts put the caption under the buttons. */}
+      {/* Writing with no picture reads first, like a text post. A picture post carries its words on the card. */}
       {!media && caption}
 
       <div className="flex items-center gap-5 px-4 pt-3">
@@ -102,11 +106,11 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
           <CommentIcon className="h-[26px] w-[26px]" />
         </Link>
         <ShareButton path={href} title={post.title} className={ACTION} />
-        <span className="eyebrow ml-auto">{categoryLabel(post.category)}</span>
+        {!hasPicture && <span className="eyebrow ml-auto">{categoryLabel(post.category)}</span>}
       </div>
 
       {counts.length > 0 && <p className="px-4 pt-2 text-sm font-semibold text-ink">{counts.join(" · ")}</p>}
-      {media && caption}
+      {video && caption}
     </Shell>
   );
 }
@@ -118,28 +122,39 @@ function ListingEntry({ listing }: { listing: Listing }) {
 
   return (
     <Shell name={listing.creatorName} handle={listing.creatorHandle} avatarFile={null} date={listing.createdAt} aiPill={aiPill}>
-      <Link href={href} className="relative block aspect-[4/5] overflow-hidden bg-field">
-        <Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} />
-        {listing.status === "sold" && (
-          <span className="absolute right-3 top-3 rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-paper">Sold</span>
-        )}
-      </Link>
+      <StoryCard
+        href={href}
+        cover={<Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} />}
+        kicker={`${categoryLabel(listing.category)} · ${listing.status === "sold" ? "Sold" : forSale ? "For sale" : "Free"}`}
+        title={listing.title}
+        lines={listing.summary}
+      />
 
       <div className="flex items-center gap-5 px-4 pt-3">
         <ShareButton path={href} title={listing.title} className={ACTION} />
-        <span className="eyebrow">{categoryLabel(listing.category)}</span>
         {forSale && (
           <Link href={href} className="btn-primary ml-auto px-5 py-2.5">
             Buy · {formatPrice(listing.priceCents, listing.currency)}
           </Link>
         )}
       </div>
-
-      <Link href={href} className="block px-4 pt-2 text-[15px] leading-relaxed">
-        <h2 className="font-medium text-ink">{listing.title}</h2>
-        {listing.summary && <p className="mt-1 line-clamp-2 text-ink-soft">{listing.summary}</p>}
-        {!forSale && <span className="mt-1 inline-block text-sm text-muted">{listing.status === "sold" ? "Sold" : "Free · Open"}</span>}
-      </Link>
     </Shell>
+  );
+}
+
+/**
+ * The picture fills a rounded card and its lower half fades to dark, carrying
+ * the craft, the title and the first few lines, like a newsletter app's feed.
+ */
+function StoryCard({ href, cover, kicker, title, lines }: { href: string; cover: React.ReactNode; kicker: string; title: string; lines?: string | null }) {
+  return (
+    <Link href={href} className="relative mx-4 block aspect-[4/5] overflow-hidden rounded-[14px] bg-ink [-webkit-tap-highlight-color:transparent]">
+      <div className="absolute inset-0">{cover}</div>
+      <div className="absolute inset-x-0 bottom-0 flex min-h-[55%] flex-col justify-end bg-gradient-to-t from-black/90 via-black/70 to-transparent px-5 pb-5 pt-16 text-white">
+        <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-white/75">{kicker}</span>
+        <h2 className="mt-2 text-[22px] font-semibold leading-tight">{title}</h2>
+        {lines && <p className="mt-2 line-clamp-3 whitespace-pre-line text-[15px] leading-snug text-white/80">{lines}</p>}
+      </div>
+    </Link>
   );
 }
