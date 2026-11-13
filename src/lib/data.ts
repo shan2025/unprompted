@@ -47,6 +47,8 @@ export interface ListingFilters {
   /** Only listings that cost money, or only free ones. */
   price?: "paid" | "free";
   sort?: Sort;
+  /** Only listings by people this user follows. */
+  followedBy?: number;
   limit?: number;
 }
 
@@ -63,6 +65,14 @@ export async function searchListings(filters: ListingFilters) {
   if (filters.price === "paid") where.push(gt(listings.priceCents, 0));
   if (filters.price === "free") where.push(eq(listings.priceCents, 0));
   if (hideDemo()) where.push(eq(listings.isDemo, false));
+  if (filters.followedBy !== undefined) {
+    where.push(
+      inArray(
+        listings.creatorId,
+        db.select({ id: schema.follows.followingId }).from(schema.follows).where(eq(schema.follows.followerId, filters.followedBy)),
+      ),
+    );
+  }
 
   const order = {
     new: [desc(listings.createdAt)],

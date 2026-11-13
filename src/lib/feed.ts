@@ -16,7 +16,8 @@ const aiShare = (item: FeedItem) => (item.kind === "listing" ? item.listing.aiPe
 
 /**
  * Free listings and posts together, as one list. Work for sale is on the
- * marketplace instead, so it never shows up here.
+ * marketplace instead, so it never shows up here, except in a Following
+ * feed (`followedBy`), where people want everything new from creators they follow.
  */
 export async function searchFeed({ show = "all", ...filters }: FeedFilters) {
   const sort = filters.sort ?? "new";
@@ -34,8 +35,11 @@ export async function searchFeed({ show = "all", ...filters }: FeedFilters) {
   }
 
   const [listings, posts] = await Promise.all([
-    wantListings ? searchListings({ ...filters, categories, sort, limit, price: "free" }) : [],
+    wantListings
+      ? searchListings({ ...filters, categories, sort, limit, price: filters.followedBy === undefined ? "free" : undefined })
+      : [],
     searchPosts({
+      followedBy: filters.followedBy,
       q: filters.q,
       categories,
       maxAi: filters.maxAi,
