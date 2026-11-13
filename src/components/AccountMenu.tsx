@@ -7,6 +7,14 @@ import { LogoutButton } from "./LogoutButton";
 
 const ITEM = "block w-full px-4 py-2.5 text-left text-sm text-ink hover:bg-line/50";
 
+const SMALL_PRINT = [
+  { href: "/standard", label: "How scoring works" },
+  { href: "/terms", label: "Terms" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/refunds", label: "Refunds" },
+  { href: "/contact", label: "Contact" },
+];
+
 export function AccountMenu({
   name,
   handle,
@@ -80,6 +88,14 @@ export function AccountMenu({
           )}
           <div className="mt-1 border-t border-line pt-1">
             <LogoutButton className={ITEM} />
+          </div>
+          {/* Phones have no footer, so the trust and legal pages live here, small and quiet. */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-line px-4 py-3 md:hidden">
+            {SMALL_PRINT.map((l) => (
+              <Link key={l.href} href={l.href} className="py-0.5 text-xs text-muted active:text-ink" onClick={close}>
+                {l.label}
+              </Link>
+            ))}
           </div>
         </div>
       )}

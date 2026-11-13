@@ -2,10 +2,12 @@ import Link from "next/link";
 import { SITE } from "@/lib/site";
 import { Mark } from "./Logo";
 
+// Phones don't get a footer, like an app: the tab bar covers the sections, and the
+// trust and legal pages sit at the bottom of the account menu (AccountMenu).
 export function Footer() {
   return (
-    <footer className="mt-12 border-t border-line md:mt-24">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 text-sm text-ink-soft sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+    <footer className="mt-24 hidden border-t border-line md:block">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-10 px-8 py-14 text-sm text-ink-soft lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div className="max-w-sm">
           <Mark className="mb-3 h-8 w-8 text-ink" />
           <p>
@@ -63,7 +65,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-line">
-        <p className="mx-auto max-w-7xl px-4 py-6 text-xs text-muted sm:px-8">© 2026 {SITE.legalName}</p>
+        <p className="mx-auto max-w-7xl px-8 py-6 text-xs text-muted">© 2026 {SITE.legalName}</p>
       </div>
     </footer>
   );
