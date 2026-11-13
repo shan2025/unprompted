@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FeedGrid } from "@/components/FeedGrid";
-import { HomeFeed, HomeFeedSkeleton } from "@/components/HomeFeed";
+import { HomeFeed, HomeFeedSkeleton, type HomeFeedParams } from "@/components/HomeFeed";
 import { GridSkeleton } from "@/components/ListingCard";
 import { Reveal } from "@/components/Reveal";
 import { ScoreCard } from "@/components/Score";
@@ -50,13 +50,13 @@ const STEPS = [
 // Stagger delay for the intro animations in globals.css.
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
 
-export default function Home() {
+export default function Home({ searchParams }: { searchParams: Promise<HomeFeedParams> }) {
   return (
     <>
       {/* Phones get a feed to scroll down, like a social app. */}
       <div className="md:hidden">
         <Suspense fallback={<HomeFeedSkeleton />}>
-          <HomeFeed />
+          <HomeFeed searchParams={searchParams} />
         </Suspense>
       </div>
       <div className="hidden md:block">

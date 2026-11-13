@@ -32,7 +32,7 @@ export function TabBar() {
 
 /** Keeps the end of each page clear of the fixed tab bar. */
 export function TabBarSpacer() {
-  return <div aria-hidden="true" className="h-[calc(3.5rem+env(safe-area-inset-bottom))] md:hidden" />;
+  return <div aria-hidden="true" className="h-[calc(4rem+env(safe-area-inset-bottom))] md:hidden" />;
 }
 
 function Current() {
@@ -48,18 +48,20 @@ function isActive(tab: Tab, pathname: string) {
 
 function Tabs({ pathname }: { pathname: string }) {
   return (
-    <ul className="mx-auto flex h-14 max-w-md items-stretch justify-around">
+    <ul className="mx-auto flex h-16 max-w-md items-stretch justify-around">
       {TABS.map((tab) => {
         const active = isActive(tab, pathname);
         return (
           <li key={tab.href} className="flex flex-1">
             <Link
               href={tab.href}
-              aria-label={tab.label}
               aria-current={active ? "page" : undefined}
-              className="flex flex-1 items-center justify-center text-ink transition-[scale] duration-150 ease-out [-webkit-tap-highlight-color:transparent] active:scale-90"
+              className={`flex flex-1 flex-col items-center justify-center gap-[3px] transition-[scale] duration-150 ease-out [-webkit-tap-highlight-color:transparent] active:scale-90 ${
+                active ? "text-ink" : "text-[#595959]"
+              }`}
             >
               {tab.icon(active)}
+              <span className={`text-[11px] leading-none ${active ? "font-bold" : "font-medium"}`}>{tab.label}</span>
             </Link>
           </li>
         );
@@ -68,7 +70,7 @@ function Tabs({ pathname }: { pathname: string }) {
   );
 }
 
-const ICON = "h-[26px] w-[26px]";
+const ICON = "h-6 w-6";
 
 function HomeIcon({ filled }: { filled: boolean }) {
   return (

@@ -33,11 +33,35 @@ export function TierStamp({ tier, size = "md" }: { tier: string; size?: "sm" | "
   );
 }
 
+// Light tier-colored backgrounds for the pill version of the label (the feed).
+const TIER_TINT: Record<Tier, string> = {
+  "human-made": "bg-human/10 text-human",
+  "human-led": "bg-led/10 text-led",
+  "ai-assisted": "bg-assist/10 text-assist",
+  "ai-heavy": "bg-heavy/10 text-heavy",
+};
+
 /** Small "3% AI" label for cards and tables. */
 /** `unscanned` marks work no scan could check (video), so the number is only the creator's word. */
-export function AiPill({ percent, tier, verified, unscanned }: { percent: number; tier: string; verified?: boolean; unscanned?: boolean }) {
+/** `tinted` sets it in a pill colored by its tier, for the phone feed. */
+export function AiPill({
+  percent,
+  tier,
+  verified,
+  unscanned,
+  tinted,
+}: {
+  percent: number;
+  tier: string;
+  verified?: boolean;
+  unscanned?: boolean;
+  tinted?: boolean;
+}) {
+  const look = tinted
+    ? `h-[26px] rounded-full px-2.5 font-bold ${TIER_TINT[tier as Tier] ?? "bg-field text-ink-soft"}`
+    : "font-semibold text-ink-soft";
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
+    <span className={`inline-flex items-center gap-1.5 text-xs ${look}`}>
       <span className={`h-2 w-2 rounded-full ${TIER_BG[tier as Tier] ?? "bg-ink"}`} aria-hidden="true" />
       {percent}% AI
       {verified && (

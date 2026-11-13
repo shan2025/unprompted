@@ -12,8 +12,12 @@ const created = (item: FeedItem) => (item.kind === "listing" ? item.listing.crea
  * work for sale, newest first. Unlike Explore it mixes in the marketplace,
  * so people can buy straight from what they're scrolling.
  */
-export async function homeFeed(limit = 30) {
-  const [listings, posts] = await Promise.all([searchListings({ sort: "new", limit }), searchPosts({ sort: "new", limit })]);
+export async function homeFeed(limit = 30, { followedBy, category }: { followedBy?: number; category?: string } = {}) {
+  const categories = category ? [category] : undefined;
+  const [listings, posts] = await Promise.all([
+    searchListings({ sort: "new", limit, followedBy, categories }),
+    searchPosts({ sort: "new", limit, followedBy, categories }),
+  ]);
   const items: FeedItem[] = [
     ...listings.map((listing) => ({ kind: "listing" as const, listing })),
     ...posts.map((post) => ({ kind: "post" as const, post })),

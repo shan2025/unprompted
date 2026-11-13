@@ -14,7 +14,8 @@ import { ShareButton } from "./ShareButton";
 // scroll down. Videos play and writing reads right here; the title opens
 // the full piece. Work for sale carries its price and a Buy button.
 
-const ACTION = "-m-2 p-2 text-ink transition-[scale] duration-150 ease-out [-webkit-tap-highlight-color:transparent] active:scale-90";
+const ACTION =
+  "-m-2 inline-flex items-center gap-1.5 p-2 text-ink transition-[scale] duration-150 ease-out [-webkit-tap-highlight-color:transparent] active:scale-90";
 
 /** `liked`: whether the viewer has already appreciated this post. */
 export function FeedPost({ item, liked = false }: { item: FeedItem; liked?: boolean }) {
@@ -40,13 +41,16 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <article className="border-b border-line pb-4">
-      <header className="flex items-center gap-2.5 px-4 py-3">
-        <Link href={`/u/${handle}`} className="flex min-w-0 items-center gap-2.5">
-          <Avatar name={name} file={avatarFile} className="h-8 w-8 shrink-0 text-xs" />
-          <span className="truncate text-sm font-semibold text-ink">{name}</span>
+    // A thick grey band between posts, so each one reads as its own card.
+    <article className="border-t-8 border-field pb-3 first-of-type:border-t-0">
+      <header className="flex items-center gap-2.5 px-4 pb-3 pt-4">
+        <Link href={`/u/${handle}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+          <Avatar name={name} file={avatarFile} className="h-10 w-10 shrink-0 text-sm" />
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[15px] font-bold text-ink">{name}</span>
+            <span className="mt-0.5 block truncate text-[13px] text-muted">{formatShortDate(date)}</span>
+          </span>
         </Link>
-        <span className="shrink-0 text-sm text-muted">· {formatShortDate(date)}</span>
         <span className="ml-auto shrink-0">{aiPill}</span>
       </header>
       {children}
@@ -58,13 +62,11 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
   const href = `/journal/${post.slug}`;
   const video = post.videoUrl ? videoEmbed(post.videoUrl) : null;
   const hasPicture = Boolean(post.coverFile || post.coverTheme || post.coverPattern);
-  const aiPill = <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} />;
+  const aiPill = <AiPill percent={post.aiPercent} tier={post.tier} verified={post.processVerified} unscanned={Boolean(video)} tinted />;
   const media = Boolean(video || hasPicture);
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const counts = [
-    post.appreciations > 0 && plural(post.appreciations, "appreciation"),
-    post.comments > 0 && plural(post.comments, "comment"),
-  ].filter(Boolean) as string[];
+  // About 230 words a minute; only writing long enough to time gets a read time.
+  const minutes = Math.ceil(post.words / 230);
+  const kicker = post.words >= 100 ? `${categoryLabel(post.category)} · ${minutes} min read` : categoryLabel(post.category);
   const caption = (
     <Link href={href} className={`block px-4 text-[15px] leading-relaxed ${media ? "pt-1" : "pb-1"}`}>
       <h2 className={`font-medium text-ink ${media ? "text-base" : "text-xl leading-snug"}`}>{post.title}</h2>
@@ -74,7 +76,13 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
   );
 
   return (
-    <Shell name={post.authorName} handle={post.authorHandle} avatarFile={post.authorAvatarFile} date={post.createdAt} aiPill={aiPill}>
+    <Shell
+      name={post.authorName}
+      handle={post.authorHandle}
+      avatarFile={post.authorAvatarFile}
+      date={post.createdAt}
+      aiPill={aiPill}
+    >
       {video ? (
         <div className="aspect-video bg-ink">
           <iframe
@@ -91,7 +99,7 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
         <StoryCard
           href={href}
           cover={<Cover slug={post.slug} category={post.category} coverFile={post.coverFile} theme={post.coverTheme} pattern={post.coverPattern} title={post.title} />}
-          kicker={categoryLabel(post.category)}
+          kicker={kicker}
           title={post.title}
           lines={post.excerpt}
         />
@@ -100,16 +108,15 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
       {/* Writing with no picture reads first, like a text post. A picture post carries its words on the card. */}
       {!media && caption}
 
-      <div className="flex items-center gap-5 px-4 pt-3">
-        <LikeButton slug={post.slug} liked={liked} count={post.appreciations} className={ACTION} />
+      <div className="flex items-center gap-6 px-4 pt-3">
+        <LikeButton slug={post.slug} liked={liked} count={post.appreciations} showCount className={ACTION} />
         <Link href={`${href}#comments`} aria-label={`Comments · ${post.comments}`} className={ACTION}>
-          <CommentIcon className="h-[26px] w-[26px]" />
+          <CommentIcon className="h-6 w-6" />
+          {post.comments > 0 && <span className="text-sm font-semibold tabular-nums">{post.comments}</span>}
         </Link>
         <ShareButton path={href} title={post.title} className={ACTION} />
-        {!hasPicture && <span className="eyebrow ml-auto">{categoryLabel(post.category)}</span>}
       </div>
 
-      {counts.length > 0 && <p className="px-4 pt-2 text-sm font-semibold text-ink">{counts.join(" · ")}</p>}
       {video && caption}
     </Shell>
   );
@@ -118,14 +125,15 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
 function ListingEntry({ listing }: { listing: Listing }) {
   const href = `/listing/${listing.slug}`;
   const forSale = listing.priceCents > 0 && listing.status !== "sold";
-  const aiPill = <AiPill percent={listing.aiPercent} tier={listing.tier} verified={listing.processVerified} />;
+  const aiPill = <AiPill percent={listing.aiPercent} tier={listing.tier} verified={listing.processVerified} tinted />;
 
   return (
     <Shell name={listing.creatorName} handle={listing.creatorHandle} avatarFile={null} date={listing.createdAt} aiPill={aiPill}>
       <StoryCard
         href={href}
         cover={<Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} />}
-        kicker={`${categoryLabel(listing.category)} · ${listing.status === "sold" ? "Sold" : forSale ? "For sale" : "Free"}`}
+        kicker={categoryLabel(listing.category)}
+        badge={listing.status === "sold" ? "Sold" : forSale ? "For sale" : "Free"}
         title={listing.title}
         lines={listing.summary}
       />
@@ -144,16 +152,40 @@ function ListingEntry({ listing }: { listing: Listing }) {
 
 /**
  * The picture fills a rounded card and its lower half fades to dark, carrying
- * the craft, the title and the first few lines, like a newsletter app's feed.
+ * the craft, the title and the first lines, like a newsletter app's feed.
+ * The whole card opens the piece.
  */
-function StoryCard({ href, cover, kicker, title, lines }: { href: string; cover: React.ReactNode; kicker: string; title: string; lines?: string | null }) {
+function StoryCard({
+  href,
+  cover,
+  kicker,
+  badge,
+  title,
+  lines,
+}: {
+  href: string;
+  cover: React.ReactNode;
+  kicker: string;
+  badge?: string;
+  title: string;
+  lines?: string | null;
+}) {
   return (
-    <Link href={href} className="relative mx-4 block aspect-[4/5] overflow-hidden rounded-[14px] bg-ink [-webkit-tap-highlight-color:transparent]">
+    // Arbitrary radius: the theme's radius tokens are all square.
+    <Link
+      href={href}
+      className="relative mx-4 block aspect-[20/19] overflow-hidden rounded-[14px] bg-ink transition-[scale] duration-200 ease-out [-webkit-tap-highlight-color:transparent] active:scale-[0.99]"
+    >
       <div className="absolute inset-0">{cover}</div>
-      <div className="absolute inset-x-0 bottom-0 flex min-h-[55%] flex-col justify-end bg-gradient-to-t from-black/90 via-black/70 to-transparent px-5 pb-5 pt-16 text-white">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-white/75">{kicker}</span>
-        <h2 className="mt-2 text-[22px] font-semibold leading-tight">{title}</h2>
-        {lines && <p className="mt-2 line-clamp-3 whitespace-pre-line text-[15px] leading-snug text-white/80">{lines}</p>}
+      {badge && (
+        <span className="absolute left-3.5 top-3.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white backdrop-blur-md">
+          {badge}
+        </span>
+      )}
+      <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/50 to-transparent px-[18px] pb-[18px] pt-20 text-white">
+        <span className="text-[12px] font-bold uppercase tracking-[0.1em] text-white/90">{kicker}</span>
+        <h2 className="mt-1.5 text-balance text-[25px] font-extrabold leading-[1.16] tracking-[-0.02em]">{title}</h2>
+        {lines && <p className="mt-1.5 line-clamp-2 whitespace-pre-line text-[15px] leading-snug text-white/90">{lines}</p>}
       </div>
     </Link>
   );

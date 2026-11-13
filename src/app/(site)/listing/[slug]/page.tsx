@@ -378,7 +378,7 @@ async function ListingView({ params, searchParams }: Props) {
       {showBuyBar && (
         <>
           <div aria-hidden="true" className="h-20 lg:hidden" />
-          <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-paper/95 backdrop-blur md:bottom-0 md:pb-[env(safe-area-inset-bottom)] lg:hidden">
+          <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-paper/95 backdrop-blur md:bottom-0 md:pb-[env(safe-area-inset-bottom)] lg:hidden">
             <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:px-6">
               <div className="min-w-0">
                 <p className="font-display text-xl font-medium leading-tight tabular-nums">{formatPrice(listing.priceCents, listing.currency)}</p>

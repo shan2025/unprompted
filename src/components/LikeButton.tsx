@@ -9,7 +9,19 @@ import { HeartIcon } from "./PostCard";
  * feed page isn't re-fetched, so the button keeps its own state afterwards.
  * Signed-out people are sent to log in by the action.
  */
-export function LikeButton({ slug, liked, count, className = "" }: { slug: string; liked: boolean; count: number; className?: string }) {
+export function LikeButton({
+  slug,
+  liked,
+  count,
+  className = "",
+  showCount = false,
+}: {
+  slug: string;
+  liked: boolean;
+  count: number;
+  className?: string;
+  showCount?: boolean;
+}) {
   const [state, setState] = useState({ liked, count });
   const [pending, startTransition] = useTransition();
 
@@ -36,7 +48,8 @@ export function LikeButton({ slug, liked, count, className = "" }: { slug: strin
       aria-label={`Appreciate · ${state.count}`}
       className={`${className} ${state.liked ? "text-heavy" : ""}`}
     >
-      <HeartIcon className="h-[26px] w-[26px]" filled={state.liked} />
+      <HeartIcon className="h-6 w-6" filled={state.liked} />
+      {showCount && state.count > 0 && <span className="text-sm font-medium tabular-nums">{state.count}</span>}
     </button>
   );
 }

@@ -1,13 +1,28 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { CATEGORIES, isCategory } from "@/lib/categories";
+import { usedCategories } from "@/lib/data";
 import { appreciatedPostIds, homeFeed } from "@/lib/home-feed";
+import { FeedBar, type FeedTab } from "./FeedBar";
 import { FeedPost } from "./FeedPost";
 
+export type HomeFeedParams = { feed?: string; category?: string };
+
 /** The phone home page: a short welcome for visitors, then the feed to scroll. */
-export async function HomeFeed() {
+export async function HomeFeed({ searchParams }: { searchParams: Promise<HomeFeedParams> }) {
   await connection();
-  const [user, items] = await Promise.all([getCurrentUser(), homeFeed(30)]);
+  const params = await searchParams;
+  const user = await getCurrentUser();
+  const feed: FeedTab = params.feed === "following" && user ? "following" : "foryou";
+  const category = isCategory(params.category) ? params.category : undefined;
+  const [items, explore, market] = await Promise.all([
+    homeFeed(30, { followedBy: feed === "following" ? user?.id : undefined, category }),
+    usedCategories("explore"),
+    usedCategories("marketplace"),
+  ]);
+  // Only crafts with something in them, so a chip never leads to an empty feed.
+  const crafts = CATEGORIES.filter((c) => explore.includes(c.id) || market.includes(c.id)).map((c) => ({ id: c.id, label: c.label }));
   const liked = user
     ? await appreciatedPostIds(
         user.id,
@@ -34,12 +49,32 @@ export async function HomeFeed() {
         </section>
       )}
 
+      <FeedBar feed={feed} category={category} categories={crafts} signedIn={Boolean(user)} />
+
       {items.length === 0 ? (
         <p className="px-4 py-16 text-center text-ink-soft">
-          Nothing shared yet.{" "}
-          <Link href="/start" className="link text-ink">
-            Be the first.
-          </Link>
+          {feed === "following" ? (
+            <>
+              Nothing new from the people you follow{category ? " in this craft" : ""}.{" "}
+              <Link href="/explore" className="link text-ink">
+                Find people to follow
+              </Link>
+            </>
+          ) : category ? (
+            <>
+              Nothing here yet.{" "}
+              <Link href="/" className="link text-ink">
+                See everything
+              </Link>
+            </>
+          ) : (
+            <>
+              Nothing shared yet.{" "}
+              <Link href="/start" className="link text-ink">
+                Be the first.
+              </Link>
+            </>
+          )}
         </p>
       ) : (
         <>
