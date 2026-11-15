@@ -1,73 +1,130 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { login, signup } from "@/app/actions/auth";
+import { phoneLogin } from "@/app/actions/phone";
+import { formatPhone, looksLikePhone } from "@/lib/phone";
+import { PhoneCodeStep } from "./PhoneForms";
 
-export function AuthForm({ mode, next, google, googleError }: { mode: "login" | "signup"; next: string; google?: boolean; googleError?: string }) {
-  const [state, action, pending] = useActionState(mode === "login" ? login : signup, null);
+const ALERT = "rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink";
 
+/**
+ * Log in or sign up. With `phone` on, the box takes an email or a phone number:
+ * an email uses a password as before, and a phone number gets a texted code.
+ */
+export function AuthForm({
+  mode,
+  next,
+  google,
+  phone,
+  googleError,
+}: {
+  mode: "login" | "signup";
+  next: string;
+  google?: boolean;
+  phone?: boolean;
+  googleError?: string;
+}) {
+  const [emailState, emailAction, emailPending] = useActionState(mode === "login" ? login : signup, null);
+  const [phoneState, phoneAction, phonePending] = useActionState(phoneLogin, null);
+  const [identifier, setIdentifier] = useState("");
+
+  const redirectTo = emailState?.next ?? phoneState?.next;
   useEffect(() => {
-    if (state?.next) window.location.assign(state.next);
-  }, [state]);
-  const v = state?.values ?? {};
+    if (redirectTo) window.location.assign(redirectTo);
+  }, [redirectTo]);
+
+  // "Use a different number" comes back to this form with the number filled in.
+  const [shownPhone, setShownPhone] = useState<string | undefined>();
+  if (phoneState?.step === "number" && phoneState.phone && phoneState.phone !== shownPhone) {
+    setShownPhone(phoneState.phone);
+    setIdentifier(formatPhone(phoneState.phone));
+  }
+
+  const usingPhone = Boolean(phone) && looksLikePhone(identifier);
+  const v = emailState?.values ?? {};
   const other = mode === "login" ? "/signup" : "/login";
   const otherHref = next ? `${other}?next=${encodeURIComponent(next)}` : other;
   const googleHref = next ? `/api/auth/google?next=${encodeURIComponent(next)}` : "/api/auth/google";
+
+  if (phoneState?.step === "code") {
+    return <PhoneCodeStep state={phoneState} action={phoneAction} pending={phonePending} next={next} />;
+  }
+
+  const pending = usingPhone ? phonePending : emailPending;
+  const error = usingPhone ? phoneState?.error : emailState?.error;
 
   return (
     <>
       {/* Shown first, so someone sent back from Google sees why straight away. */}
       {googleError && (
-        <p role="alert" className="mb-4 rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
+        <p role="alert" className={`mb-4 ${ALERT}`}>
           {googleError}
         </p>
       )}
-      <form action={action} className="space-y-4">
+      <form action={usingPhone ? phoneAction : emailAction} className="space-y-4">
         <input type="hidden" name="next" value={next} />
+        <input type="hidden" name="mode" value={mode} />
+        {usingPhone && <input type="hidden" name="intent" value="send" />}
         {mode === "signup" && (
           <div>
             <label htmlFor="name" className="label">
               Your name
             </label>
-            <input id="name" name="name" className="field" defaultValue={v.name} autoComplete="name" required />
+            <input id="name" name="name" className="field" defaultValue={v.name ?? phoneState?.name} autoComplete="name" required />
           </div>
         )}
         <div>
-          <label htmlFor="email" className="label">
-            Email
-          </label>
-          <input id="email" name="email" type="email" className="field" defaultValue={v.email} autoComplete="email" required />
-        </div>
-        <div>
-          <label htmlFor="password" className="label">
-            Password
+          <label htmlFor="identifier" className="label">
+            {phone ? "Email or phone number" : "Email"}
           </label>
           <input
-            id="password"
-            name="password"
-            type="password"
+            id="identifier"
+            name="identifier"
+            type={phone ? "text" : "email"}
+            inputMode={usingPhone ? "tel" : "email"}
             className="field"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            minLength={mode === "signup" ? 8 : undefined}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            autoComplete={phone ? "username" : "email"}
+            autoCapitalize="none"
+            spellCheck={false}
             required
           />
-          {mode === "signup" ? (
-            <p className="hint">At least 8 characters.</p>
-          ) : (
-            <Link href="/forgot-password" className="mt-2 inline-block text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
-              Forgot password?
-            </Link>
-          )}
+          {usingPhone && <p className="hint">We&apos;ll text you a code. Outside India? Start with + and your country code.</p>}
         </div>
-        {state?.error && (
-          <p role="alert" className="rounded-lg bg-accent-soft px-4 py-3 text-sm font-medium text-ink">
-            {state.error}
+        {!usingPhone && (
+          <div>
+            <label htmlFor="password" className="label">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              className="field"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              minLength={mode === "signup" ? 8 : undefined}
+              required
+            />
+            {mode === "signup" ? (
+              <p className="hint">At least 8 characters.</p>
+            ) : (
+              <Link href="/forgot-password" className="mt-2 inline-block text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
+                Forgot password?
+              </Link>
+            )}
+          </div>
+        )}
+        {error && (
+          <p role="alert" className={ALERT}>
+            {error}
           </p>
         )}
-        {mode === "signup" && (
+        {(mode === "signup" || usingPhone) && (
           <p className="text-xs leading-relaxed text-muted">
-            By creating an account, with Google or a password, you agree to our{" "}
+            {mode === "signup" ? "By creating an account" : "If this number is new to us, we'll make you an account. By continuing"}, you agree to our{" "}
             <Link href="/terms" className="link text-ink-soft">
               terms
             </Link>{" "}
@@ -78,8 +135,8 @@ export function AuthForm({ mode, next, google, googleError }: { mode: "login" | 
             , and that you are 18 or older.
           </p>
         )}
-        <button className="btn-primary w-full" disabled={pending || Boolean(state?.next)}>
-          {pending || state?.next ? "One moment…" : mode === "login" ? "Log in" : "Create account"}
+        <button className="btn-primary w-full" disabled={pending || Boolean(redirectTo)}>
+          {pending || redirectTo ? "One moment…" : usingPhone ? "Text me a code" : mode === "login" ? "Log in" : "Create account"}
         </button>
       </form>
 

@@ -23,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .orderBy(desc(listings.createdAt))
       .limit(MAX_OF_EACH),
     db
-      .select({ slug: posts.slug, createdAt: posts.createdAt, handle: users.handle })
+      .select({ slug: posts.slug, createdAt: posts.createdAt, updatedAt: posts.updatedAt, handle: users.handle })
       .from(posts)
       .innerJoin(users, eq(posts.authorId, users.id))
       .where(and(eq(posts.status, "published"), eq(posts.isDemo, false)))
@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...STATIC_PAGES.map((path) => ({ url: `${base}${path === "/" ? "" : path}` })),
     ...listingRows.map((l) => ({ url: `${base}/listing/${l.slug}`, lastModified: l.createdAt })),
-    ...postRows.map((p) => ({ url: `${base}/journal/${p.slug}`, lastModified: p.createdAt })),
+    ...postRows.map((p) => ({ url: `${base}/journal/${p.slug}`, lastModified: p.updatedAt ?? p.createdAt })),
     ...[...handles].map((handle) => ({ url: `${base}/u/${handle}` })),
   ];
 }

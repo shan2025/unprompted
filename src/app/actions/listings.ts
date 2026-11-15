@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { CLAIM_HOLD_DAYS, claimHoldCutoff } from "@/lib/data";
 import { db, schema } from "@/lib/db";
 import { escapeHtml, sendEmail } from "@/lib/email";
+import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { siteUrl } from "@/lib/format";
 import { parseListingForm, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
 import { PAYMENT_LINK_HELP, parsePaymentLink } from "@/lib/payment-link";
@@ -55,6 +56,7 @@ export async function previewAssessment(fd: FormData): Promise<PreviewState> {
 export async function createListing(_prev: CreateState, fd: FormData): Promise<CreateState> {
   const user = await getCurrentUser();
   if (!user) return { message: "Your session expired. Log in again." };
+  if (!user.verified) return { message: UNVERIFIED_MESSAGE };
 
   const parsed = await parseListingForm(fd, { requireAttestation: true });
   if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
@@ -140,7 +142,9 @@ export async function buyListing(slug: string) {
   redirect(bought ? `/listing/${slug}?purchased=1` : `/listing/${slug}`);
 }
 
-async function notify(to: string, subject: string, lines: string[], path: string) {
+async function notify(to: string | null, subject: string, lines: string[], path: string) {
+  // phone-only accounts have no email; they see the order on their dashboard instead.
+  if (!to) return;
   const link = `${siteUrl()}${path}`;
   await sendEmail({
     to,

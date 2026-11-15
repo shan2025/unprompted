@@ -10,6 +10,7 @@ import { notifyAppreciation, notifyComment, notifyFollow } from "@/lib/notify";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
+import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { safeNext } from "@/lib/format";
 import { MAX_EVIDENCE, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE } from "@/lib/listing-form";
 import {
@@ -94,6 +95,7 @@ export async function previewPostAssessment(fd: FormData): Promise<PostPreviewSt
 export async function createPost(_prev: PostCreateState, fd: FormData): Promise<PostCreateState> {
   const user = await getCurrentUser();
   if (!user) return { message: "Your session expired. Log in again." };
+  if (!user.verified) return { message: UNVERIFIED_MESSAGE };
 
   const parsed = await parsePostForm(fd, { requireAttestation: true });
   if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
@@ -198,6 +200,7 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
         disclosure: v.disclosure,
         ...scoreColumns(result),
         evidence,
+        updatedAt: new Date(),
       })
       .where(eq(schema.posts.id, post.id)),
   );
@@ -261,6 +264,7 @@ export type CommentState = { ok?: boolean; message?: string; key?: number } | nu
 export async function addComment(_prev: CommentState, fd: FormData): Promise<CommentState> {
   const user = await getCurrentUser();
   if (!user) return { message: "Log in to comment." };
+  if (!user.verified) return { message: UNVERIFIED_MESSAGE };
 
   const slug = String(fd.get("slug") ?? "");
   const body = String(fd.get("body") ?? "").trim();

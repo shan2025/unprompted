@@ -7,6 +7,9 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { requireUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { formatDate, siteUrl } from "@/lib/format";
+import { phoneLoginEnabled } from "@/lib/sms";
+import { ResendVerification } from "@/components/VerifyEmail";
+import { AddEmailForm, LinkPhoneForm } from "@/components/PhoneForms";
 
 export const metadata: Metadata = { title: "Edit profile" };
 
@@ -17,6 +20,58 @@ export default function EditProfilePage() {
         <EditProfile />
       </Suspense>
     </div>
+  );
+}
+
+// How you get into your account: an email and password, a phone number, or both.
+function LoginMethods({
+  email,
+  emailVerified,
+  phone,
+  phoneEnabled,
+}: {
+  email: string | null;
+  emailVerified: boolean;
+  phone: string | null;
+  phoneEnabled: boolean;
+}) {
+  return (
+    <section id="login" className="mt-14 grid gap-8 border-t border-line pt-10 md:grid-cols-[1fr_2fr]">
+      <div>
+        <h2 className="text-2xl font-light">How you log in</h2>
+        <p className="mt-2 text-sm text-ink-soft">Use either one. Neither is shown on your profile.</p>
+      </div>
+      <div className="grid gap-8 sm:grid-cols-2">
+        <div>
+          <h3 className="eyebrow">Email</h3>
+          <div className="mt-3">
+            {email ? (
+              <div className="space-y-2 text-sm">
+                <p className="break-all">{email}</p>
+                {emailVerified ? (
+                  <p className="text-muted">Confirmed</p>
+                ) : (
+                  <>
+                    <p className="text-muted">Not confirmed yet. Check your inbox for our link.</p>
+                    <ResendVerification />
+                  </>
+                )}
+              </div>
+            ) : (
+              <AddEmailForm />
+            )}
+          </div>
+        </div>
+        {(phoneEnabled || phone) && (
+          <div>
+            <h3 className="eyebrow">Phone</h3>
+            <div className="mt-3">
+              <LinkPhoneForm phone={phone} hasEmail={Boolean(email)} />
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -51,7 +106,8 @@ async function EditProfile() {
         links={row?.links ?? []}
         avatarFile={user.avatarFile}
       />
-      <NotificationSwitch initial={row?.emailNotifications ?? true} />
+      <LoginMethods email={user.email} emailVerified={user.emailVerified} phone={user.phone} phoneEnabled={phoneLoginEnabled()} />
+      {user.email && <NotificationSwitch initial={row?.emailNotifications ?? true} />}
     </>
   );
 }

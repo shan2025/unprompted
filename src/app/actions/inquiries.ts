@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { hideDemo } from "@/lib/demo";
 import { escapeHtml, sendEmail } from "@/lib/email";
+import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { siteUrl } from "@/lib/format";
 import { MAX_QUESTION, MIN_QUESTION, type AskState } from "@/lib/inquiry";
 import { withinLimit } from "@/lib/rate-limit";
@@ -37,6 +38,9 @@ async function findWork(target: string, slug: string) {
 export async function askCreator(_prev: AskState, fd: FormData): Promise<AskState> {
   const user = await getCurrentUser();
   if (!user) return { message: "Log in to ask a question." };
+  if (!user.verified) return { message: UNVERIFIED_MESSAGE };
+  // The creator answers by replying to an email, so there has to be an address to reply to.
+  if (!user.email) return { message: "Add an email in Edit profile first, so the creator has somewhere to reply." };
 
   const message = String(fd.get("message") ?? "").trim();
   if (message.length < MIN_QUESTION) return { message: "Write a little more so they can answer you." };
@@ -56,6 +60,8 @@ export async function askCreator(_prev: AskState, fd: FormData): Promise<AskStat
   const link = `${siteUrl()}${work.path}`;
   const firstName = work.creatorName.split(" ")[0];
   // A failed email isn't a failed question: it's saved, and shows on their dashboard.
+  // So does a question to a phone-only creator, who has no email to send to.
+  if (!work.creatorEmail) return { ok: true, key: Date.now() };
   await sendEmail({
     to: work.creatorEmail,
     replyTo: user.email,

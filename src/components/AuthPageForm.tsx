@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { homePath } from "@/lib/data";
 import { safeNext } from "@/lib/format";
 import { googleEnabled } from "@/lib/google";
+import { phoneLoginEnabled } from "@/lib/sms";
 import { AuthForm } from "./AuthForm";
 
 export async function AuthPageForm({
@@ -19,7 +20,7 @@ export async function AuthPageForm({
   const user = await getCurrentUser();
   if (user) redirect(next || (await homePath(user.id)));
   const error = GOOGLE_ERRORS[first(params.error) ?? ""];
-  return <AuthForm mode={mode} next={next} google={googleEnabled()} googleError={error} />;
+  return <AuthForm mode={mode} next={next} google={googleEnabled()} phone={phoneLoginEnabled()} googleError={error} />;
 }
 
 // Set by the Google sign-in routes when they send someone back here.

@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import { createSession } from "@/lib/auth";
 import { homePath } from "@/lib/data";
 import { db, schema } from "@/lib/db";
+import { markEmailVerified } from "@/lib/email-verification";
 import { safeNext } from "@/lib/format";
 import { GOOGLE_COOKIE, googleEnabled, googleProfile } from "@/lib/google";
 import { makeHandle } from "@/lib/handles";
@@ -39,7 +40,9 @@ export async function GET(request: NextRequest) {
   if (!profile) redirect("/login?error=google");
 
   const [existing] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, profile.email)).limit(1);
+  // Google has checked the address, so it counts as confirmed.
   if (existing) {
+    await markEmailVerified(existing.id);
     await createSession(existing.id);
     redirect(safeNext(started.next, await homePath(existing.id)));
   }
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const [user] = await db
       .insert(schema.users)
-      .values({ name: profile.name, handle: await makeHandle(profile.name), email: profile.email, passwordHash })
+      .values({ name: profile.name, handle: await makeHandle(profile.name), email: profile.email, passwordHash, emailVerifiedAt: new Date() })
       .onConflictDoNothing()
       .returning({ id: schema.users.id });
     if (user) {
@@ -62,6 +65,7 @@ export async function GET(request: NextRequest) {
     // Signed up with this email a moment ago, in another tab.
     const [raced] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, profile.email)).limit(1);
     if (raced) {
+      await markEmailVerified(raced.id);
       await createSession(raced.id);
       redirect(safeNext(started.next, await homePath(raced.id)));
     }

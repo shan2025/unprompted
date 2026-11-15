@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { SellForm } from "@/components/SellForm";
+import { ConfirmEmailCard } from "@/components/VerifyEmailNotice";
 import { requireUser } from "@/lib/auth";
 import { isCategory } from "@/lib/categories";
 import { LEVELS, type Level } from "@/lib/scoring";
@@ -51,6 +52,7 @@ async function Gate({ searchParams }: Props) {
   const qs = new URLSearchParams();
   if (prefill.category) qs.set("category", prefill.category);
   if (prefill.ai) qs.set("ai", prefill.ai);
-  await requireUser(qs.size ? `/sell?${qs}` : "/sell", { newcomers: true });
+  const user = await requireUser(qs.size ? `/sell?${qs}` : "/sell", { newcomers: true });
+  if (!user.verified) return <ConfirmEmailCard email={user.email ?? ""} doing="sell your work" />;
   return <SellForm defaultCategory={prefill.category} defaultAi={prefill.ai} />;
 }

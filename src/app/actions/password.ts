@@ -6,6 +6,7 @@ import { createSession } from "@/lib/auth";
 import { homePath } from "@/lib/data";
 import { db, schema } from "@/lib/db";
 import { escapeHtml, sendEmail } from "@/lib/email";
+import { markEmailVerified } from "@/lib/email-verification";
 import { siteUrl } from "@/lib/format";
 import { hashPassword } from "@/lib/password";
 import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
@@ -83,6 +84,8 @@ export async function resetPassword(_prev: ResetState, fd: FormData): Promise<Re
     .set({ usedAt: sql`now()` })
     .where(and(eq(passwordResets.userId, claimed.userId), isNull(passwordResets.usedAt)));
 
+  // The link reached their inbox, which is the same proof a confirmation link gives.
+  await markEmailVerified(claimed.userId);
   await createSession(claimed.userId);
   return { next: await homePath(claimed.userId) };
 }

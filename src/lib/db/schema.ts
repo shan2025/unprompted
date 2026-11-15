@@ -28,7 +28,10 @@ const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
 
 export const users = pgTable("users", {
   id: id(),
-  email: text("email").notNull().unique(),
+  /** Null for people who signed up with a phone number and haven't added an email. */
+  email: text("email").unique(),
+  /** Mobile number in E.164 form (+919876543210), confirmed with a texted code. Null if they never added one. */
+  phone: text("phone").unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
   handle: text("handle").notNull().unique(),
@@ -41,8 +44,26 @@ export const users = pgTable("users", {
   emailNotifications: boolean("email_notifications").notNull().default(true),
   /** One of the hand-picked first creators. Shown as a permanent badge; a moderator sets it. */
   founding: boolean("founding").notNull().default(false),
+  /** When they proved they own the email: a link we sent, or a Google login. Null until then. */
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   createdAt: createdAt(),
-}).enableRLS();
+}, (t) => [check("users_email_or_phone", sql`${t.email} is not null or ${t.phone} is not null`)]).enableRLS();
+
+/** Six-digit codes texted to log in, sign up or add a number to an account. */
+export const phoneCodes = pgTable(
+  "phone_codes",
+  {
+    id: id(),
+    phone: text("phone").notNull(),
+    // SHA-256 of the phone and code together; the code itself is never stored.
+    codeHash: text("code_hash").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("phone_codes_phone_idx").on(t.phone, t.createdAt)],
+).enableRLS();
 
 export const sessions = pgTable("sessions", {
   // SHA-256 of the cookie token, so a leaked database can't be replayed.
@@ -168,6 +189,8 @@ export const posts = pgTable(
     /** When a moderator put it in the home page's Featured row. Null when it isn't featured. */
     featuredAt: timestamp("featured_at", { withTimezone: true }),
     createdAt: createdAt(),
+    /** When the author last edited it. Null if never edited. Tells search engines to look again. */
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
   },
   (t) => [index("posts_status_idx").on(t.status, t.createdAt), index("posts_author_idx").on(t.authorId)],
 ).enableRLS();
@@ -311,6 +334,21 @@ export const passwordResets = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("password_resets_user_idx").on(t.userId)],
+).enableRLS();
+
+export const emailVerifications = pgTable(
+  "email_verifications",
+  {
+    // SHA-256 of the emailed token; the token itself is never stored.
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("email_verifications_user_idx").on(t.userId)],
 ).enableRLS();
 
 // Attempt counters for log-in, sign-up and password resets (see rate-limit.ts).

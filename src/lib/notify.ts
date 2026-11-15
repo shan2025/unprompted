@@ -18,7 +18,8 @@ async function recipient(userId: number) {
     .from(schema.users)
     .where(eq(schema.users.id, userId))
     .limit(1);
-  return row?.wants ? row : null;
+  // Phone-only accounts have no email to send to.
+  return row?.wants && row.email ? { email: row.email, name: row.name } : null;
 }
 
 async function send(to: { email: string; name: string }, subject: string, lines: string[], path: string) {

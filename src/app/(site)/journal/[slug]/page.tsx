@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: "article",
       publishedTime: post.createdAt.toISOString(),
-      modifiedTime: post.createdAt.toISOString(),
+      modifiedTime: (post.updatedAt ?? post.createdAt).toISOString(),
       authors: [`${siteUrl()}/u/${author.handle}`],
     },
   };
@@ -113,7 +113,7 @@ async function PostView({ params, searchParams }: Props) {
             // (its address carries a suffix Next.js generates, so it isn't repeated here).
             ...(post.coverFile && !post.videoUrl && { image: `${siteUrl()}/api/files/${post.coverFile}` }),
             datePublished: post.createdAt.toISOString(),
-            dateModified: post.createdAt.toISOString(),
+            dateModified: (post.updatedAt ?? post.createdAt).toISOString(),
             author: { "@type": "Person", name: author.name, url: `${siteUrl()}/u/${author.handle}` },
             publisher: { "@type": "Organization", name: "Unprompters", url: siteUrl() },
             mainEntityOfPage: `${siteUrl()}${path}`,

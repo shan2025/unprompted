@@ -1,9 +1,10 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { createSession, destroySession } from "@/lib/auth";
+import { createSession, destroySession, getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { homePath } from "@/lib/data";
+import { sendVerificationEmail } from "@/lib/email-verification";
 import { safeNext } from "@/lib/format";
 import { makeHandle } from "@/lib/handles";
 import { hashPassword, verifyPassword } from "@/lib/password";
@@ -17,7 +18,8 @@ const MIN_PASSWORD = 8;
 
 export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState> {
   const name = String(fd.get("name") ?? "").trim();
-  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  // The form's box is "identifier" (it also takes phone numbers); older forms send "email".
+  const email = String(fd.get("identifier") ?? fd.get("email") ?? "").trim().toLowerCase();
   const password = String(fd.get("password") ?? "");
   const values = { name, email };
 
@@ -46,6 +48,7 @@ export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState>
       .returning({ id: schema.users.id });
     if (user) {
       await createSession(user.id);
+      await sendVerificationEmail({ id: user.id, name, email });
       return { next: safeNext(fd.get("next"), "/explore") };
     }
     if (await emailTaken()) return takenError;
@@ -54,7 +57,7 @@ export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState>
 }
 
 export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> {
-  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  const email = String(fd.get("identifier") ?? fd.get("email") ?? "").trim().toLowerCase();
   const password = String(fd.get("password") ?? "");
 
   // Checked before the password, so guesses are capped whether right or wrong.
@@ -82,4 +85,19 @@ export async function login(_prev: AuthState, fd: FormData): Promise<AuthState> 
 
 export async function logout() {
   await destroySession();
+}
+
+export type ResendState = { ok?: boolean; message?: string } | null;
+
+/** Sends a fresh confirmation link to the signed-in person, a few times an hour at most. */
+export async function resendVerification(): Promise<ResendState> {
+  const user = await getCurrentUser();
+  if (!user) return { message: "Log in first." };
+  if (!user.email) return { message: "Add an email in Edit profile first." };
+  if (user.emailVerified) return { ok: true, message: "Your email is already confirmed." };
+  if (!(await withinLimit(`verify-send:user:${user.id}`, 3, 60 * 60))) {
+    return { message: "We've sent a few links already. Check your spam folder, or try again in an hour." };
+  }
+  const sent = await sendVerificationEmail({ id: user.id, name: user.name, email: user.email });
+  return sent ? { ok: true, message: `Sent. Check ${user.email}.` } : { message: "We couldn't send the email. Try again in a few minutes." };
 }

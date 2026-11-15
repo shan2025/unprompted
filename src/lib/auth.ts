@@ -13,9 +13,18 @@ export interface SessionUser {
   id: number;
   name: string;
   handle: string;
-  email: string;
+  /** Null for phone-only accounts. */
+  email: string | null;
+  phone: string | null;
   avatarFile: string | null;
   role: "member" | "admin";
+  /**
+   * They've proved who they are: clicked the link we emailed, logged in with
+   * Google, or confirmed a phone number with a texted code. Needed to post, sell, comment or ask.
+   */
+  verified: boolean;
+  /** Their email specifically is confirmed (false with no email). */
+  emailVerified: boolean;
 }
 
 function hashToken(token: string) {
@@ -54,6 +63,9 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       email: schema.users.email,
       avatarFile: schema.users.avatarFile,
       role: schema.users.role,
+      phone: schema.users.phone,
+      verified: sql<boolean>`(${schema.users.emailVerifiedAt} is not null or ${schema.users.phone} is not null)`,
+      emailVerified: sql<boolean>`(${schema.users.email} is not null and ${schema.users.emailVerifiedAt} is not null)`,
     })
     .from(schema.sessions)
     .innerJoin(schema.users, eq(schema.sessions.userId, schema.users.id))
