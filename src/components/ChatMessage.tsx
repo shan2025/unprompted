@@ -3,32 +3,86 @@
 import { useEffect, useLayoutEffect, useOptimistic, useRef, useState, useTransition, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { deleteDirectMessage, editDirectMessage, reactToDirectMessage } from "@/app/actions/chat";
 import { MAX_MESSAGE_LENGTH, REACTIONS } from "@/lib/chat-rules";
+import { ChatTime, clock, fullDay, sameDay, useIsClient } from "./ChatTime";
 
 type Reaction = { emoji: string; mine: boolean };
+type Panel = "react" | "menu" | "confirm" | null;
+
+export type ThreadMessage = {
+  id: number;
+  body: string;
+  own: boolean;
+  createdAt: string;
+  edited: boolean;
+  editableUntil: number;
+  reactions: Reaction[];
+  seen: boolean;
+};
 
 /** Enter sends on keyboards with a mouse; on phones it adds a new line and the button sends. */
 export function enterSends() {
   return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
-type Panel = "react" | "menu" | "confirm" | null;
 
-export function ChatMessage({ id, body, own, author, time, dateTime, edited, editableUntil, reactions, seen }: {
-  id: number;
-  body: string;
-  own: boolean;
+/** Messages from one person sent this close together sit in one group, with the time shown once under it. */
+const GROUP_GAP_MS = 10 * 60 * 1000;
+
+function together(a: ThreadMessage | undefined, b: ThreadMessage | undefined, client: boolean) {
+  if (!a || !b || a.own !== b.own) return false;
+  const first = new Date(a.createdAt);
+  const second = new Date(b.createdAt);
+  return sameDay(first, second, client) && Math.abs(second.getTime() - first.getTime()) < GROUP_GAP_MS;
+}
+
+/** The messages of one conversation, with a divider wherever the day changes in the viewer's timezone. */
+export function ChatThread({ messages, author }: { messages: ThreadMessage[]; author: string }) {
+  const client = useIsClient();
+  return (
+    <ol>
+      {messages.map((message, index) => {
+        const date = new Date(message.createdAt);
+        const previous = messages[index - 1];
+        const newDay = !previous || !sameDay(new Date(previous.createdAt), date, client);
+        return (
+          <MessageWithDivider key={message.id} divider={newDay ? fullDay(date, client) : null}>
+            <ChatMessage
+              {...message}
+              author={author}
+              groupStart={!together(previous, message, client)}
+              groupEnd={!together(message, messages[index + 1], client)}
+            />
+          </MessageWithDivider>
+        );
+      })}
+    </ol>
+  );
+}
+
+function MessageWithDivider({ divider, children }: { divider: string | null; children: ReactNode }) {
+  return (
+    <>
+      {divider && (
+        <li aria-hidden="true" className="eyebrow flex items-center gap-4 pb-4 pt-6 first:pt-0">
+          <span className="h-px flex-1 bg-line" />{divider}<span className="h-px flex-1 bg-line" />
+        </li>
+      )}
+      {children}
+    </>
+  );
+}
+
+function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, reactions, seen, groupStart, groupEnd }: ThreadMessage & {
   author: string;
-  time: string;
-  dateTime: string;
-  edited: boolean;
-  editableUntil: number;
-  reactions: Reaction[];
-  seen: boolean;
+  groupStart: boolean;
+  groupEnd: boolean;
 }) {
+  const client = useIsClient();
   const [panel, setPanel] = useState<Panel>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [editable, setEditable] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(reactions, (current, emoji: string | null) => [
     ...current.filter((reaction) => !reaction.mine),
@@ -37,6 +91,7 @@ export function ChatMessage({ id, body, own, author, time, dateTime, edited, edi
   const reactButton = useRef<HTMLButtonElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const mine = shown.find((reaction) => reaction.mine)?.emoji ?? null;
+  const date = new Date(createdAt);
 
   function run(action: () => Promise<{ error?: string }>, after?: () => void) {
     setError("");
@@ -73,9 +128,10 @@ export function ChatMessage({ id, body, own, author, time, dateTime, edited, edi
     counts[reaction.emoji] = (counts[reaction.emoji] ?? 0) + 1;
     return counts;
   }, {}));
+  const meta = groupEnd || edited || copied;
 
   return (
-    <li className={`group flex flex-col ${own ? "items-end" : "items-start"}`}>
+    <li className={`group flex flex-col ${own ? "items-end" : "items-start"} ${groupStart ? "mt-4 first:mt-0" : "mt-1"}`}>
       <div className={`flex w-full items-center gap-1 ${own ? "flex-row-reverse" : ""}`}>
         {editing ? (
           <EditBox
@@ -85,26 +141,19 @@ export function ChatMessage({ id, body, own, author, time, dateTime, edited, edi
             onSave={(text) => text.trim() === body ? setEditing(false) : run(() => editDirectMessage(id, text), () => setEditing(false))}
           />
         ) : (
-          <div className={`relative max-w-[78%] sm:max-w-[72%] ${shown.length ? "mb-3" : ""}`}>
-            <div className={`rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] ${own ? "rounded-br-sm bg-ink text-paper" : "rounded-bl-sm border border-line bg-paper text-ink"} ${pending ? "opacity-60" : ""}`}>
+          <div className="max-w-[80%] md:max-w-[70%]">
+            <div
+              // On touch screens a tap shows the React and More buttons; with a mouse they appear on hover.
+              onClick={() => setRevealed(!revealed)}
+              title={client ? `${fullDay(date, true)}, ${clock(date, true)}` : undefined}
+              className={`px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] md:text-sm ${own ? "bg-ink text-white" : "bg-field text-ink"} ${pending ? "opacity-60" : ""}`}
+            >
               <span className="sr-only">{own ? "You" : author}: </span>{body}
             </div>
-            {grouped.length > 0 && (
-              <button
-                type="button"
-                onClick={() => (mine ? react(mine) : setPanel("react"))}
-                aria-label={`Reactions: ${shown.map((reaction) => `${reaction.emoji}${reaction.mine ? " (yours)" : ""}`).join(", ")}${mine ? ". Remove yours" : ""}`}
-                className={`absolute -bottom-3.5 ${own ? "right-2" : "left-2"} flex h-7 items-center gap-0.5 rounded-full border border-line bg-paper px-1.5 text-sm leading-none shadow-sm hover:bg-field`}
-              >
-                {grouped.map(([emoji, count]) => (
-                  <span key={emoji} className="flex items-center">{emoji}{count > 1 && <span className="ml-0.5 text-xs text-ink-soft">{count}</span>}</span>
-                ))}
-              </button>
-            )}
           </div>
         )}
         {!editing && (
-          <div className={`flex shrink-0 items-center opacity-100 transition-opacity focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 ${panel ? "[@media(hover:hover)]:opacity-100" : ""}`}>
+          <div className={`flex shrink-0 items-center opacity-100 transition-opacity focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 ${panel ? "[@media(hover:hover)]:opacity-100" : ""} ${revealed || panel ? "" : "[@media(hover:none)]:hidden"}`}>
             <ToolButton ref={reactButton} label="React" active={panel === "react"} onClick={() => setPanel(panel === "react" ? null : "react")}>
               <circle cx="12" cy="12" r="8.5" /><path d="M8.8 14.2a4 4 0 0 0 6.4 0" /><path d="M9.3 9.8h.01M14.7 9.8h.01" strokeWidth="2.4" />
             </ToolButton>
@@ -118,9 +167,22 @@ export function ChatMessage({ id, body, own, author, time, dateTime, edited, edi
         )}
       </div>
 
+      {grouped.length > 0 && !editing && (
+        <button
+          type="button"
+          onClick={() => (mine ? react(mine) : setPanel("react"))}
+          aria-label={`Reactions: ${shown.map((reaction) => `${reaction.emoji}${reaction.mine ? " (yours)" : ""}`).join(", ")}${mine ? ". Remove yours" : ""}`}
+          className={`-mt-1 ${own ? "mr-1.5" : "ml-1.5"} relative flex h-6 items-center gap-0.5 border border-line bg-paper px-1 text-xs leading-none hover:bg-field`}
+        >
+          {grouped.map(([emoji, count]) => (
+            <span key={emoji} className="flex items-center">{emoji}{count > 1 && <span className="ml-0.5 text-[11px] text-ink-soft">{count}</span>}</span>
+          ))}
+        </button>
+      )}
+
       {panel === "react" && (
-        <Floating anchor={reactButton} alignEnd={own} onClose={() => setPanel(null)}>
-          <div role="group" aria-label="Choose a reaction" className="flex gap-0.5 rounded-full border border-line bg-paper p-1 shadow-lg">
+        <Floating anchor={reactButton} alignEnd={own} onClose={() => { setPanel(null); setRevealed(false); }}>
+          <div role="group" aria-label="Choose a reaction" className="flex gap-0.5 border border-line bg-paper p-1 shadow-lg">
             {REACTIONS.map((emoji) => (
               <button
                 key={emoji}
@@ -128,7 +190,7 @@ export function ChatMessage({ id, body, own, author, time, dateTime, edited, edi
                 onClick={() => react(emoji)}
                 aria-pressed={emoji === mine}
                 aria-label={emoji === mine ? `Remove ${emoji}` : `React ${emoji}`}
-                className={`grid h-10 w-10 place-items-center rounded-full text-xl transition-transform hover:scale-115 hover:bg-field ${emoji === mine ? "bg-field" : ""}`}
+                className={`grid h-10 w-10 place-items-center text-xl transition-transform hover:scale-115 hover:bg-field ${emoji === mine ? "bg-field" : ""}`}
               >
                 {emoji}
               </button>
@@ -138,15 +200,15 @@ export function ChatMessage({ id, body, own, author, time, dateTime, edited, edi
       )}
 
       {(panel === "menu" || panel === "confirm") && (
-        <Floating anchor={menuButton} alignEnd={own} prefer="below" onClose={() => setPanel(null)}>
-          <div className="min-w-44 overflow-hidden rounded-xl border border-line bg-paper py-1 text-sm shadow-lg">
+        <Floating anchor={menuButton} alignEnd={own} prefer="below" onClose={() => { setPanel(null); setRevealed(false); }}>
+          <div className="min-w-48 border border-line bg-paper py-1 text-sm shadow-lg">
             {panel === "confirm" ? (
-              <div className="px-3 py-2">
-                <p className="mb-2 font-semibold">Unsend for everyone?</p>
-                <p className="mb-3 text-ink-soft">It&apos;s removed from both sides of the chat.</p>
+              <div className="px-4 py-3">
+                <p className="mb-1 font-semibold">Unsend for everyone?</p>
+                <p className="mb-3 text-muted">It&apos;s removed from both sides of the chat.</p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => { setPanel(null); run(() => deleteDirectMessage(id)); }} className="rounded-full bg-heavy px-3 py-1.5 font-semibold text-paper">Unsend</button>
-                  <button type="button" onClick={() => setPanel("menu")} className="rounded-full px-3 py-1.5 font-semibold hover:bg-field">Cancel</button>
+                  <button type="button" onClick={() => { setPanel(null); run(() => deleteDirectMessage(id)); }} className="btn bg-heavy px-3.5 py-2 text-[11px] text-white">Unsend</button>
+                  <button type="button" onClick={() => setPanel("menu")} className="btn-ghost px-3.5 py-2 text-[11px]">Cancel</button>
                 </div>
               </div>
             ) : (
@@ -160,13 +222,15 @@ export function ChatMessage({ id, body, own, author, time, dateTime, edited, edi
         </Floating>
       )}
 
-      <p className={`mt-1 flex gap-1.5 px-1 text-xs text-muted ${shown.length && !editing ? "mt-4" : ""}`}>
-        <time dateTime={dateTime}>{time}</time>
-        {edited && <span>· Edited</span>}
-        {seen && <span>· Seen</span>}
-        {copied && <span role="status">· Copied</span>}
-      </p>
-      {error && <p role="alert" className="mt-1 px-1 text-xs text-heavy">{error}</p>}
+      {meta && (
+        <p className="mt-1 flex gap-1.5 px-0.5 text-[11px] text-muted">
+          {groupEnd && <ChatTime iso={createdAt} style="thread" />}
+          {edited && <span>{groupEnd ? "· " : ""}Edited</span>}
+          {seen && <span>· Seen</span>}
+          {copied && <span role="status">· Copied</span>}
+        </p>
+      )}
+      {error && <p role="alert" className="mt-1 px-0.5 text-xs text-heavy">{error}</p>}
     </li>
   );
 }
@@ -263,7 +327,7 @@ function Floating({ anchor, alignEnd, prefer = "above", onClose, children }: {
     };
   }, [anchor]);
 
-  return <div ref={panel} style={{ position: "fixed", zIndex: 50, ...style }}>{children}</div>;
+  return <div ref={panel} style={{ position: "fixed", zIndex: 70, ...style }}>{children}</div>;
 }
 
 function EditBox({ initial, pending, onSave, onCancel }: {
@@ -284,7 +348,7 @@ function EditBox({ initial, pending, onSave, onCancel }: {
 
   return (
     <form
-      className="w-full max-w-[88%] sm:max-w-[72%]"
+      className="w-full max-w-[88%] md:max-w-[70%]"
       onSubmit={(event) => {
         event.preventDefault();
         if (text.trim()) onSave(text);
@@ -305,12 +369,12 @@ function EditBox({ initial, pending, onSave, onCancel }: {
             event.currentTarget.form?.requestSubmit();
           }
         }}
-        className="w-full resize-none rounded-xl border border-ink bg-paper px-3 py-2 text-[15px] leading-relaxed outline-none"
+        className="w-full resize-none border border-ink bg-paper px-3 py-2 text-base leading-relaxed outline-none md:text-sm"
       />
-      <div className="mt-1.5 flex justify-end gap-2 text-sm">
+      <div className="mt-1.5 flex justify-end gap-2">
         <span className="mr-auto hidden self-center text-xs text-muted [@media(hover:hover)_and_(pointer:fine)]:inline">Esc to cancel · Enter to save</span>
-        <button type="button" onClick={onCancel} className="rounded-full px-3 py-1.5 font-semibold hover:bg-field">Cancel</button>
-        <button type="submit" disabled={pending || !text.trim()} className="rounded-full bg-ink px-3.5 py-1.5 font-semibold text-paper disabled:opacity-45">
+        <button type="button" onClick={onCancel} className="btn-ghost px-3.5 py-2 text-[11px]">Cancel</button>
+        <button type="submit" disabled={pending || !text.trim()} className="btn-primary px-3.5 py-2 text-[11px]">
           {pending ? "Saving…" : "Save"}
         </button>
       </div>
