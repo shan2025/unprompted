@@ -127,6 +127,13 @@
       "when": 1794736245081,
       "tag": "0017_publishing_and_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794736896941,
+      "tag": "0018_chat_basics",
+      "breakpoints": true
     }
   ]
 }

@@ -82,12 +82,25 @@ export const directMessages = pgTable("direct_messages", {
   recipientId: integer("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   body: text("body").notNull(),
   readAt: timestamp("read_at", { withTimezone: true }),
+  /** Set when the sender changes the text. Unsent messages are deleted outright. */
+  editedAt: timestamp("edited_at", { withTimezone: true }),
   createdAt: createdAt(),
 }, (t) => [
   check("direct_messages_distinct_members", sql`${t.senderId} <> ${t.recipientId}`),
   check("direct_messages_body_length", sql`char_length(${t.body}) between 1 and 2000`),
   index("direct_messages_sender_idx").on(t.senderId, t.recipientId, t.id),
   index("direct_messages_recipient_idx").on(t.recipientId, t.senderId, t.id),
+]).enableRLS();
+
+/** One emoji reaction per person per message; reacting again replaces it. */
+export const directMessageReactions = pgTable("direct_message_reactions", {
+  messageId: integer("message_id").notNull().references(() => directMessages.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  emoji: text("emoji").notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  primaryKey({ columns: [t.messageId, t.userId] }),
+  check("direct_message_reactions_emoji_length", sql`char_length(${t.emoji}) between 1 and 16`),
 ]).enableRLS();
 
 export interface StoredAnalysis {

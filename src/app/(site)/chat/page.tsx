@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ChatIcon } from "@/components/ChatIcon";
 import { ChatComposer, ChatHistory, ChatLive } from "@/components/ChatLive";
+import { ChatMessage } from "@/components/ChatMessage";
+import { EDIT_WINDOW_MS } from "@/lib/chat-rules";
 import { ConfirmEmailCard } from "@/components/VerifyEmailNotice";
 import { requireUser } from "@/lib/auth";
 import { findChatMember, getMessageHistory, listConversations, MAX_MESSAGE_LENGTH, searchChatMembers } from "@/lib/chat";
@@ -198,18 +200,22 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                 </div>
               )}
               {history.messages.length ? (
-                <ol className="space-y-4">
-                  {history.messages.map((message) => {
-                    const own = message.senderId === user.id;
-                    return (
-                      <li key={message.id} className={`flex flex-col ${own ? "items-end" : "items-start"}`}>
-                        <div className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] sm:max-w-[80%] ${own ? "rounded-br-sm bg-ink text-paper" : "rounded-bl-sm border border-line bg-paper text-ink"}`}>
-                          <span className="sr-only">{own ? "You" : selected.name}: </span>{message.body}
-                        </div>
-                        <time dateTime={message.createdAt.toISOString()} className="mt-1 px-1 text-xs text-muted">{formatDate(message.createdAt)}</time>
-                      </li>
-                    );
-                  })}
+                <ol className="space-y-3">
+                  {history.messages.map((message) => (
+                    <ChatMessage
+                      key={message.id}
+                      id={message.id}
+                      body={message.body}
+                      own={message.senderId === user.id}
+                      author={selected.name}
+                      time={formatDate(message.createdAt)}
+                      dateTime={message.createdAt.toISOString()}
+                      edited={Boolean(message.editedAt)}
+                      editableUntil={message.createdAt.getTime() + EDIT_WINDOW_MS}
+                      reactions={message.reactions.map((reaction) => ({ emoji: reaction.emoji, mine: reaction.userId === user.id }))}
+                      seen={message === latest && message.senderId === user.id && Boolean(message.readAt)}
+                    />
+                  ))}
                 </ol>
               ) : (
                 <p className="py-6 text-center text-sm text-ink-soft">{before ? "No earlier messages." : `Say hello to ${selected.name}.`}</p>

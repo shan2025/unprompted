@@ -4,11 +4,11 @@ import { db, schema } from "./db";
 import { hideDemo } from "./demo";
 import { followMemberIds, followPageSize, type FollowDirection } from "./journal";
 
-const { directMessages, users } = schema;
+const { directMessageReactions, directMessages, users } = schema;
 const member = { id: users.id, handle: users.handle, name: users.name, avatarFile: users.avatarFile };
 const historySize = 50;
 
-export const MAX_MESSAGE_LENGTH = 2000;
+export { MAX_MESSAGE_LENGTH } from "./chat-rules";
 
 function realMember() {
   // The seed script uses this reserved domain for its preview accounts.
@@ -80,6 +80,7 @@ export async function getMessageHistory(userId: number, peerId: number, before?:
     senderId: directMessages.senderId,
     createdAt: directMessages.createdAt,
     readAt: directMessages.readAt,
+    editedAt: directMessages.editedAt,
   }).from(directMessages)
     .where(and(
       or(
@@ -90,6 +91,29 @@ export async function getMessageHistory(userId: number, peerId: number, before?:
     ))
     .orderBy(desc(directMessages.id))
     .limit(historySize + 1);
-  const messages = rows.slice(0, historySize).reverse();
+  const page = rows.slice(0, historySize).reverse();
+  const reactions = page.length
+    ? await db.select({ messageId: directMessageReactions.messageId, userId: directMessageReactions.userId, emoji: directMessageReactions.emoji })
+      .from(directMessageReactions)
+      .where(inArray(directMessageReactions.messageId, page.map((message) => message.id)))
+      .orderBy(directMessageReactions.createdAt)
+    : [];
+  const messages = page.map((message) => ({
+    ...message,
+    reactions: reactions.filter((reaction) => reaction.messageId === message.id).map(({ userId, emoji }) => ({ userId, emoji })),
+  }));
   return { messages, older: rows.length > historySize ? messages[0].id : undefined };
+}
+
+/** A message the member sent or received, or null if it isn't part of their conversations. */
+export async function findOwnConversationMessage(userId: number, messageId: number) {
+  const [message] = await db.select({
+    id: directMessages.id,
+    senderId: directMessages.senderId,
+    recipientId: directMessages.recipientId,
+    createdAt: directMessages.createdAt,
+  }).from(directMessages)
+    .where(and(eq(directMessages.id, messageId), or(eq(directMessages.senderId, userId), eq(directMessages.recipientId, userId))))
+    .limit(1);
+  return message ?? null;
 }
