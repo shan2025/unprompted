@@ -21,6 +21,7 @@ import { VideoPlayer } from "@/components/VideoPlayer";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryLabel } from "@/lib/categories";
 import { formatDate, plural, siteUrl, snippet } from "@/lib/format";
+import { worthIndexing } from "@/lib/indexing";
 import { getPost, getPostActivity, isFollowing } from "@/lib/journal";
 import { clientIp } from "@/lib/rate-limit";
 import { EVIDENCE_KINDS } from "@/lib/scoring";
@@ -43,7 +44,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description,
     alternates: { canonical: `/journal/${post.slug}` },
-    robots: post.isDemo ? { index: false } : undefined,
+    // Demo posts and very short posts with nothing to look at stay out of search (indexing.ts).
+    robots: post.isDemo || !worthIndexing(post) ? { index: false } : undefined,
     // The picture comes from opengraph-image.tsx, which wins over anything set here.
     openGraph: {
       siteName: "Unprompters",
