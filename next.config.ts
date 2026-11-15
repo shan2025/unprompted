@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { CATEGORY_IDS } from "./src/lib/categories";
 
 // Crawlers that read the raw HTML without running scripts get each page's title,
 // description and canonical link inside <head>; everyone else gets them streamed.
@@ -13,6 +14,16 @@ const nextConfig: NextConfig = {
   htmlLimitedBots: new RegExp(`${NEXT_DEFAULT_BOTS}|${AI_BOTS}`, "i"),
   cacheComponents: true,
   partialPrefetching: true,
+  // One craft has its own page now (src/lib/browse.ts), so old single-craft
+  // filter links move there for good. Several crafts stay a filter.
+  async redirects() {
+    return (["explore", "marketplace"] as const).map((page) => ({
+      source: `/${page}`,
+      has: [{ type: "query" as const, key: "category", value: `(?<cat>${CATEGORY_IDS.join("|")})` }],
+      destination: `/${page}/:cat`,
+      permanent: true,
+    }));
+  },
   experimental: {
     serverActions: {
       // Listings can include an image of up to 4 MB; Vercel caps requests at 4.5 MB.

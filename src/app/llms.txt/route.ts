@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { connection } from "next/server";
+import { browseHref } from "@/lib/browse";
 import { CATEGORIES } from "@/lib/categories";
+import { usedCategories } from "@/lib/data";
 import { db, schema } from "@/lib/db";
 import { siteUrl } from "@/lib/format";
 import { MAX_DISCLOSED, TIER_INFO, type Tier } from "@/lib/scoring";
@@ -15,7 +17,9 @@ export async function GET() {
   await connection();
   const base = siteUrl();
 
-  const [postRows, listingRows] = await Promise.all([
+  const [exploreCrafts, marketCrafts, postRows, listingRows] = await Promise.all([
+    usedCategories("explore", { realOnly: true }),
+    usedCategories("marketplace", { realOnly: true }),
     db
       .select({ slug: posts.slug, title: posts.title, aiPercent: posts.aiPercent, tier: posts.tier })
       .from(posts)
@@ -63,7 +67,14 @@ export async function GET() {
     "",
     "## Crafts",
     "",
-    ...CATEGORIES.map((c) => `- ${c.label}: ${c.blurb}`),
+    // Crafts with real work link to their pages; the rest are listed so the range is clear.
+    ...CATEGORIES.map((c) => {
+      const links = [
+        exploreCrafts.includes(c.id) && `[explore](${base}${browseHref("explore", c.id)})`,
+        marketCrafts.includes(c.id) && `[for sale](${base}${browseHref("marketplace", c.id)})`,
+      ].filter(Boolean);
+      return `- ${c.label}: ${c.blurb}${links.length ? ` (${links.join(", ")})` : ""}`;
+    }),
   ];
   if (postRows.length > 0) lines.push("", "## Recent journal posts", "", ...postRows.map((r) => item("journal", r)));
   if (listingRows.length > 0) lines.push("", "## Recent listings", "", ...listingRows.map((r) => item("listing", r)));

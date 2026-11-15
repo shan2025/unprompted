@@ -102,14 +102,16 @@ export type ListingCard = Awaited<ReturnType<typeof searchListings>>[number];
  * chips skip empty ones. Explore holds free listings and posts; the
  * marketplace holds listings with a price; the journal holds posts.
  */
-export async function usedCategories(page: "explore" | "marketplace" | "journal") {
+export async function usedCategories(page: "explore" | "marketplace" | "journal", { realOnly = false } = {}) {
+  // realOnly: count only real work, never demo pieces, as search engines should.
+  const noDemo = realOnly || hideDemo();
   const listingWhere = [
     inArray(listings.status, PUBLIC_STATUSES),
     page === "marketplace" ? gt(listings.priceCents, 0) : eq(listings.priceCents, 0),
   ];
-  if (hideDemo()) listingWhere.push(eq(listings.isDemo, false));
+  if (noDemo) listingWhere.push(eq(listings.isDemo, false));
   const postWhere = [eq(posts.status, "published")];
-  if (hideDemo()) postWhere.push(eq(posts.isDemo, false));
+  if (noDemo) postWhere.push(eq(posts.isDemo, false));
 
   const [fromListings, fromPosts] = await Promise.all([
     page === "journal" ? [] : db.selectDistinct({ category: listings.category }).from(listings).where(and(...listingWhere)),

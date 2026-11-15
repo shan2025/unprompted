@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useTransition } from "react";
+import { browseQueryHref, categoryHeading } from "@/lib/browse";
 import { CATEGORIES, type CategoryId } from "@/lib/categories";
 import { isShow, SHOWS, type Show } from "@/lib/show";
 import { EXPLORE_SORTS, SORTS, type Sort } from "@/lib/sorts";
@@ -35,36 +36,38 @@ const PAGES = {
 } as const;
 type Page = keyof typeof PAGES;
 
+// One craft goes to its own page (/explore/crafts); several become a filter.
 function toQuery(page: Page, f: Filters & Fields) {
   const qs = new URLSearchParams();
   if (f.q) qs.set("q", f.q);
-  if (f.categories.length) qs.set("category", f.categories.join(","));
   if (f.maxAi) qs.set("maxAi", f.maxAi);
   if (f.sort !== "new") qs.set("sort", f.sort);
   if (f.verified) qs.set("verified", "1");
   if (page === "explore" && f.show !== "all") qs.set("show", f.show);
-  const query = qs.toString();
-  const { path } = PAGES[page];
-  return query ? `${path}?${query}` : path;
+  return browseQueryHref(page, f.categories, qs);
 }
 
 // Every filter applies as soon as it changes: chips and the heading update
 // on click, and the results dim while the server fetches the new ones.
 export function ExploreView({
   page = "explore",
+  category,
   available,
   filters,
   fields,
   children,
 }: {
   page?: Page;
+  /** On a craft's own page, the heading names the craft. */
+  category?: CategoryId;
   /** Categories with something in them on this page. Empty ones get no chip. */
   available: CategoryId[];
   filters: Filters;
   fields: Fields;
   children: React.ReactNode;
 }) {
-  const { path, title, intro, sorts } = PAGES[page];
+  const { path, sorts } = PAGES[page];
+  const { title, intro } = category ? categoryHeading(page, category) : PAGES[page];
   const market = page === "marketplace";
   const router = useRouter();
   const [pending, startTransition] = useTransition();

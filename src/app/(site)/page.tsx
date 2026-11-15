@@ -8,6 +8,7 @@ import { HomeFeed, HomeFeedSkeleton, type HomeFeedParams } from "@/components/Ho
 import { GridSkeleton } from "@/components/ListingCard";
 import { Reveal } from "@/components/Reveal";
 import { ScoreCard } from "@/components/Score";
+import { browseHref } from "@/lib/browse";
 import { CATEGORIES } from "@/lib/categories";
 import { usedCategories } from "@/lib/data";
 import { getCurrentUser } from "@/lib/auth";
@@ -184,7 +185,7 @@ async function Crafts() {
       {crafts.map((c, i) => (
         <Reveal key={c.id} delay={(i % 4) * 70} className="grid border-b border-r border-line">
           <Link
-            href={`/${explore.includes(c.id) ? "explore" : "marketplace"}?category=${c.id}`}
+            href={browseHref(explore.includes(c.id) ? "explore" : "marketplace", c.id)}
             className="group p-6 transition-colors hover:bg-field"
           >
             <span className="text-lg">{c.label}</span>

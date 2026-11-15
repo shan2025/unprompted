@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
+import { browseHref } from "@/lib/browse";
+import { usedCategories } from "@/lib/data";
 import { db, schema } from "@/lib/db";
 import { siteUrl } from "@/lib/format";
 import { worthIndexing } from "@/lib/indexing";
@@ -15,7 +17,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();
   const base = siteUrl();
 
-  const [listingRows, postRows] = await Promise.all([
+  const [exploreCrafts, marketCrafts, listingRows, postRows] = await Promise.all([
+    // Craft pages (/explore/crafts) only once they hold real work.
+    usedCategories("explore", { realOnly: true }),
+    usedCategories("marketplace", { realOnly: true }),
     db
       .select({ slug: listings.slug, createdAt: listings.createdAt, handle: users.handle })
       .from(listings)
@@ -46,6 +51,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...STATIC_PAGES.map((path) => ({ url: `${base}${path === "/" ? "" : path}` })),
+    ...exploreCrafts.map((c) => ({ url: `${base}${browseHref("explore", c)}` })),
+    ...marketCrafts.map((c) => ({ url: `${base}${browseHref("marketplace", c)}` })),
     ...listingRows.map((l) => ({ url: `${base}/listing/${l.slug}`, lastModified: l.createdAt })),
     ...postRows.map((p) => ({ url: `${base}/journal/${p.slug}`, lastModified: p.updatedAt ?? p.createdAt })),
     ...[...handles].map((handle) => ({ url: `${base}/u/${handle}` })),

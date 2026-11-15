@@ -15,7 +15,8 @@ import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
 import { SubmitButton } from "@/components/SubmitButton";
 import { getCurrentUser } from "@/lib/auth";
-import { categoryLabel, LICENSES, licenseLabel } from "@/lib/categories";
+import { browseHref } from "@/lib/browse";
+import { categoryLabel, isCategory, LICENSES, licenseLabel } from "@/lib/categories";
 import { ListingCard } from "@/components/ListingCard";
 import { getListing, getOrderStatus, hasPendingOrder, salesCount, searchListings } from "@/lib/data";
 import { formatDate, formatPrice, plural, siteUrl } from "@/lib/format";
@@ -79,7 +80,11 @@ async function ListingView({ params, searchParams }: Props) {
   const { analysis } = listing;
   const evidence = listing.evidence;
 
-  const badgeAlt = `${listing.aiPercent}% AI, ${TIER_INFO[listing.tier as Tier]?.label ?? listing.tier}, on Unprompters`;
+  // The craft's own page, on whichever side the listing lives.
+  const browsePage = listing.priceCents > 0 ? "marketplace" : "explore";
+  const craftHref = browseHref(browsePage, isCategory(listing.category) ? listing.category : null);
+
+  const badgeAlt =`${listing.aiPercent}% AI, ${TIER_INFO[listing.tier as Tier]?.label ?? listing.tier}, on Unprompters`;
   const badgeSnippet = `<a href="${siteUrl()}/listing/${listing.slug}"><img src="${siteUrl()}/api/badge/${listing.slug}" alt="${badgeAlt}"></a>`;
 
   const purchase = (
@@ -175,7 +180,7 @@ async function ListingView({ params, searchParams }: Props) {
               },
               breadcrumbs([
                 { name: listing.priceCents > 0 ? "Marketplace" : "Explore", path: listing.priceCents > 0 ? "/marketplace" : "/explore" },
-                { name: categoryLabel(listing.category), path: `${listing.priceCents > 0 ? "/marketplace" : "/explore"}?category=${listing.category}` },
+                { name: categoryLabel(listing.category), path: craftHref },
                 { name: listing.title, path: `/listing/${listing.slug}` },
               ]),
             ],
@@ -189,7 +194,7 @@ async function ListingView({ params, searchParams }: Props) {
           {listing.priceCents > 0 ? "Marketplace" : "Explore"}
         </Link>
         <span className="mx-2">/</span>
-        <Link href={`${listing.priceCents > 0 ? "/marketplace" : "/explore"}?category=${listing.category}`} className="hover:text-ink">
+        <Link href={craftHref} className="hover:text-ink">
           {categoryLabel(listing.category)}
         </Link>
       </nav>
@@ -419,7 +424,7 @@ async function MoreLikeThis({ id, category }: { id: number; category: string }) 
     <section className="mt-16 border-t border-line pt-10">
       <div className="mb-5 flex items-end justify-between gap-4">
         <h2 className="text-2xl font-normal">More {categoryLabel(category).toLowerCase()} for sale</h2>
-        <Link href={`/marketplace?category=${category}`} className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
+        <Link href={browseHref("marketplace", isCategory(category) ? category : null)} className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
           See all
         </Link>
       </div>
