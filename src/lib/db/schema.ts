@@ -74,6 +74,20 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 }).enableRLS();
 
+export const directMessages = pgTable("direct_messages", {
+  id: id(),
+  senderId: integer("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  recipientId: integer("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [
+  check("direct_messages_distinct_members", sql`${t.senderId} <> ${t.recipientId}`),
+  check("direct_messages_body_length", sql`char_length(${t.body}) between 1 and 2000`),
+  index("direct_messages_sender_idx").on(t.senderId, t.recipientId, t.id),
+  index("direct_messages_recipient_idx").on(t.recipientId, t.senderId, t.id),
+]).enableRLS();
+
 export interface StoredAnalysis {
   score: Score;
   previewSegments: Segment[];

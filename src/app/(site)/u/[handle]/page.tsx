@@ -136,13 +136,18 @@ async function Creator({ params, searchParams }: Props) {
             </ul>
           )}
         </div>
-        <div className="col-span-2 flex items-start gap-2.5 md:col-span-1 md:pt-2">
+        <div className="col-span-2 flex flex-wrap items-start gap-2.5 md:col-span-1 md:pt-2">
           {isSelf ? (
             <Link href="/dashboard/profile" className="btn-ghost px-5 py-2.5">
               Edit profile
             </Link>
           ) : (
             <FollowButton handle={creator.handle} following={following} returnTo={`/u/${creator.handle}`} />
+          )}
+          {!isSelf && (
+            <Link href={`/chat?with=${encodeURIComponent(creator.handle)}`} className="btn-ghost px-5 py-2.5">
+              Message
+            </Link>
           )}
           <CopyLink url={profileUrl} label="Copy profile link" icon className="btn-ghost h-[42px] w-[42px] p-0" />
         </div>

@@ -29,6 +29,7 @@ export function Header() {
           <NavLink href="/explore">Explore</NavLink>
           <NavLink href="/marketplace">Marketplace</NavLink>
           <NavLink href="/journal">Journal</NavLink>
+          <NavLink href="/chat">Chat</NavLink>
           <NavLink href="/standard" className="hidden xl:inline">
             How scoring works
           </NavLink>
