@@ -1,5 +1,7 @@
 "use server";
 
+import { publishDraft, PublicationConflict } from "@/lib/publishing";
+import { hasDuplicateEvidence } from "@/lib/evidence";
 import { parseCoverPattern, parseCoverTheme } from "@/lib/cover-themes";
 import { randomBytes } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
@@ -44,7 +46,7 @@ async function loadEdit(fd: FormData, userId: number) {
   const slug = String(fd.get("editSlug") ?? "");
   if (!slug) return null;
   const [post] = await db.select().from(schema.posts).where(eq(schema.posts.slug, slug)).limit(1);
-  if (!post || post.authorId !== userId || post.status === "removed") return null;
+  if (!post || post.authorId !== userId) return null;
 
   const replacesImage = fd.get("cover") instanceof File && (fd.get("cover") as File).size > 0;
   const keepsImage = Boolean(post.coverFile) && !replacesImage && fd.get("remove_cover") !== "on";
@@ -124,8 +126,8 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
   }
   const slug = slugify(v.title);
 
-  await saveWithUploads([coverFile, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
-    db.insert(schema.posts).values({
+  try { await saveWithUploads([coverFile, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
+    publishDraft(fd, user.id, "post", "", (tx) => tx.insert(schema.posts).values({
       slug,
       authorId: user.id,
       title: v.title,
@@ -141,8 +143,8 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
       disclosure: v.disclosure,
       ...scoreColumns(result),
       evidence,
-    }),
-  );
+    })),
+  ); } catch (error) { if (error instanceof PublicationConflict) return { message: error.message }; throw error; }
 
   // Ask Bing and others to crawl it now, if it's live and long enough to be in search.
   if (!result.score.needsReview && worthIndexing({ subtitle: v.subtitle, body: v.body, coverFile, videoUrl: v.videoUrl })) {
@@ -160,7 +162,9 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
   if (!user) return { message: "Your session expired. Log in again." };
   const edit = await loadEdit(fd, user.id);
   if (!edit) return { message: "This post can't be edited. It may have been deleted or removed." };
+  if (!user.verified) return { message: UNVERIFIED_MESSAGE };
   const { post } = edit;
+  if (fd.has("draftId") && fd.get("workVersion") !== post.analysis.analyzedAt) return { message: "This post has a newer version. Open a fresh edit from the post before resubmitting." };
 
   const parsed = await parsePostForm(fd, { requireAttestation: true, keepsImage: edit.keepsImage });
   if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
@@ -169,6 +173,7 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
     return { errors: { evidence: `Keep it to ${MAX_EVIDENCE} pieces of evidence in all.` }, message: "Some fields need attention." };
   }
 
+  if (hasDuplicateEvidence([...v.evidence, ...edit.kept])) return { errors: { evidence: "Remove repeated evidence links or files." } };
   const result = await assessPost(v, edit);
   if (result.score.blocked) {
     return {
@@ -189,9 +194,11 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
   }
   const coverFile = newCover ?? (edit.keepsImage ? post.coverFile : null);
 
-  await saveWithUploads([newCover, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
-    db
-      .update(schema.posts)
+  try { await saveWithUploads([newCover, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
+    publishDraft(fd, user.id, "post", post.slug, async (tx) => {
+      const [current] = await tx.select().from(schema.posts).where(eq(schema.posts.id, post.id)).for("update");
+      if (!current || current.analysis.analyzedAt !== post.analysis.analyzedAt) throw new PublicationConflict("This post changed while you were editing. Reload before resubmitting.");
+      return tx.update(schema.posts)
       .set({
         title: v.title,
         subtitle: v.subtitle,
@@ -202,14 +209,16 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
         coverFile,
         coverTheme: parseCoverTheme(fd.get("cover_theme")),
         coverPattern: parseCoverPattern(fd.get("cover_pattern")),
-        status: result.score.needsReview ? "in_review" : "published",
+        status: current.status !== "published" || result.score.needsReview ? "in_review" : "published",
+        evidenceReview: null,
         disclosure: v.disclosure,
         ...scoreColumns(result),
         evidence,
         updatedAt: new Date(),
       })
-      .where(eq(schema.posts.id, post.id)),
-  );
+      .where(and(eq(schema.posts.id, post.id), eq(schema.posts.authorId, user.id)));
+    }),
+  ); } catch (error) { if (error instanceof PublicationConflict) return { message: error.message }; throw error; }
 
   // Files the new version no longer uses have public addresses, so they go.
   const stillUsed = new Set([coverFile, ...evidence.map((e) => e.file)]);

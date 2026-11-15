@@ -1,6 +1,9 @@
 "use server";
 
 import { parseCoverPattern, parseCoverTheme } from "@/lib/cover-themes";
+import { publishDraft, PublicationConflict } from "@/lib/publishing";
+import { hasDuplicateEvidence } from "@/lib/evidence";
+import { isAutoEvidence } from "@/lib/post-form";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -13,7 +16,7 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { siteUrl } from "@/lib/format";
 import { announce } from "@/lib/indexnow";
-import { parseListingForm, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
+import { MAX_EVIDENCE, parseListingForm, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
 import { PAYMENT_LINK_HELP, parsePaymentLink } from "@/lib/payment-link";
 import { withinLimit } from "@/lib/rate-limit";
 import { deleteUploads, saveEvidenceFiles, saveUpload, saveWithUploads } from "@/lib/uploads";
@@ -28,18 +31,87 @@ function slugify(title: string) {
   return `${base || "work"}-${randomBytes(3).toString("hex")}`;
 }
 
+async function loadListingEdit(fd: FormData, userId: number) {
+  const slug = String(fd.get("editSlug") ?? "");
+  if (!slug) return null;
+  const [listing] = await db.select().from(schema.listings).where(and(eq(schema.listings.slug, slug), eq(schema.listings.creatorId, userId))).limit(1);
+  if (!listing) return null;
+  const replaces = fd.get("cover") instanceof File && (fd.get("cover") as File).size > 0;
+  const keepsImage = Boolean(listing.coverFile) && !replaces && fd.get("remove_cover") !== "on";
+  const indexes = new Set(fd.getAll("keep_evidence").map(Number));
+  const kept = listing.evidence.filter((e, index) => !isAutoEvidence(e) && indexes.has(index));
+  return { listing, kept, keepsImage, priorMedia: keepsImage ? listing.analysis.media : null };
+}
+
+export async function updateListing(_previous: CreateState, fd: FormData): Promise<CreateState> {
+  const user = await getCurrentUser();
+  if (!user) return { message: "Log in again to edit this listing." };
+  if (!user.verified) return { message: UNVERIFIED_MESSAGE };
+  const edit = await loadListingEdit(fd, user.id);
+  if (!edit) return { message: "This listing isn't available to edit." };
+  if (fd.has("draftId") && fd.get("workVersion") !== edit.listing.analysis.analyzedAt) return { message: "This listing has a newer version. Open a fresh edit from the listing before resubmitting." };
+  const parsed = await parseListingForm(fd, { requireAttestation: true, keepsImage: edit.keepsImage });
+  if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
+  const v = parsed.values;
+  const allEvidence = [...v.evidence, ...edit.kept];
+  if (allEvidence.length > MAX_EVIDENCE || hasDuplicateEvidence(allEvidence)) return { errors: { evidence: "Attach at most six different evidence sources. Remove repeated links or files." } };
+  if (!(await withinLimit(`listing-edit:user:${user.id}`, 40, 86400))) return { message: "You've made many edits today. Try again tomorrow." };
+  const result = await assess({ ...v, image: v.image?.bytes, evidence: allEvidence, priorMedia: edit.priorMedia });
+  if (result.score.blocked) return { errors: { disclosure: "Disclosed AI use must be 50% or less." } };
+  const newCover = v.image ? await saveUpload(v.image.bytes) : null;
+  if (v.image && !newCover) return { errors: { cover: UNREADABLE_IMAGE } };
+  const evidence = await saveEvidenceFiles(result.evidence, v.evidenceFiles);
+  if (!evidence) { if (newCover) await deleteUploads([newCover]); return { errors: { evidence: UNREADABLE_EVIDENCE } }; }
+  const coverFile = newCover ?? (edit.keepsImage ? edit.listing.coverFile : null);
+  try {
+    await saveWithUploads([newCover, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () => publishDraft(fd, user.id, "listing", edit.listing.slug, async (tx) => {
+      const [current] = await tx.select().from(schema.listings).where(and(eq(schema.listings.id, edit.listing.id), eq(schema.listings.creatorId, user.id))).for("update");
+      if (!current || current.analysis.analyzedAt !== edit.listing.analysis.analyzedAt) throw new PublicationConflict("This listing changed while you were editing. Reload before resubmitting.");
+      const [order] = await tx.select({ id: schema.orders.id }).from(schema.orders).where(and(eq(schema.orders.listingId, current.id), ne(schema.orders.status, "declined"))).limit(1);
+      if (order || current.status === "sold") throw new PublicationConflict("This listing has orders. Its work and terms are protected for those buyers. You can withdraw it, or create a new listing for a new version.");
+      await tx.update(schema.listings).set({
+        title: v.title, category: v.category, summary: v.summary, preview: v.preview, locked: v.locked, aiNotes: v.aiNotes,
+        priceCents: v.priceCents, currency: v.currency, paymentUrl: v.paymentUrl, license: v.license, coverFile,
+        coverTheme: parseCoverTheme(fd.get("cover_theme")), coverPattern: parseCoverPattern(fd.get("cover_pattern")),
+        disclosure: v.disclosure, ...scoreColumns(result), evidence, evidenceReview: null,
+        status: current.status === "removed" || current.status === "in_review" || Boolean(current.moderationReason) || result.score.needsReview ? "in_review" : "published",
+      }).where(eq(schema.listings.id, current.id));
+    }));
+  } catch (error) { if (error instanceof PublicationConflict) return { message: error.message }; throw error; }
+  const used = new Set([coverFile, ...evidence.map((e) => e.file)]);
+  await deleteUploads([edit.listing.coverFile, ...edit.listing.evidence.map((e) => e.file)].filter((name): name is string => Boolean(name) && !used.has(name))).catch(() => {});
+  revalidatePath("/", "layout");
+  announce([`/listing/${edit.listing.slug}`]);
+  redirect(`/listing/${edit.listing.slug}?updated=1`);
+}
+
+/** Withdrawal closes new sales; all existing orders and buyer access remain. */
+export async function withdrawListing(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const slug = String(fd.get("slug") ?? "");
+  await db.transaction(async (tx) => {
+    const [listing] = await tx.select().from(schema.listings).where(and(eq(schema.listings.slug, slug), eq(schema.listings.creatorId, user.id))).for("update");
+    if (!listing || !["published", "in_review"].includes(listing.status)) return;
+    await tx.update(schema.listings).set({ status: "withdrawn", moderationReason: listing.moderationReason || (listing.status === "in_review" ? "Review pending before withdrawal." : "") }).where(eq(schema.listings.id, listing.id));
+  });
+  revalidatePath("/", "layout");
+  announce([`/listing/${slug}`]);
+}
+
 /** Score a draft without saving it, so creators can see the result first. */
 export async function previewAssessment(fd: FormData): Promise<PreviewState> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: {}, message: "Your session expired. Log in again." };
-  const parsed = await parseListingForm(fd, { requireAttestation: false });
+  const edit = await loadListingEdit(fd, user.id);
+  const parsed = await parseListingForm(fd, { requireAttestation: false, keepsImage: edit?.keepsImage });
   if (!parsed.values) return { ok: false, errors: parsed.errors };
   if (!(await withinLimit(`preview:user:${user.id}`, 60, 60 * 60))) {
     return { ok: false, errors: {}, message: "That's a lot of score checks. Try again in an hour." };
   }
 
   const v = parsed.values;
-  const result = await assess({ ...v, image: v.image?.bytes });
+  const result = await assess({ ...v, image: v.image?.bytes, evidence: [...v.evidence, ...(edit?.kept ?? [])], priorMedia: edit?.priorMedia });
   return {
     ok: true,
     result: {
@@ -85,8 +157,8 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
   }
   const slug = slugify(v.title);
 
-  await saveWithUploads([coverFile, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
-    db.insert(schema.listings).values({
+  try { await saveWithUploads([coverFile, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
+    publishDraft(fd, user.id, "listing", "", (tx) => tx.insert(schema.listings).values({
       slug,
       creatorId: user.id,
       title: v.title,
@@ -100,12 +172,14 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
       paymentUrl: v.paymentUrl,
       license: v.license,
       coverFile,
+      coverTheme: parseCoverTheme(fd.get("cover_theme")),
+      coverPattern: parseCoverPattern(fd.get("cover_pattern")),
       status: score.needsReview ? "in_review" : "published",
       disclosure: v.disclosure,
       ...scoreColumns(result),
       evidence,
-    }),
-  );
+    })),
+  ); } catch (error) { if (error instanceof PublicationConflict) return { message: error.message }; throw error; }
 
   // Ask Bing and others to crawl it now, if it went live straight away.
   if (!score.needsReview) announce([`/listing/${slug}`, `/u/${user.handle}`]);

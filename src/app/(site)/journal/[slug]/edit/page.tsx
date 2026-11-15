@@ -1,3 +1,4 @@
+import { DraftWorkspace } from "@/components/DraftWorkspace";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -33,12 +34,13 @@ async function Gate({ params }: Props) {
   const { slug } = await params;
   const user = await requireUser(`/journal/${slug}/edit`);
   const row = await getPost(slug);
-  // Only the author edits. A post a moderator removed stays removed.
-  if (!row || row.post.authorId !== user.id || row.post.status === "removed") notFound();
+  // Only the author can submit a revision.
+  if (!row || row.post.authorId !== user.id) notFound();
   const { post } = row;
 
   const editable: EditablePost = {
     slug: post.slug,
+    workVersion: post.analysis.analyzedAt,
     title: post.title,
     subtitle: post.subtitle,
     category: post.category,
@@ -51,5 +53,5 @@ async function Gate({ params }: Props) {
     disclosure: post.disclosure,
     evidence: post.evidence.map((e, index) => ({ ...e, index })).filter((e) => !isAutoEvidence(e)),
   };
-  return <PostForm post={editable} />;
+  return <><p className="mb-5 text-sm text-ink-soft">{post.moderationReason || (post.status === "removed" ? "This post was removed. Submit a revised version for a moderator to review." : "Changes to work under review return to the review queue.")}</p><DraftWorkspace userId={user.id} kind="post" targetSlug={post.slug}><PostForm post={editable} /></DraftWorkspace></>;
 }

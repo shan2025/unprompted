@@ -28,7 +28,7 @@ export function SegmentView({
       nodes.push(
         <mark
           key={seg.start}
-          title={`${Math.round(seg.ai * 100)}% likely machine-made${seg.signals.length ? `: ${seg.signals.join("; ")}` : ""}`}
+          title={`${Math.round(seg.ai * 100)}% heuristic AI signal (uncalibrated)${seg.signals.length ? `: ${seg.signals.join("; ")}` : ""}`}
           className="rounded-sm text-ink"
           style={{ backgroundColor: seg.ai >= 0.65 ? "var(--mark)" : "color-mix(in srgb, var(--mark) 45%, transparent)" }}
         >

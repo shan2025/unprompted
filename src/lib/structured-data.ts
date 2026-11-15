@@ -62,10 +62,10 @@ export function aiInvolvement(aiPercent: number, tier: string) {
   return [
     {
       "@type": "PropertyValue",
-      name: "AI involvement",
+      name: "AI disclosure and scan score",
       value: aiPercent,
       unitText: "percent",
-      description: `Estimated share of the creative work that came from AI, per ${siteUrl()}/standard`,
+      description: `Uncalibrated weighted disclosure-and-scan score, not a measured share or probability, per ${siteUrl()}/standard`,
     },
     ...(info ? [{ "@type": "PropertyValue", name: "AI tier", value: info.label, description: `${info.range}: ${info.blurb}` }] : []),
   ];

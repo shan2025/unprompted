@@ -221,10 +221,10 @@ export function ExploreView({
             </PillSelect>
             <label
               className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:text-ink"
-              title="Only show work with process evidence attached"
+              title="Only show work with process evidence reviewed by a moderator"
             >
               <input type="checkbox" name="verified" value="1" defaultChecked={fields.verified} className="h-3.5 w-3.5 accent-[var(--accent)]" />
-              Process evidence
+              Reviewed evidence
             </label>
           </div>
         </div>

@@ -168,7 +168,7 @@ async function Creator({ params, searchParams }: Props) {
         <Stat label={counts.followers === 1 ? "Follower" : "Followers"} value={counts.followers} href={isSelf ? profileHref("followers") : undefined} current={direction === "followers"} />
         <Stat label="Following" value={counts.following} href={isSelf ? profileHref("following") : undefined} current={direction === "following"} />
         {avgAi !== null && <Stat label="Avg. AI use" value={`${avgAi}%`} tone="text-human" />}
-        {makes && <Stat label="With process evidence" value={withEvidence} />}
+        {makes && <Stat label="With reviewed evidence" value={withEvidence} />}
         {sells && <Stat label={stats.sales === 1 ? "Sale" : "Sales"} value={stats.sales} />}
       </dl>
 

@@ -1,12 +1,8 @@
 import { STAGE_WEIGHTS, type CategoryId } from "./categories";
 
-// The AI-involvement score. It blends three sources:
-//   1. what the creator discloses, stage by stage;
-//   2. what automated detection finds in the work itself;
-//   3. how much process evidence backs the disclosure up.
-// The disclosure is a floor: we never report less AI than the creator admits.
-// Detection can only push the estimate up, and only as far as its confidence
-// allows. Evidence narrows the range and softens detector suspicion.
+// An uncalibrated disclosure-and-signal score. The disclosure is a floor.
+// Evidence is displayed and reviewed separately; it never discounts detections.
+// low/high remain for historic storage compatibility and are not confidence bounds.
 
 export const STAGES = ["ideation", "creation", "refinement", "assets"] as const;
 export type Stage = (typeof STAGES)[number];
@@ -48,6 +44,8 @@ export interface Evidence {
   /** Name of a file uploaded from the creator's device, served from /api/files. */
   file?: string;
   note?: string;
+  /** SHA-256 of the original attachment, set by the server parser. */
+  fingerprint?: string;
 }
 
 export interface Detection {
@@ -83,6 +81,7 @@ export interface StageScore {
 }
 
 export interface Score {
+  version?: number;
   percent: number;
   low: number;
   high: number;
@@ -98,13 +97,10 @@ export interface Score {
 }
 
 export function evidenceStrength(evidence: Evidence[]) {
-  let remaining = 1;
-  for (const item of evidence) {
-    // A note on its own gives nobody anything to check. C2PA is found in the file itself.
-    if (!item.url && !item.file && item.kind !== "c2pa") continue;
-    remaining *= 1 - (EVIDENCE_KINDS[item.kind]?.strength ?? 0);
-  }
-  return Math.min(0.9, 1 - remaining);
+  // Attachments are not a measurement of authorship. Until calibrated evidence
+  // exists, even a human review does not change the numeric estimate.
+  void evidence;
+  return 0;
 }
 
 export function tierFor(percent: number): Tier {
@@ -121,7 +117,6 @@ export function computeScore(input: {
   detections: Detection[];
 }): Score {
   const weights = STAGE_WEIGHTS[input.category];
-  const E = evidenceStrength(input.evidence);
 
   let disclosed = 0;
   let point = 0;
@@ -146,7 +141,7 @@ export function computeScore(input: {
       const confidence = Math.min(0.95, 1 - found.reduce((n, x) => n * (1 - x.confidence), 1));
       maxConfidence = Math.max(maxConfidence, confidence);
       const gap = Math.max(0, detected - d);
-      effective = d + gap * confidence * (1 - 0.5 * E);
+      effective = d + gap * confidence;
       discrepancy += weights[stage] * gap * confidence;
     }
 
@@ -157,7 +152,7 @@ export function computeScore(input: {
 
   const hasDetection = input.detections.some((x) => x.confidence > 0);
   const uncertainty =
-    0.02 + 0.08 * (1 - E) + (hasDetection ? 0.06 * (1 - maxConfidence) : 0.06) + 0.25 * discrepancy;
+    0.1 + (hasDetection ? 0.06 * (1 - maxConfidence) : 0.06) + 0.25 * discrepancy;
 
   const percent = Math.round(point * 100);
   // The range never dips below what the creator disclosed.
@@ -168,13 +163,14 @@ export function computeScore(input: {
   const blocked = disclosed > MAX_DISCLOSED;
 
   const score: Omit<Score, "notes"> = {
+    version: 2,
     percent,
     low,
     high,
     disclosedPercent: Math.round(disclosed * 100),
     tier: tierFor(percent),
-    evidenceStrength: Math.round(E * 100) / 100,
-    processVerified: E >= 0.5,
+    evidenceStrength: 0,
+    processVerified: false,
     discrepancy: Math.round(discrepancy * 100),
     needsReview,
     blocked,
@@ -201,7 +197,17 @@ export function scoreNotes(
   else if (score.needsReview) notes.push("Automated analysis found noticeably more AI than was disclosed, so a person will review this work.");
   else if (score.discrepancy > 3) notes.push("Automated analysis found slightly more AI than was disclosed. The estimate includes that.");
   if (!hasDetection) notes.push("Nothing in this work could be scanned automatically, so the range is wider.");
-  if (score.processVerified) notes.push("Strong process evidence narrows the range.");
-  else if (score.evidenceStrength === 0) notes.push("No process evidence attached. Adding drafts or a time-lapse narrows the range.");
+  notes.push("This is an uncalibrated scoring heuristic, not a measured percentage or a probability of human authorship. Process evidence is assessed separately.");
   return notes;
+}
+
+/** Remove the old attachment discount without scanning already-stripped files. */
+export function upgradeScore(previous: Score): Score {
+  if (previous.version === 2) return previous;
+  const discount = 1 - 0.5 * previous.evidenceStrength;
+  const stages = previous.stages.map((s) => ({ ...s, effective: s.disclosed + (s.effective - s.disclosed) / discount }));
+  const percent = Math.round(stages.reduce((sum, s) => sum + s.weight * s.effective, 0) * 100);
+  const result = { ...previous, version: 2, stages, percent, tier: tierFor(percent), evidenceStrength: 0, processVerified: false,
+    low: previous.disclosedPercent, high: 100 };
+  return { ...result, notes: scoreNotes(result) };
 }

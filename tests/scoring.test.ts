@@ -11,7 +11,7 @@ describe("computeScore", () => {
     expect(s.high).toBeGreaterThanOrEqual(10);
   });
 
-  it("narrows the range when process evidence is attached", () => {
+  it("does not narrow the range for unreviewed attachments", () => {
     const bare = computeScore({ category: "writing", disclosure: NONE, evidence: [], detections: [] });
     const proven = computeScore({
       category: "writing",
@@ -23,8 +23,8 @@ describe("computeScore", () => {
       ],
       detections: [],
     });
-    expect(proven.high).toBeLessThan(bare.high);
-    expect(proven.processVerified).toBe(true);
+    expect(proven.high).toBe(bare.high);
+    expect(proven.processVerified).toBe(false);
   });
 
   it("gives no credit for evidence that is only a note", () => {
@@ -42,8 +42,8 @@ describe("computeScore", () => {
     expect(s.processVerified).toBe(false);
   });
 
-  it("still counts Content Credentials found in the file", () => {
-    expect(evidenceStrength([{ kind: "c2pa", note: "Found in the uploaded file" }])).toBe(0.35);
+  it("does not count unverified Content Credentials markers", () => {
+    expect(evidenceStrength([{ kind: "c2pa", note: "Found in the uploaded file" }])).toBe(0);
   });
 
   it("turns disclosure into a weighted percentage", () => {
@@ -82,7 +82,7 @@ describe("computeScore", () => {
     expect(s.high).toBeGreaterThan(s.percent);
   });
 
-  it("lets evidence soften detector suspicion", () => {
+  it("does not let attachments soften detector suspicion", () => {
     const detections = [{ stage: "creation" as const, share: 0.9, confidence: 0.5, source: "test" }];
     const bare = computeScore({ category: "writing", disclosure: NONE, evidence: [], detections });
     const proven = computeScore({
@@ -94,7 +94,7 @@ describe("computeScore", () => {
       ],
       detections,
     });
-    expect(proven.percent).toBeLessThan(bare.percent);
+    expect(proven.percent).toBe(bare.percent);
   });
 
   it("blocks listings that disclose more than half AI", () => {
@@ -167,10 +167,10 @@ describe("assess", () => {
 });
 
 describe("helpers", () => {
-  it("caps evidence strength", () => {
+  it("does not give repeated evidence any numeric credit", () => {
     expect(evidenceStrength([])).toBe(0);
     const many = Array.from({ length: 20 }, () => ({ kind: "timelapse" as const, url: "https://example.com" }));
-    expect(evidenceStrength(many)).toBe(0.9);
+    expect(evidenceStrength(many)).toBe(0);
   });
 
   it("maps percentages to tiers", () => {

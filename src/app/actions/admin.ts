@@ -1,11 +1,12 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { announce } from "@/lib/indexnow";
 import { parseWorkLink } from "@/lib/work-link";
+import { hasDuplicateEvidence } from "@/lib/evidence";
 
 // revalidatePath rather than refresh(): in testing on Next 16.4, refresh()
 // didn't update the queue when the page had been opened with a full load.
@@ -17,8 +18,8 @@ export async function reviewListing(fd: FormData) {
   if (!Number.isInteger(id) || (decision !== "approve" && decision !== "remove")) return;
   const changed = await db
     .update(schema.listings)
-    .set({ status: decision === "approve" ? "published" : "removed" })
-    .where(eq(schema.listings.id, id))
+    .set({ status: decision === "approve" ? "published" : "removed", moderationReason: decision === "approve" ? "" : String(fd.get("reason") ?? "").trim().slice(0, 1000) || "A moderator removed this work. Revise your work or evidence and resubmit for review." })
+    .where(and(eq(schema.listings.id, id), eq(schema.listings.status, "in_review"), sql`${schema.listings.analysis}->>'analyzedAt' = ${String(fd.get("analyzedAt") ?? "")}`))
     .returning({ slug: schema.listings.slug });
   // Now live, or now gone: either way search engines should look again.
   announce(changed.map((l) => `/listing/${l.slug}`));
@@ -32,8 +33,8 @@ export async function reviewPost(fd: FormData) {
   if (!Number.isInteger(id) || (decision !== "approve" && decision !== "remove")) return;
   const changed = await db
     .update(schema.posts)
-    .set({ status: decision === "approve" ? "published" : "removed" })
-    .where(eq(schema.posts.id, id))
+    .set({ status: decision === "approve" ? "published" : "removed", moderationReason: decision === "approve" ? "" : String(fd.get("reason") ?? "").trim().slice(0, 1000) || "A moderator removed this work. Revise your work or evidence and resubmit for review." })
+    .where(and(eq(schema.posts.id, id), eq(schema.posts.status, "in_review"), sql`${schema.posts.analysis}->>'analyzedAt' = ${String(fd.get("analyzedAt") ?? "")}`))
     .returning({ slug: schema.posts.slug });
   announce(changed.map((p) => `/journal/${p.slug}`));
   revalidatePath("/admin");
@@ -127,4 +128,25 @@ export async function resolveFlag(fd: FormData) {
     }
   }
   revalidatePath("/admin");
+}
+
+export async function reviewProcessEvidence(_previous: { message: string } | null, form: FormData): Promise<{ message: string }> {
+  const admin = await requireAdmin();
+  const kind = form.get("kind"), id = Number(form.get("id")), decision = form.get("decision");
+  if ((kind !== "post" && kind !== "listing") || !Number.isSafeInteger(id) || (decision !== "review" && decision !== "revoke")) return { message: "Invalid review." };
+  const note = String(form.get("note") ?? "").trim();
+  if (decision === "review" && (note.length < 20 || note.length > 1000 || form.get("checked") !== "on")) return { message: "Check the evidence and write a review note of 20–1,000 characters." };
+  const table = kind === "post" ? schema.posts : schema.listings;
+  const result = await db.transaction(async (tx) => {
+    const [work] = await tx.select().from(table).where(eq(table.id, id)).for("update");
+    if (!work || work.analysis.analyzedAt !== form.get("analyzedAt")) return { message: "This work changed. Reload and check the current evidence before reviewing." };
+    if (decision === "review" && (!work.evidence.some((e) => e.kind !== "c2pa" && (e.file || e.url)) || hasDuplicateEvidence(work.evidence))) return { message: "This work needs distinct, accessible evidence sources before a review can be recorded." };
+    const reviewed = decision === "review";
+    await tx.update(table).set({ evidenceReview: reviewed ? { reviewerId: admin.id, reviewedAt: new Date().toISOString(), note } : null, processVerified: reviewed,
+      analysis: { ...work.analysis, score: { ...work.analysis.score, processVerified: reviewed } },
+    }).where(eq(table.id, id));
+    return { message: reviewed ? "Evidence review recorded. The numeric score is unchanged." : "Evidence review revoked." };
+  });
+  revalidatePath("/", "layout");
+  return result;
 }

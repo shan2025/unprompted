@@ -4,6 +4,7 @@
 // disclosure and evidence steps stay identical in both.
 
 import { useEffect, useRef, useState } from "react";
+import { useDraftWorkspace } from "./DraftWorkspace";
 import { MAX_EVIDENCE, MAX_FILES_BYTES, MAX_IMAGE_BYTES, type FieldErrors, type PreviewResult } from "@/lib/listing-form";
 import { MAX_PUBLIC_EDGE } from "@/lib/public-image-size";
 import { EVIDENCE_KINDS, LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Disclosure, type Evidence, type Level } from "@/lib/scoring";
@@ -121,9 +122,10 @@ export function CoverThemeField({
   hint: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const draft = useDraftWorkspace();
   const [category, setCategory] = useState("writing");
-  const [theme, setTheme] = useState(saved ?? "");
-  const [pattern, setPattern] = useState(savedPattern ?? "");
+  const [theme, setTheme] = useState(draft?.value("cover_theme") ?? saved ?? "");
+  const [pattern, setPattern] = useState(draft?.value("cover_pattern") ?? savedPattern ?? "");
   const shown = pattern || category;
 
   useEffect(() => {
@@ -186,9 +188,10 @@ export function CoverThemeField({
 }
 
 export function ImageField({ errors, hint, currentFile }: { errors: FieldErrors; hint: string; currentFile?: string | null }) {
+  const draft = useDraftWorkspace();
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [tooBig, setTooBig] = useState<string | null>(null);
-  const [removing, setRemoving] = useState(false);
+  const [removing, setRemoving] = useState(draft?.value("remove_cover") === "on");
   useEffect(() => () => void (coverUrl && URL.revokeObjectURL(coverUrl)), [coverUrl]);
   const showCurrent = currentFile && !coverUrl && !removing;
 
@@ -314,9 +317,11 @@ export function DisclosureFields({
 }
 
 export function EvidenceFields({ errors, saved = [] }: { errors: FieldErrors; saved?: (Evidence & { index: number })[] }) {
-  const [rows, setRows] = useState<number[]>(saved.length ? [] : [0]);
-  const nextRow = useRef(1);
-  const [keep, setKeep] = useState(() => new Set(saved.map((e) => e.index)));
+  const draft = useDraftWorkspace();
+  const restored = Boolean(draft?.initial.fields.length);
+  const [rows, setRows] = useState<number[]>(() => restored ? draft!.initial.fields.filter(([key]) => key === "evidence_row").map(([, value]) => Number(value)).filter(Number.isSafeInteger) : saved.length ? [] : [0]);
+  const nextRow = useRef(Math.max(0, ...rows) + 1);
+  const [keep, setKeep] = useState(() => new Set(restored ? draft!.initial.fields.filter(([key]) => key === "keep_evidence").map(([, value]) => Number(value)) : saved.map((e) => e.index)));
 
   return (
     <>
@@ -379,7 +384,7 @@ export function EvidenceFields({ errors, saved = [] }: { errors: FieldErrors; sa
         ))}
       </div>
       <p className="hint">
-        Only evidence with a file or link counts towards your score, so people have something to check. Upload images or PDFs: anyone can open
+        Evidence is supplied by you and does not change your numeric score. A moderator can review it separately. Upload images or PDFs: anyone can open
         them, and they share a 4 MB limit with your image (photos are shrunk to fit). For video, paste a link.
       </p>
       {rows.length + keep.size < MAX_EVIDENCE && (
@@ -408,7 +413,7 @@ export function ScorePreview({
         <p className="mt-3 font-display text-2xl font-normal leading-snug">See your number before anyone else does.</p>
         <p className="mt-2 text-sm text-ink-soft">
           Fill in the form and press <strong>Check my score</strong>. We combine your disclosure, a scan of the work, and
-          your evidence. Nothing is saved until you publish.
+          show your evidence separately. Drafts stay private until you publish.
         </p>
       </div>
     );

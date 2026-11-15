@@ -1,5 +1,5 @@
 import { CountUp } from "./CountUp";
-import { LEVELS, LEVEL_INFO, scoreNotes, STAGE_INFO, TIER_INFO, type Score, type Tier } from "@/lib/scoring";
+import { LEVELS, LEVEL_INFO, scoreNotes, upgradeScore, STAGE_INFO, TIER_INFO, type Score, type Tier } from "@/lib/scoring";
 
 const TIER_TEXT: Record<Tier, string> = {
   "human-made": "text-human",
@@ -63,11 +63,11 @@ export function AiPill({
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs ${look}`}>
       <span className={`h-2 w-2 rounded-full ${TIER_BG[tier as Tier] ?? "bg-ink"}`} aria-hidden="true" />
-      {percent}% AI
+      {percent}% AI score
       {verified && (
-        <span className="text-human" title="Process evidence attached by the creator">
+        <span className="text-human" title="Process evidence reviewed by a moderator">
           <CheckIcon className="h-3.5 w-3.5" />
-          <span className="sr-only">process evidence attached</span>
+          <span className="sr-only">process evidence reviewed</span>
         </span>
       )}
       {unscanned && (
@@ -90,74 +90,8 @@ export function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-// Each tier gets an equal-ish share of the bar so the low end, where most
-// human work sits, stays readable.
-const STOPS: [number, number][] = [
-  [0, 0],
-  [5, 15],
-  [20, 40],
-  [50, 70],
-  [100, 100],
-];
-
-// With `intro`, returns the animation class and stagger delay for one piece of
-// the forming card (keyframes in globals.css); otherwise nothing.
 function introFx(intro: boolean | undefined, cls: string, ms: number) {
   return intro ? { cls: ` ${cls}`, style: { "--d": `${ms}ms` } as React.CSSProperties } : { cls: "", style: undefined };
-}
-
-function position(percent: number) {
-  for (let i = 1; i < STOPS.length; i++) {
-    const [v0, p0] = STOPS[i - 1];
-    const [v1, p1] = STOPS[i];
-    if (percent <= v1) return p0 + ((percent - v0) / (v1 - v0)) * (p1 - p0);
-  }
-  return 100;
-}
-
-export function AiMeter({ percent, low, high, intro }: { percent: number; low: number; high: number; intro?: boolean }) {
-  const lo = position(low);
-  const hi = position(high);
-  const track = introFx(intro, "si-grow", 750);
-  const band = introFx(intro, "si-grow", 1000);
-  const mark = introFx(intro, "si-slide", 1050);
-  const ticks = introFx(intro, "si-rise", 900);
-  return (
-    <div>
-      <div
-        className="relative h-3 rounded-full"
-        role="img"
-        aria-label={`Estimated ${percent}% AI involvement, likely between ${low}% and ${high}%`}
-      >
-        <div className={`absolute inset-0 flex overflow-hidden rounded-full${track.cls}`} style={track.style}>
-          <div className="h-full w-[15%] bg-human/25" />
-          <div className="h-full w-[25%] bg-led/25" />
-          <div className="h-full w-[30%] bg-assist/25" />
-          <div className="h-full w-[30%] bg-heavy/25" />
-        </div>
-        <div
-          className={`absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-ink/35${band.cls}`}
-          style={{ ...band.style, left: `${lo}%`, width: `${Math.max(hi - lo, 1)}%` }}
-        />
-        <div
-          className={`absolute top-1/2 h-5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ink ring-2 ring-card${mark.cls}`}
-          style={{ ...mark.style, left: `${position(percent)}%` }}
-        />
-      </div>
-      <div className={`relative mt-1.5 h-4 text-[10px] font-medium text-muted${ticks.cls}`} style={ticks.style}>
-        {STOPS.map(([v, p]) => (
-          <span
-            key={v}
-            className="absolute -translate-x-1/2 first:translate-x-0 last:-translate-x-full"
-            style={{ left: `${p}%` }}
-          >
-            {v}
-            {v === 100 && "%"}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 function levelFor(value: number) {
@@ -166,7 +100,7 @@ function levelFor(value: number) {
 
 /** `intro` plays the card forming once on load: used for the home page example. */
 export function ScoreCard({
-  score,
+  score: storedScore,
   evidenceCount,
   unscanned,
   intro,
@@ -176,6 +110,7 @@ export function ScoreCard({
   unscanned?: boolean;
   intro?: boolean;
 }) {
+  const score = upgradeScore(storedScore);
   // Rebuilt from the score rather than read from it, so stored scores show the current wording.
   const notes = scoreNotes(score);
   const stamp = introFx(intro, "si-pop", 700);
@@ -185,7 +120,7 @@ export function ScoreCard({
   return (
     <div className="card p-5">
       <div className="flex items-start justify-between gap-3">
-        <span className="eyebrow">AI involvement</span>
+        <span className="eyebrow">AI disclosure & scan score</span>
         <span className={stamp.cls.trim() || undefined} style={stamp.style}>
           <TierStamp tier={score.tier} />
         </span>
@@ -195,15 +130,11 @@ export function ScoreCard({
       <div className={`mt-2 flex items-baseline gap-3${head.cls}`} style={head.style}>
         <span className={`font-display text-5xl font-light tracking-tight ${tierColor(score.tier)}`}>{intro ? <CountUp to={score.percent} delay={700} /> : score.percent}%</span>
         <span className="text-sm text-ink-soft">
-          estimated
-          <br />
-          likely {score.low}–{score.high}%
+          uncalibrated heuristic
         </span>
       </div>
 
-      <div className="mt-4">
-        <AiMeter percent={score.percent} low={score.low} high={score.high} intro={intro} />
-      </div>
+      <p className="mt-3 text-xs leading-relaxed text-muted">A weighted disclosure and scan score, not a measured share of AI or a probability. No validated confidence interval is available.</p>
 
       <div className="mt-5 border-t border-line pt-4">
         <span className={`eyebrow block${label.cls}`} style={label.style}>
@@ -237,10 +168,10 @@ export function ScoreCard({
         {score.processVerified ? (
           <>
             <CheckIcon className="h-4 w-4 text-human" />
-            <span className="font-semibold text-human">Evidence attached</span>
+            <span className="font-semibold text-human">Evidence reviewed</span>
           </>
         ) : (
-          <span className="text-ink-soft">Process evidence: {Math.round(score.evidenceStrength * 100)}% strength</span>
+          <span className="text-ink-soft">{evidenceCount ? "Evidence attached · not reviewed" : "No reviewed process evidence"}</span>
         )}
         {evidenceCount !== undefined && (
           <span className="ml-auto text-xs text-muted">

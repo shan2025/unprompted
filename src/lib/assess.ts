@@ -1,5 +1,5 @@
 import { VISUAL_CATEGORIES, type CategoryId } from "./categories";
-import { scanImageMetadata, type MediaScan } from "./analysis/media";
+import { scanImageMetadata, updateMetadataWording, type MediaScan } from "./analysis/media";
 import { externalProviders } from "./analysis/providers";
 import { analyzeText, combineAnalyses, detectKind, type TextAnalysis } from "./analysis/text";
 import type { StoredAnalysis } from "./db/schema";
@@ -27,7 +27,7 @@ export interface Assessment {
   /** Passage-level results for the public preview only. */
   preview: TextAnalysis | null;
   media: MediaScan | null;
-  /** Evidence as submitted plus anything found automatically (e.g. C2PA). */
+  /** Evidence supplied by the creator. */
   evidence: Evidence[];
   sources: string[];
 }
@@ -35,7 +35,7 @@ export interface Assessment {
 export async function assess(input: AssessmentInput): Promise<Assessment> {
   const detections: Detection[] = [];
   const sources: string[] = [];
-  const evidence = [...input.evidence];
+  const evidence = input.evidence.filter((item) => item.kind !== "c2pa");
 
   const preview = input.preview.trim() ? analyzeText(input.preview, detectKind(input.preview, input.category)) : null;
   const locked = input.locked.trim() ? analyzeText(input.locked, detectKind(input.locked, input.category)) : null;
@@ -60,7 +60,7 @@ export async function assess(input: AssessmentInput): Promise<Assessment> {
   // With no text alongside it, the image is the work whatever the category.
   const imageStage = VISUAL_CATEGORIES.includes(input.category) || !fullText ? "creation" : "assets";
   if (!(input.image && input.image.byteLength > 0) && input.priorMedia) {
-    media = input.priorMedia;
+    media = updateMetadataWording(input.priorMedia)!;
     sources.push("Image metadata scan (IPTC, C2PA, EXIF, generator tags), from the original upload");
     if (media.aiSignal === "strong") detections.push({ stage: imageStage, share: 1, confidence: 0.9, source: METADATA_SOURCE });
     if (media.aiSignal === "partial") detections.push({ stage: imageStage, share: 0.5, confidence: 0.8, source: METADATA_SOURCE });
@@ -71,9 +71,7 @@ export async function assess(input: AssessmentInput): Promise<Assessment> {
     sources.push("Image metadata scan (IPTC, C2PA, EXIF, generator tags)");
     if (media.aiSignal === "strong") detections.push({ stage, share: 1, confidence: 0.9, source: METADATA_SOURCE });
     if (media.aiSignal === "partial") detections.push({ stage, share: 0.5, confidence: 0.8, source: METADATA_SOURCE });
-    if (media.c2pa && media.aiSignal === "none" && !evidence.some((e) => e.kind === "c2pa")) {
-      evidence.push({ kind: "c2pa", note: "Found in the uploaded file (signature not yet verified)" });
-    }
+    // A metadata marker is not authenticated provenance and earns no evidence credit.
 
     for (const provider of externalProviders) {
       if (!provider.analyzeImage) continue;

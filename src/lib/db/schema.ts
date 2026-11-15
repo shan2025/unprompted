@@ -16,6 +16,8 @@ import {
 import type { MediaScan } from "../analysis/media";
 import type { Segment } from "../analysis/text";
 import type { Disclosure, Evidence, Score } from "../scoring";
+import type { EvidenceReview } from "../evidence";
+import type { DraftPayload } from "../drafts";
 
 // Every table enables row-level security with no policies. The app connects
 // as the database owner, which bypasses RLS, while Supabase's public data API
@@ -123,7 +125,7 @@ export const listings = pgTable(
     coverPattern: text("cover_pattern"),
     // Where buyers pay the seller directly. Empty on free and demo listings.
     paymentUrl: text("payment_url"),
-    status: text("status", { enum: ["published", "in_review", "sold", "removed"] })
+    status: text("status", { enum: ["published", "in_review", "sold", "removed", "withdrawn"] })
       .notNull()
       .default("published"),
     aiPercent: integer("ai_percent").notNull(),
@@ -134,6 +136,8 @@ export const listings = pgTable(
     disclosure: jsonb("disclosure").$type<Disclosure>().notNull(),
     evidence: jsonb("evidence").$type<Evidence[]>().notNull(),
     analysis: jsonb("analysis").$type<StoredAnalysis>().notNull(),
+    evidenceReview: jsonb("evidence_review").$type<EvidenceReview>(),
+    moderationReason: text("moderation_reason").notNull().default(""),
     isDemo: boolean("is_demo").notNull().default(false),
     /** When a moderator put it in the home page's Featured row. Null when it isn't featured. */
     featuredAt: timestamp("featured_at", { withTimezone: true }),
@@ -199,6 +203,8 @@ export const posts = pgTable(
     disclosure: jsonb("disclosure").$type<Disclosure>().notNull(),
     evidence: jsonb("evidence").$type<Evidence[]>().notNull(),
     analysis: jsonb("analysis").$type<StoredAnalysis>().notNull(),
+    evidenceReview: jsonb("evidence_review").$type<EvidenceReview>(),
+    moderationReason: text("moderation_reason").notNull().default(""),
     isDemo: boolean("is_demo").notNull().default(false),
     /** When a moderator put it in the home page's Featured row. Null when it isn't featured. */
     featuredAt: timestamp("featured_at", { withTimezone: true }),
@@ -334,6 +340,18 @@ export const uploads = pgTable("uploads", {
   bytes: bytea("bytes").notNull(),
   createdAt: createdAt(),
 }).enableRLS();
+
+/** Private, incomplete form snapshots. Attachments never use the public file route. */
+export const workDrafts = pgTable("work_drafts", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: ["post", "listing"] }).notNull(),
+  targetSlug: text("target_slug").notNull().default(""),
+  payload: jsonb("payload").$type<DraftPayload>().notNull(),
+  version: integer("version").notNull().default(0),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("work_drafts_user_idx").on(t.userId, t.updatedAt)]).enableRLS();
 
 export const passwordResets = pgTable(
   "password_resets",

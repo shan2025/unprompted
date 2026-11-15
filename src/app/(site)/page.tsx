@@ -46,7 +46,7 @@ const STEPS = [
   {
     n: "03",
     title: "Prove",
-    body: "Drafts, time-lapses and commit history narrow the range. They're public, so anyone can see how the work was made.",
+    body: "Drafts, time-lapses and commit history are public. See the creator's sources and whether a moderator has reviewed them.",
   },
 ];
 
@@ -75,7 +75,7 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
           </h1>
           <p style={d(220)} className="intro-rise mt-8 max-w-xl text-lg leading-relaxed text-ink-soft">
             Explore writing, art, film, code, handicrafts and anything else people make themselves. Each piece shows how
-            much AI was involved, as a number with a range and the reasoning behind it. If it&apos;s for sale, you can buy
+            AI disclosure and scan signals, with the reasoning behind the score. If it&apos;s for sale, you can buy
             it.
           </p>
           <div style={d(340)} className="intro-rise mt-10 flex flex-wrap gap-3">
@@ -138,10 +138,10 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
         <Reveal className="grid gap-12 bg-ink p-10 text-white sm:p-16 lg:grid-cols-[1.2fr_1fr]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">Honest by design</p>
-            <h2 className="mt-4 text-4xl font-light sm:text-5xl">A range, not a verdict.</h2>
+            <h2 className="mt-4 text-4xl font-light sm:text-5xl">See the sources. Understand the limits.</h2>
             <p className="mt-6 max-w-lg leading-relaxed text-white/75">
               No detector can prove who made something. They get fooled, and they wrongly flag real people. So we never
-              call anyone guilty on a scan alone. We show our working, give an honest range, and send disagreements to a
+              call anyone guilty on a scan alone. We show our working, explain the limits, and send disagreements to a
               person, not an algorithm.
             </p>
             <Link href="/standard" className="btn mt-8 bg-white px-8 py-4 text-ink hover:bg-white/85">
@@ -158,8 +158,7 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
               confidence allows.
             </li>
             <li>
-              <strong className="font-medium text-white">Evidence narrows the range.</strong> Process proof beats any
-              detector.
+              <strong className="font-medium text-white">Evidence is reviewed separately.</strong> Attachments alone do not increase trust or change the score.
             </li>
             <li>
               <strong className="font-medium text-white">Disputes go to people.</strong> Flags and disagreements are

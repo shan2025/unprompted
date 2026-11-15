@@ -1,3 +1,4 @@
+import { DraftWorkspace } from "@/components/DraftWorkspace";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -54,5 +55,5 @@ async function Gate({ searchParams }: Props) {
   if (prefill.ai) qs.set("ai", prefill.ai);
   const user = await requireUser(qs.size ? `/sell?${qs}` : "/sell", { newcomers: true });
   if (!user.verified) return <ConfirmEmailCard email={user.email ?? ""} doing="sell your work" />;
-  return <SellForm defaultCategory={prefill.category} defaultAi={prefill.ai} />;
+  return <DraftWorkspace userId={user.id} kind="listing"><SellForm defaultCategory={prefill.category} defaultAi={prefill.ai} /></DraftWorkspace>;
 }

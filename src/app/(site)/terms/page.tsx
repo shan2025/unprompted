@@ -65,7 +65,7 @@ export default function TermsPage() {
       <Section title="4. About the AI-involvement score">
         <p>
           Each score is an <strong className="text-ink">estimate</strong>, not a certificate or a guarantee. It combines
-          the creator&apos;s disclosure, automated analysis and process evidence, and is shown as a range. Automated AI
+          the creator&apos;s disclosure and automated signals. It is an uncalibrated heuristic, not a measured share of AI. Process evidence is reviewed separately. Automated AI
           detection is known to be unreliable, so we never treat it as proof, and video can&apos;t be scanned at all. How it
           works is explained on{" "}
           <Link href="/standard" className="link text-ink">

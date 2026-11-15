@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
+import { useDraftWorkspace } from "./DraftWorkspace";
 import Link from "next/link";
 import { createPost, previewPostAssessment, updatePost } from "@/app/actions/posts";
 import { CATEGORIES } from "@/lib/categories";
@@ -10,13 +11,16 @@ import type { Level } from "@/lib/scoring";
 import { CoverThemeField, DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
 export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory?: string; defaultAi?: Level; post?: EditablePost }) {
+  const draft = useDraftWorkspace();
   const formRef = useRef<HTMLFormElement>(null);
-  const [createState, createAction, publishing] = useActionState(post ? updatePost : createPost, null);
+  const [createState, createAction, publishing] = useActionState(async (previous: Parameters<typeof createPost>[0], form: FormData) => {
+    try { return await (post ? updatePost : createPost)(previous, form); } finally { draft?.resume(); }
+  }, null);
   const [preview, setPreview] = useState<PostPreviewState | null>(null);
   const [checking, startChecking] = useTransition();
   const [, startPublishing] = useTransition();
   const [tooBig, setTooBig] = useState<string | null>(null);
-  const [hasVideo, setHasVideo] = useState(Boolean(post?.videoUrl));
+  const [hasVideo, setHasVideo] = useState(Boolean(draft?.value("videoUrl") ?? post?.videoUrl));
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
   const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
@@ -39,13 +43,19 @@ export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     if (!fitsLimit(data)) return;
-    startPublishing(() => createAction(data));
+    startPublishing(async () => {
+      if (draft && !(await draft.prepare(data))) return;
+      createAction(data);
+    });
   }
 
   return (
     <form ref={formRef} onSubmit={submit} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]" noValidate>
       <div className="space-y-6">
-        {post && <input type="hidden" name="editSlug" value={post.slug} />}
+        {post && <>
+          <input type="hidden" name="editSlug" value={post.slug} />
+          <input type="hidden" name="workVersion" defaultValue={draft?.value("workVersion") ?? post.workVersion} />
+        </>}
         <Section step="01" title="Your post">
           <div>
             <label htmlFor="title" className="label">
@@ -146,7 +156,7 @@ export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory
         <Section
           step="03"
           title="Process evidence"
-          intro="Optional, but it narrows your score's range and is the best answer to a false flag."
+          intro="Optional, but it helps a moderator review your work and is the best answer to a false flag."
         >
           <EvidenceFields errors={errors} saved={post?.evidence} />
         </Section>

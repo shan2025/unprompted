@@ -34,7 +34,7 @@ describe("parseEvidence", () => {
     ]);
   });
 
-  it("gives an uploaded file the same credit as a link, and a note none", async () => {
+  it("gives neither unreviewed files nor links numeric credit", async () => {
     const fd = new FormData();
     row(fd, 0, { file: new File([PNG], "draft.png") });
     row(fd, 1, { note: "only a note" });
@@ -65,7 +65,7 @@ describe("parseEvidence", () => {
     expect(v.evidenceFiles).toHaveLength(1);
 
     const result = await assess({ ...v, preview: v.body, locked: "", image: null });
-    expect(result.score.evidenceStrength).toBe(0.25);
+    expect(result.score.evidenceStrength).toBe(0);
     expect(result.evidence[0].file).toBeTruthy();
   });
 

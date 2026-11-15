@@ -24,6 +24,7 @@ export type PostCreateState = { errors?: FieldErrors; message?: string } | null;
 
 /** A post as the edit form starts out: what the author saved last time. */
 export interface EditablePost {
+  workVersion: string;
   slug: string;
   title: string;
   subtitle: string;

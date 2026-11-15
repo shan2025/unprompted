@@ -1,3 +1,4 @@
+import { DraftWorkspace } from "@/components/DraftWorkspace";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PostForm } from "@/components/PostForm";
@@ -45,5 +46,5 @@ async function Gate({ searchParams }: Props) {
   if (prefill.ai) qs.set("ai", prefill.ai);
   const user = await requireUser(qs.size ? `/journal/new?${qs}` : "/journal/new", { newcomers: true });
   if (!user.verified) return <ConfirmEmailCard email={user.email ?? ""} doing="share your work" />;
-  return <PostForm defaultCategory={prefill.category} defaultAi={prefill.ai} />;
+  return <DraftWorkspace userId={user.id} kind="post"><PostForm defaultCategory={prefill.category} defaultAi={prefill.ai} /></DraftWorkspace>;
 }

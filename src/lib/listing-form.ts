@@ -1,4 +1,5 @@
 import { isCategory, isLicense, type CategoryId, type LicenseId } from "./categories";
+import { evidenceUrl, hasDuplicateEvidence } from "./evidence";
 import { CURRENCIES, isCurrency, type Currency } from "./currency";
 import { sniffImageType } from "./analysis/media";
 import type { MediaScan } from "./analysis/media";
@@ -40,6 +41,15 @@ export interface ParsedListing {
   evidence: Evidence[];
   evidenceFiles: EvidenceFile[];
   image: { bytes: Uint8Array } | null;
+}
+
+export interface EditableListing extends Omit<ParsedListing, "image" | "evidenceFiles" | "evidence"> {
+  slug: string;
+  workVersion: string;
+  coverFile: string | null;
+  coverTheme: string | null;
+  coverPattern: string | null;
+  evidence: (Evidence & { index: number })[];
 }
 
 export interface PreviewResult {
@@ -93,16 +103,18 @@ export async function parseEvidence(fd: FormData, errors: FieldErrors) {
     const upload = fd.get(`evidence_file_${rows[i]}`);
     const file = upload instanceof File && upload.size > 0 ? upload : null;
     if (!url && !note && !file) continue;
-    if (!(kind in EVIDENCE_KINDS) || kind === "c2pa") {
+    if (!Object.hasOwn(EVIDENCE_KINDS, kind) || kind === "c2pa") {
       errors.evidence = "Choose what each piece of evidence is.";
       continue;
     }
-    if (url && !/^https?:\/\/\S+\.\S+/.test(url)) {
+    if (url && !evidenceUrl(url)) {
       errors.evidence = "Evidence links must start with http:// or https://";
       continue;
     }
+    let fingerprint: string | undefined;
     if (file) {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      fingerprint = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), (b) => b.toString(16).padStart(2, "0")).join("");
       const pdf = isPdf(bytes);
       if (!pdf && !sniffImageType(bytes)) {
         errors.evidence = "Evidence files must be a JPG, PNG, WebP, GIF or PDF.";
@@ -110,9 +122,10 @@ export async function parseEvidence(fd: FormData, errors: FieldErrors) {
       }
       files.push({ index: evidence.length, bytes, pdf });
     }
-    evidence.push({ kind: kind as EvidenceKind, ...(url && { url }), ...(file && { file: UNSAVED_FILE }), ...(note && { note }) });
+    evidence.push({ kind: kind as EvidenceKind, ...(url && { url }), ...(file && { file: UNSAVED_FILE, fingerprint }), ...(note && { note }) });
   }
   if (evidence.length > MAX_EVIDENCE) errors.evidence = `Attach at most ${MAX_EVIDENCE} pieces of evidence.`;
+  if (hasDuplicateEvidence(evidence)) errors.evidence = "Each evidence source must be different. Remove repeated links or files.";
   return { evidence, files };
 }
 
@@ -131,7 +144,7 @@ export async function parseImage(fd: FormData, errors: FieldErrors): Promise<Par
   return { bytes };
 }
 
-export async function parseListingForm(fd: FormData, { requireAttestation }: { requireAttestation: boolean }) {
+export async function parseListingForm(fd: FormData, { requireAttestation, keepsImage = false }: { requireAttestation: boolean; keepsImage?: boolean }) {
   const errors: FieldErrors = {};
 
   const title = str(fd, "title");
@@ -177,7 +190,7 @@ export async function parseListingForm(fd: FormData, { requireAttestation }: { r
   const { evidence, files: evidenceFiles } = await parseEvidence(fd, errors);
   const image = await parseImage(fd, errors);
 
-  if (!preview && !locked && !image && !errors.cover) {
+  if (!preview && !locked && !image && !keepsImage && !errors.cover) {
     errors.preview = "Add a preview, the deliverable, or an image so there is something to show and check.";
   }
 

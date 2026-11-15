@@ -1,3 +1,4 @@
+import { EvidenceReview } from "@/components/EvidenceReview";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -32,7 +33,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const row = await getListing(slug);
-  if (!row || row.listing.status === "in_review" || row.listing.status === "removed") return { title: "Listing", robots: { index: false } };
+  if (!row || !["published", "sold"].includes(row.listing.status)) return { title: "Listing", robots: { index: false } };
   const description = `${row.listing.aiPercent}% AI · ${TIER_INFO[row.listing.tier as Tier]?.label}. ${row.listing.summary}`;
   return {
     title: row.listing.title,
@@ -67,7 +68,7 @@ async function ListingView({ params, searchParams }: Props) {
   const purchased = orderStatus === "paid" || orderStatus === "demo";
   // Buyers keep what they bought, even after a listing leaves the market. Anyone
   // waiting on a seller keeps sight of the listing they've paid for too.
-  if ((listing.status === "in_review" || listing.status === "removed") && !isOwner && !isAdmin && !purchased && orderStatus !== "pending") notFound();
+  if ((!["published", "sold"].includes(listing.status)) && !isOwner && !isAdmin && !purchased && orderStatus !== "pending") notFound();
 
   const [sales, reserved] = await Promise.all([
     salesCount(listing.id),
@@ -99,7 +100,7 @@ async function ListingView({ params, searchParams }: Props) {
       <div className="mt-4">
         {isOwner ? (
           <>
-            <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">This is your listing.</p>
+            <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">This is your listing. <Link href={`/listing/${listing.slug}/edit`} className="link">Edit or revise</Link></p>
             {listing.priceCents > 0 && !listing.isDemo && <PaymentLinkForm slug={listing.slug} current={listing.paymentUrl} />}
           </>
         ) : purchased ? (
@@ -111,7 +112,7 @@ async function ListingView({ params, searchParams }: Props) {
         ) : listing.status === "sold" ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Sold. This was an exclusive listing.</p>
         ) : listing.status !== "published" ? (
-          <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Not available while under review.</p>
+          <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">This listing is not currently for sale.</p>
         ) : instantBuy ? (
           <form action={buyListing.bind(null, listing.slug)}>
             <SubmitButton className="btn-accent w-full py-3 text-[15px]" pendingText="Processing…">
@@ -281,6 +282,7 @@ async function ListingView({ params, searchParams }: Props) {
 
           <Reveal className="mt-10">
             <h2 className="text-2xl font-normal">Process evidence</h2>
+            {evidence.length > 0 && <EvidenceReview kind="listing" id={listing.id} analyzedAt={analysis.analyzedAt} review={listing.evidenceReview} isAdmin={isAdmin} />}
             {evidence.length === 0 ? (
               <p className="mt-3 text-ink-soft">The creator hasn&apos;t attached any process evidence yet.</p>
             ) : (
@@ -307,12 +309,11 @@ async function ListingView({ params, searchParams }: Props) {
                 <strong className="text-ink">
                   <CountedText text={`${analysis.score.disclosedPercent}%`} delay={150} />
                 </strong>
-                . Estimate after automated checks and evidence:{" "}
+                . Disclosure and scan score:{" "}
                 <strong className="text-ink">
                   <CountedText text={`${analysis.score.percent}%`} delay={250} />
                 </strong>{" "}
-                (likely <CountedText text={`${analysis.score.low}–${analysis.score.high}%`} delay={350} />
-                ).
+                (uncalibrated score, not a measured AI percentage).
               </p>
               {analysis.sources.length > 0 && (
                 <div>
@@ -466,8 +467,7 @@ function Banners({
       "border-assist/40 bg-card text-ink",
       isOwner ? (
         <>
-          <strong>In review.</strong> Automated checks found more AI than you disclosed, so a moderator will look at this
-          before it goes live. Adding process evidence helps.
+          <strong>In review.</strong> A moderator will check the current version before it goes live. You can edit the listing to add evidence or clarify your disclosure.
         </>
       ) : (
         <>
@@ -476,6 +476,7 @@ function Banners({
       ),
     );
   }
+  if (status === "withdrawn") return <p className="mb-6 rounded-xl border border-line bg-paper p-4 text-sm">Withdrawn from the market. Existing buyers keep access; pending orders can still be confirmed.</p>;
   if (status === "removed") {
     return banner(
       "border-heavy/40 bg-card text-ink",

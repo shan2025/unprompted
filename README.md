@@ -2,11 +2,11 @@
 
 **A place to explore work made by people, and buy it if it's for sale: writing, poetry, art, photography, design, music, film, code, websites, handicrafts and ideas. Every piece shows how much AI was involved.**
 
-Each post or listing gets an **AI-involvement estimate**, for example *"3% · likely 2–13% · Human-made"*. It's built from three sources and shown with its reasoning:
+Each post or listing gets an **uncalibrated disclosure-and-scan score**, with a stage-by-stage breakdown. This is not a measured percentage of AI authorship or a calibrated probability; the UI no longer presents heuristic bounds as a “likely” interval.
 
-1. **Disclosure.** The creator says, stage by stage (idea, making, polish, supporting assets), whether AI was used: none, light, substantial or generated. This is the floor: we never show less AI than the creator admits to.
-2. **Automated analysis.** Text, poetry and code are scanned passage by passage for machine-writing patterns. Images are scanned for generator tags, IPTC "trained algorithmic media" markers and C2PA Content Credentials. Scans can only *raise* an estimate, in proportion to their confidence.
-3. **Process evidence.** Drafts, time-lapses and commit history narrow the range and are shown publicly.
+1. **Disclosure.** The creator answers separately for idea, making, polish and assets. This sets the score's floor.
+2. **Automated signals.** Text heuristics and image metadata can raise the score and trigger moderation. C2PA markers are explicitly unverified and receive no provenance credit.
+3. **Process evidence.** Attachments are public but do not affect the score. Repeated URLs and identical uploaded files are rejected. An admin can record a dated evidence review with a note; publishing an edit clears that review.
 
 When a scan disagrees strongly with a disclosure, or a file's metadata says AI was used at a stage disclosed as "No AI", the listing goes to a **human review queue** instead of going live. Read [docs/RESEARCH.md](docs/RESEARCH.md) for why it works this way: AI detectors are not reliable enough to issue verdicts.
 
@@ -38,7 +38,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 
 ## What works today
 
-- Browse, search and filter by category, maximum AI %, and "process evidence attached"
+- Browse, search and filter by category, maximum AI %, and "process evidence reviewed"
 - Listing pages with the score card, passage-by-passage highlighting, process evidence, and a locked deliverable that unlocks after purchase
 - Selling: a guided form with stage-by-stage disclosure, evidence links and image upload, plus a **Check my score** preview before publishing
 - Automatic review: listings where detection disagrees with the disclosure are held for a moderator
@@ -63,8 +63,8 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 | Provenance | Verify C2PA signatures (today we only detect that a manifest exists) |
 | File delivery | Deliverables are text or links; add secure file uploads and downloads |
 | Storage | Public image copies are stored in the database; move to object storage as volume grows (`src/lib/uploads.ts`) |
-| Accounts | Email verification, seller identity verification |
-| Moderation | Creator appeals UI, edit and relist after review, reputation history |
+| Accounts | Seller identity verification (email/phone verification already exists) |
+| Moderation | Formal appeals case management and reputation history; removed work can now be revised and resubmitted to moderation |
 | Legal | Terms of service, DMCA process, refund policy (see the research doc) |
 
 ## How scoring works (code)
@@ -144,3 +144,19 @@ Notes:
 | Listing | Sell form with score preview |
 | --- | --- |
 | ![Listing](docs/screenshots/listing.jpg) | ![Sell](docs/screenshots/sell.jpg) |
+
+## Drafts, revisions and evidence reviews
+
+Apply the new migration with `npm run db:migrate` before starting the updated app. The migration adds private drafts and review fields, and the migration script upgrades historic scores to remove attachment discounts and automatic verification. This backfill leaves moderation decisions intact.
+
+- New posts, new listings and edits autosave to the account. Attachments are stored privately in the draft, not through the public upload route. The dashboard lists saved drafts.
+- An IndexedDB recovery copy stays on the device. When it differs from the account copy, the editor asks which to use. Saving and publishing check the draft version; stale tabs cannot overwrite or republish it. Ownership attestations must be checked again after recovery.
+- Publishing consumes the saved draft in the same database transaction. Work in review or removed by moderators returns to review on resubmission. Edits clear any previous process-evidence review.
+- Creators can edit unsold listings and withdraw published listings. Listings with pending, paid, demo or refunded orders retain their original work and terms; create a new listing for a new version. Withdrawal leaves existing orders and buyer access intact.
+- Admins record evidence reviews on the work detail page after opening the sources, confirming relevance and writing a review note. Reviews do not change numeric scores or claim cryptographic verification.
+
+### Database regression checks
+
+`npm test` runs the unit suite. The PostgreSQL integration suite additionally needs `TEST_DATABASE_URL` pointing to an empty, disposable database named `unprompted_publishing_test_<timestamp>` on localhost. It runs the checked-in migrations and creates only test data. Run `npx vitest run tests/publishing.integration.test.ts` with that environment variable. Never point it at a production database.
+
+The eight existing prose, poetry, and code fixtures score at the expected extremes: five human or human-style examples at 0 and three machine-style examples at 100 for the text scan. These examples were selected for regression testing and cannot calibrate the estimate for new work. Calibration requires an independent, consented corpus with recorded AI use, including mixed workflows, and an evaluation of false holds and uncertainty by medium. C2PA signature verification remains unconfigured.

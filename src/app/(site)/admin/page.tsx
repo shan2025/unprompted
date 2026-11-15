@@ -153,8 +153,10 @@ async function Queue() {
                     ? listing.evidence.map((e) => EVIDENCE_KINDS[e.kind]?.label ?? e.kind).join(", ")
                     : "none"}
                 </p>
-                <form action={reviewListing} className="mt-4 flex gap-2">
+                <form action={reviewListing} className="mt-4 flex flex-wrap gap-2">
                   <input type="hidden" name="id" value={listing.id} />
+                  <input type="hidden" name="analyzedAt" value={listing.analysis.analyzedAt} />
+                  <input name="reason" aria-label="Reason for removal" className="field w-full" maxLength={1000} placeholder="If removing, explain what the creator needs to revise" />
                   <SubmitButton name="decision" value="approve" className="btn-primary">
                     Approve
                   </SubmitButton>
@@ -241,8 +243,10 @@ async function Queue() {
                 <p className="mt-1 text-sm text-muted">
                   Evidence: {post.evidence.length ? post.evidence.map((e) => EVIDENCE_KINDS[e.kind]?.label ?? e.kind).join(", ") : "none"}
                 </p>
-                <form action={reviewPost} className="mt-4 flex gap-2">
+                <form action={reviewPost} className="mt-4 flex flex-wrap gap-2">
                   <input type="hidden" name="id" value={post.id} />
+                  <input type="hidden" name="analyzedAt" value={post.analysis.analyzedAt} />
+                  <input name="reason" aria-label="Reason for removal" className="field w-full" maxLength={1000} placeholder="If removing, explain what the creator needs to revise" />
                   <SubmitButton name="decision" value="approve" className="btn-primary">
                     Approve
                   </SubmitButton>

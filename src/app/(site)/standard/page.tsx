@@ -34,9 +34,7 @@ export default function StandardPage() {
       </h1>
       <p className="intro-rise mt-5 text-lg leading-relaxed text-ink-soft" style={d(180)}>
         Every piece on Unprompters, shared for free or for sale, carries an{" "}
-        <strong className="text-ink">AI-involvement estimate</strong>: roughly how much of the creative work came from AI
-        rather than from the person who made it. It comes with a range, a stage-by-stage breakdown, and the reasoning
-        behind it. Here is exactly how it&apos;s built, and where it falls short.
+        <strong className="text-ink">AI-involvement estimate</strong>: an uncalibrated heuristic combining stage-by-stage disclosure and automated signals. It is not a measured share of AI or a probability of authorship. We show the reasoning behind it. Here is exactly how it&apos;s built, and where it falls short.
       </p>
 
       <H2>What the tiers mean</H2>
@@ -118,7 +116,7 @@ export default function StandardPage() {
         <p>
           <strong className="text-ink">Text and poetry</strong> are split into passages and checked for statistical habits
           of language models: stock vocabulary, formulaic constructions, very even sentence rhythm, stacked transition
-          words. Each passage gets a probability, and the score is the share of the text that reads as machine-made. You
+          words. Each passage gets a heuristic signal score, not a calibrated probability. You
           can see the passage-level result on every post and listing.
         </p>
         <p>
@@ -140,7 +138,7 @@ export default function StandardPage() {
         </p>
       </div>
 
-      <H2>3. Evidence narrows the range</H2>
+      <H2>3. Evidence is reviewed separately</H2>
       <p className="mt-4 leading-relaxed text-ink-soft">
         The best proof that a person made something is the process. Creators can attach evidence, which is shown publicly
         so anyone can check it:
@@ -150,19 +148,16 @@ export default function StandardPage() {
           <li key={e.label}>
             <Reveal delay={(i % 2) * 90} className="card px-4 py-3 text-sm">
               {e.label}
-              <span className="float-right tabular-nums text-muted">
-                <CountedText text={`+${Math.round(e.strength * 100)}`} delay={(i % 2) * 90 + 150} />
-              </span>
+
             </Reveal>
           </li>
         ))}
       </ul>
       <p className="mt-4 leading-relaxed text-ink-soft">
-        Only evidence with a file or link counts, because a note alone gives nobody anything to check. Strengths combine with
-        diminishing returns, up to 90%. At 50% or more a piece is marked{" "}
-        <strong className="text-human">Evidence attached</strong>. That means the creator supplied it, not that we checked
-        it, so open it before you rely on it. Evidence also softens detector suspicion. That&apos;s deliberate: a
-        time-lapse of someone painting outweighs a pattern-matcher.
+        Attached evidence is supplied by the creator; it is not proof of authorship. Repeated links and identical uploaded files are rejected.
+        A moderator must open the sources, check their relevance, and record a note before the work is marked “Evidence reviewed”.
+        Editing the work clears that review. Neither attachments nor a review change the numeric score.
+        C2PA markers receive no credit: this system does not validate C2PA manifests or signatures.
       </p>
 
       <H2 id="limits">What detection can&apos;t do</H2>
@@ -180,7 +175,7 @@ export default function StandardPage() {
         </p>
         <p>
           <strong className="text-ink">So we never treat a scan as a verdict.</strong> Our built-in analyzer is a transparent
-          baseline, and its confidence is capped. Every estimate is shown as a range. Disagreements between a scan and a
+          baseline, and its confidence is capped. No statistically validated confidence interval is available, so we do not display a “likely” range. Disagreements between a scan and a
           disclosure go to a person.
         </p>
       </div>

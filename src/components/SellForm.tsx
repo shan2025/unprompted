@@ -1,21 +1,25 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { createListing, previewAssessment } from "@/app/actions/listings";
+import { createListing, previewAssessment, updateListing } from "@/app/actions/listings";
+import { useDraftWorkspace } from "./DraftWorkspace";
 import { CATEGORIES, LICENSES } from "@/lib/categories";
 import { CURRENCIES, FORM_CURRENCY, type Currency } from "@/lib/currency";
-import type { FieldErrors, PreviewState } from "@/lib/listing-form";
+import type { EditableListing, FieldErrors, PreviewState } from "@/lib/listing-form";
 import type { Level } from "@/lib/scoring";
 import { CoverThemeField, DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
 
-export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: string; defaultAi?: Level }) {
+export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCategory?: string; defaultAi?: Level; listing?: EditableListing }) {
+  const draft = useDraftWorkspace();
   const formRef = useRef<HTMLFormElement>(null);
-  const [createState, createAction, publishing] = useActionState(createListing, null);
+  const [createState, createAction, publishing] = useActionState(async (previous: Parameters<typeof createListing>[0], form: FormData) => {
+    try { return await (listing ? updateListing : createListing)(previous, form); } finally { draft?.resume(); }
+  }, null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [checking, startChecking] = useTransition();
   const [, startPublishing] = useTransition();
   const [tooBig, setTooBig] = useState<string | null>(null);
-  const [currency, setCurrency] = useState<Currency>(FORM_CURRENCY);
+  const [currency, setCurrency] = useState<Currency>((draft?.value("currency") as Currency) ?? listing?.currency ?? FORM_CURRENCY);
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
   const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
@@ -39,18 +43,25 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     if (!fitsLimit(data)) return;
-    startPublishing(() => createAction(data));
+    startPublishing(async () => {
+      if (draft && !(await draft.prepare(data))) return;
+      createAction(data);
+    });
   }
 
   return (
     <form ref={formRef} onSubmit={submit} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]" noValidate>
       <div className="space-y-6">
+        {listing && <>
+          <input type="hidden" name="editSlug" value={listing.slug} />
+          <input type="hidden" name="workVersion" defaultValue={draft?.value("workVersion") ?? listing.workVersion} />
+        </>}
         <Section step="01" title="The work">
           <div>
             <label htmlFor="title" className="label">
               Title
             </label>
-            <input id="title" name="title" className="field" maxLength={100} required />
+            <input id="title" name="title" className="field" maxLength={100} required defaultValue={listing?.title} />
             <FieldError errors={errors} name="title" />
           </div>
 
@@ -59,7 +70,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
               <label htmlFor="category" className="label">
                 Category
               </label>
-              <select id="category" name="category" className="field" defaultValue={defaultCategory ?? ""}>
+              <select id="category" name="category" className="field" defaultValue={listing?.category ?? defaultCategory ?? ""}>
                 <option value="" disabled>
                   Choose one
                 </option>
@@ -92,7 +103,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
                 </select>
                 <div className="relative min-w-0 flex-1">
                   <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{CURRENCIES[currency].symbol}</span>
-                  <input id="price" name="price" inputMode="decimal" className="field pl-7" placeholder={currency === "INR" ? "500" : "25"} />
+                  <input id="price" name="price" inputMode="decimal" className="field pl-7" placeholder={currency === "INR" ? "500" : "25"} defaultValue={listing ? listing.priceCents / 100 : undefined} />
                 </div>
               </div>
               <p className="hint">Use the currency your payment link charges in. Buyers see the price exactly as you enter it. Use 0 to give it away.</p>
@@ -105,7 +116,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             <label htmlFor="paymentUrl" className="label">
               Payment link
             </label>
-            <input id="paymentUrl" name="paymentUrl" className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" />
+            <input id="paymentUrl" name="paymentUrl" className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" defaultValue={listing?.paymentUrl ?? ""} />
             <p className="hint">
               Needed if you charge. Buyers pay you directly through this link, and Unprompters takes no cut. Use Razorpay, PayPal,
               Stripe, Instamojo, PayU, Cashfree or UPI, and set it to charge the price above.
@@ -117,7 +128,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             <label htmlFor="summary" className="label">
               Short description
             </label>
-            <textarea id="summary" name="summary" rows={3} maxLength={280} className="field" />
+            <textarea id="summary" name="summary" rows={3} maxLength={280} className="field" defaultValue={listing?.summary} />
             <p className="hint">Shown on cards and search results. Up to 280 characters.</p>
             <FieldError errors={errors} name="summary" />
           </div>
@@ -130,7 +141,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
                   key={l.id}
                   className="cursor-pointer rounded-xl border border-line p-3 transition-colors hover:border-ink has-checked:border-ink has-checked:bg-paper"
                 >
-                  <input type="radio" name="license" value={l.id} defaultChecked={i === 0} className="sr-only" />
+                  <input type="radio" name="license" value={l.id} defaultChecked={listing ? listing.license === l.id : i === 0} className="sr-only" />
                   <span className="block text-sm font-semibold">{l.label}</span>
                   <span className="mt-0.5 block text-xs text-muted">{l.blurb}</span>
                 </label>
@@ -141,9 +152,10 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
 
           <ImageField
             errors={errors}
+            currentFile={listing?.coverFile}
             hint="Up to 4 MB. Upload the file you exported, not a screenshot: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px, so link the full-resolution file under “What the buyer gets”."
           />
-          <CoverThemeField hint="Without an image, your listing gets a drawn cover. Leave both on their defaults, or make it yours." />
+          <CoverThemeField saved={listing?.coverTheme} savedPattern={listing?.coverPattern} hint="Without an image, your listing gets a drawn cover. Leave both on their defaults, or make it yours." />
         </Section>
 
         <Section step="02" title="Content" intro="Both parts are scanned. Only the preview is ever shown publicly.">
@@ -151,7 +163,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             <label htmlFor="preview" className="label">
               Public preview
             </label>
-            <textarea id="preview" name="preview" rows={8} className="field font-[inherit]" />
+            <textarea id="preview" name="preview" rows={8} className="field font-[inherit]" defaultValue={listing?.preview} />
             <p className="hint">An excerpt, a stanza, a code sample, the pitch. Anyone can read this.</p>
             <FieldError errors={errors} name="preview" />
           </div>
@@ -159,7 +171,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
             <label htmlFor="locked" className="label">
               What the buyer gets
             </label>
-            <textarea id="locked" name="locked" rows={8} className="field" />
+            <textarea id="locked" name="locked" rows={8} className="field" defaultValue={listing?.locked} />
             <p className="hint">The full text or code, or delivery instructions and download links. Unlocked after purchase.</p>
             <FieldError errors={errors} name="locked" />
           </div>
@@ -170,15 +182,15 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
           title="AI disclosure"
           intro="Be precise. Your answers set the floor of your score: we never show less AI than you disclose."
         >
-          <DisclosureFields errors={errors} defaultAi={defaultAi} />
+          <DisclosureFields errors={errors} defaultAi={defaultAi} saved={listing?.disclosure} savedNotes={listing?.aiNotes} />
         </Section>
 
         <Section
           step="04"
           title="Process evidence"
-          intro="Show how you made it. Evidence is public, narrows your score's range and is the best answer to a false flag."
+          intro="Show how you made it. Evidence is public and can be reviewed by a moderator; attaching it does not change your numeric score."
         >
-          <EvidenceFields errors={errors} />
+          <EvidenceFields errors={errors} saved={listing?.evidence} />
         </Section>
 
         <section className="card space-y-4 p-5 sm:p-7">
@@ -200,7 +212,7 @@ export function SellForm({ defaultCategory, defaultAi }: { defaultCategory?: str
               {checking ? "Checking…" : "Check my score"}
             </button>
             <button type="submit" className="btn-accent" disabled={publishing}>
-              {publishing ? "Analyzing & publishing…" : "Publish listing"}
+              {publishing ? "Saving & assessing…" : listing ? "Save and resubmit" : "Publish listing"}
             </button>
           </div>
         </section>

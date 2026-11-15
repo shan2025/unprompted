@@ -179,7 +179,7 @@ function HowCraftIsScored({ page, category }: { page: BrowsePage; category: Cate
       <p className="mt-3 leading-relaxed text-ink-soft">
         Every piece on Unprompters carries an estimate of how much of the work came from AI. It weighs four stages, by
         what matters most in the craft. For {noun}, {sentence}. The creator&apos;s own disclosure is the floor, scans can
-        only raise the estimate, and process evidence such as drafts or time-lapses narrows its range.
+        only raise the heuristic score. Process evidence is reviewed separately and does not change the number.
       </p>
       <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <Link href="/standard" className="link text-ink">

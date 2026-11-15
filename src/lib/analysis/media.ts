@@ -6,10 +6,16 @@
 
 export interface MediaScan {
   aiSignal: "strong" | "partial" | "none";
-  /** A C2PA manifest is embedded. Its signature is not verified here. */
+  /** An unverified C2PA marker was found, not a validated manifest. */
   c2pa: boolean;
   camera: string | null;
   findings: string[];
+}
+
+const C2PA_MARKER_NOTE = "Contains an unverified C2PA marker. No manifest or signature has been validated.";
+
+export function updateMetadataWording(scan: MediaScan | null): MediaScan | null {
+  return scan && { ...scan, findings: scan.findings.map((finding) => finding.startsWith("Contains a C2PA Content Credentials manifest") ? C2PA_MARKER_NOTE : finding) };
 }
 
 const GENERATORS: [RegExp, string][] = [
@@ -51,11 +57,7 @@ export function scanImageMetadata(bytes: Uint8Array): MediaScan {
 
   const c2pa = raw.includes("c2pa");
   if (c2pa) {
-    findings.push(
-      aiSignal === "none"
-        ? "Contains a C2PA Content Credentials manifest with no AI source declared (signature not yet verified)."
-        : "Contains a C2PA Content Credentials manifest.",
-    );
+    findings.push(C2PA_MARKER_NOTE);
   }
 
   let camera: string | null = null;

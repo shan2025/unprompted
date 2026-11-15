@@ -1,3 +1,4 @@
+import { EvidenceReview } from "@/components/EvidenceReview";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -163,7 +164,7 @@ async function PostView({ params, searchParams }: Props) {
               {author.name}
             </Link>{" "}
             · {formatDate(post.createdAt)}
-            {isAuthor && post.status !== "removed" && (
+            {isAuthor && (
               <>
                 {" "}
                 ·{" "}
@@ -223,6 +224,7 @@ async function PostView({ params, searchParams }: Props) {
           {evidence.length > 0 && (
             <section className="mt-10">
               <h2 className="text-2xl font-normal">Process evidence</h2>
+              <EvidenceReview kind="post" id={post.id} analyzedAt={post.analysis.analyzedAt} review={post.evidenceReview} isAdmin={isAdmin} />
               <ul className="mt-4 space-y-3">
                 {evidence.map((e, i) => (
                   <li key={i}>
@@ -310,7 +312,7 @@ async function PostView({ params, searchParams }: Props) {
           )}
 
           <p className="px-1 text-xs leading-relaxed text-muted">
-            Disclosed by the author: {analysis.score.disclosedPercent}%. Estimate after automated checks and evidence:{" "}
+            Disclosed by the author: {analysis.score.disclosedPercent}%. Disclosure and scan score:{" "}
             {analysis.score.percent}%. Automated checks are signals, not proof.{" "}
             <Link href="/standard" className="link">
               How scoring works
@@ -325,7 +327,7 @@ async function PostView({ params, searchParams }: Props) {
 
           {(isAuthor || isAdmin) && (
             <div className="space-y-3 px-1">
-              {isAuthor && post.status !== "removed" && (
+              {isAuthor && (
                 <Link href={`${path}/edit`} className="block text-sm font-medium text-ink hover:text-accent">
                   Edit this post
                 </Link>
@@ -350,8 +352,7 @@ function Banner({ status, created, updated, isAuthor }: { status: string; create
       "border-assist/40 bg-card text-ink",
       isAuthor ? (
         <>
-          <strong>In review.</strong> Automated checks found more AI than you disclosed, so a moderator will look at this
-          before it goes live. Adding process evidence helps.
+          <strong>In review.</strong> A moderator will check the current version before it goes live. You can edit the post to add evidence or clarify your disclosure.
         </>
       ) : (
         <>

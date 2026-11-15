@@ -1,3 +1,5 @@
+import { DraftList } from "@/components/DraftList";
+import { WithdrawListing } from "@/components/WithdrawListing";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { reviewOrder } from "@/app/actions/listings";
@@ -21,6 +23,7 @@ const STATUS: Record<string, { label: string; tone: string }> = {
   in_review: { label: "In review", tone: "text-assist" },
   sold: { label: "Sold", tone: "text-ink" },
   removed: { label: "Removed", tone: "text-heavy" },
+  withdrawn: { label: "Withdrawn", tone: "text-muted" },
 };
 
 // Posts only show a status when it isn't the usual "Live".
@@ -112,6 +115,7 @@ async function Dashboard() {
         )}
       </div>
 
+      <DraftList userId={user.id} />
       {statCards.length > 0 && (
         <div className={`mt-8 grid gap-4 sm:grid-cols-2 ${STAT_COLUMNS[statCards.length] ?? "lg:grid-cols-3"}`}>{statCards}</div>
       )}
@@ -270,7 +274,7 @@ async function Dashboard() {
                         <Link href={`/listing/${l.slug}`} className="font-semibold hover:text-accent">
                           {l.title}
                         </Link>
-                        <div className="text-xs text-muted">{formatDate(l.createdAt)}</div>
+                        <div className="text-xs text-muted">{formatDate(l.createdAt)}</div><div className="mt-2 flex flex-wrap gap-3"><Link href={`/listing/${l.slug}/edit`} className="link text-sm">Edit or revise</Link>{["published", "in_review"].includes(l.status) && <WithdrawListing slug={l.slug} />}</div>
                       </td>
                       <td className={`px-4 py-3 font-semibold ${STATUS[l.status]?.tone}`}>{STATUS[l.status]?.label ?? l.status}</td>
                       <td className="px-4 py-3">
