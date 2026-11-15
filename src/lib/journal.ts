@@ -145,6 +145,30 @@ export async function followCounts(userId: number) {
   return { followers: followers?.n ?? 0, following: following?.n ?? 0 };
 }
 
+export type FollowDirection = "followers" | "following";
+
+export function followMemberIds(userId: number, direction: FollowDirection) {
+  const [member, owner] = direction === "followers"
+    ? [follows.followerId, follows.followingId]
+    : [follows.followingId, follows.followerId];
+  return db.select({ id: member }).from(follows).where(eq(owner, userId));
+}
+
+export const followPageSize = 20;
+
+export function followPage(value: unknown) {
+  return typeof value === "string" && /^[1-9]\d{0,7}$/.test(value) ? Number(value) : 1;
+}
+
+export function listFollowMembers(userId: number, direction: FollowDirection, page: number) {
+  return db.select({ id: users.id, name: users.name, handle: users.handle, avatarFile: users.avatarFile })
+    .from(users)
+    .where(inArray(users.id, followMemberIds(userId, direction)))
+    .orderBy(users.name, users.id)
+    .limit(followPageSize + 1)
+    .offset((page - 1) * followPageSize);
+}
+
 export async function getMyPosts(userId: number) {
   return db
     .select({

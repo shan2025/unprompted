@@ -8,11 +8,12 @@ import { ConfirmEmailCard } from "@/components/VerifyEmailNotice";
 import { requireUser } from "@/lib/auth";
 import { findChatMember, getMessageHistory, listConversations, MAX_MESSAGE_LENGTH, searchChatMembers } from "@/lib/chat";
 import { formatDate, formatShortDate } from "@/lib/format";
+import { followPage, followPageSize } from "@/lib/journal";
 
 export const metadata: Metadata = { title: "Chat", robots: { index: false, follow: false } };
 
 type Query = Record<string, string | string[] | undefined>;
-type ChatLocation = { with?: string; new?: string; q?: string; filter?: string; before?: string };
+type ChatLocation = { with?: string; new?: string; q?: string; filter?: string; before?: string; people?: string; page?: string };
 type Member = NonNullable<Awaited<ReturnType<typeof findChatMember>>>;
 
 function href(location: ChatLocation = {}) {
@@ -43,8 +44,18 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
   const handle = /^[a-z0-9_]{3,30}$/.test(rawHandle) ? rawHandle : "";
   const compose = param(params.new, 1) === "1";
   const query = param(params.q, 100);
+  const hasSearch = Boolean(query.replace(/^@/, "").trim());
+  const direction = params.people === "followers" || params.people === "following" ? params.people : undefined;
+  const peopleScope = direction ?? "all";
+  const page = compose ? followPage(params.page) : 1;
   const unreadOnly = params.filter === "unread";
-  const location = { new: compose ? "1" : undefined, q: query, filter: unreadOnly ? "unread" : undefined };
+  const location = {
+    new: compose ? "1" : undefined,
+    q: query,
+    filter: unreadOnly ? "unread" : undefined,
+    people: compose ? direction : undefined,
+    page: page > 1 ? String(page) : undefined,
+  };
   const rawBefore = param(params.before, 11);
   const before = /^\d{1,10}$/.test(rawBefore) && Number(rawBefore) <= 2147483647 ? Number(rawBefore) : undefined;
   const user = await requireUser(href({ ...location, with: handle, before: before?.toString() }));
@@ -60,7 +71,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
 
   const [conversations, people, selected] = await Promise.all([
     compose ? [] : listConversations(user.id, query, unreadOnly, handle ? undefined : before),
-    compose && query.replace(/^@/, "").trim() ? searchChatMembers(user.id, query) : [],
+    compose && (hasSearch || direction) ? searchChatMembers(user.id, query, direction, page) : [],
     handle ? findChatMember(user.id, handle) : null,
   ]);
   const history = selected ? await getMessageHistory(user.id, selected.id, before) : null;
@@ -77,12 +88,13 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
         <div className="border-b border-line px-4 pb-3 pt-5 sm:px-5">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h1 className="text-3xl font-bold tracking-tight">Chat</h1>
-            <Link href={compose ? "/chat" : href({ new: "1" })} className={compose ? "btn-ghost min-h-10 px-3" : "btn-primary min-h-10 gap-1.5 px-3"}>
+            <Link href={compose ? "/chat" : href({ new: "1", people: "followers" })} className={compose ? "btn-ghost min-h-10 px-3" : "btn-primary min-h-10 gap-1.5 px-3"}>
               {compose ? "Back to inbox" : <><ChatIcon className="h-4 w-4" /> New message</>}
             </Link>
           </div>
           <form action="/chat" method="get" role="search" className="flex items-center gap-1 rounded-full border border-line bg-field px-3 focus-within:border-ink">
             {compose && <input type="hidden" name="new" value="1" />}
+            {location.people && <input type="hidden" name="people" value={location.people} />}
             {!compose && unreadOnly && <input type="hidden" name="filter" value="unread" />}
             <input
               key={`${compose}:${query}`}
@@ -100,7 +112,13 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
               </svg>
             </button>
           </form>
-          {!compose && (
+          {compose ? (
+            <nav className="mt-3 flex flex-wrap gap-2 text-sm" aria-label="Find people by connection">
+              <Filter href={href({ new: "1", people: "followers", q: query })} current={peopleScope === "followers"}>Followers</Filter>
+              <Filter href={href({ new: "1", people: "following", q: query })} current={peopleScope === "following"}>Following</Filter>
+              <Filter href={href({ new: "1", q: query })} current={peopleScope === "all"}>All members</Filter>
+            </nav>
+          ) : (
             <nav className="mt-3 flex gap-2 text-sm" aria-label="Filter conversations">
               <Filter href={href({ q: query })} current={!unreadOnly}>All</Filter>
               <Filter href={href({ q: query, filter: "unread" })} current={unreadOnly}>Unread</Filter>
@@ -109,13 +127,28 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
           {compose ? (
-            people.length ? (
-              <ul>
-                {people.map((person) => <MemberRow key={person.id} person={person} url={href({ with: person.handle })} selected={person.id === selected?.id} />)}
-              </ul>
-            ) : (
-              <p className="px-3 py-5 text-sm text-ink-soft">{query ? "No members found." : "Find someone by their name or @handle."}</p>
-            )
+            <>
+              {people.length ? (
+                <ul>
+                  {people.slice(0, followPageSize).map((person) => (
+                    <MemberRow key={person.id} person={person} url={href({ ...location, with: person.handle })} selected={person.id === selected?.id} />
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-3 py-5 text-sm text-ink-soft">
+                  {page > 1 ? "No people on this page." : hasSearch ? "No matching members." : peopleScope === "followers"
+                    ? "No followers available to message. Try All members."
+                    : peopleScope === "following" ? "Nobody you follow is available to message. Try All members."
+                      : "Find someone by their name or @handle."}
+                </p>
+              )}
+              {(page > 1 || people.length > followPageSize) && (
+                <nav aria-label="Member search pages" className="flex gap-4 px-3 py-2 text-sm">
+                  {page > 1 && <Link href={href({ ...location, page: page > 2 ? String(page - 1) : undefined })} className="underline underline-offset-4">Previous</Link>}
+                  {people.length > followPageSize && <Link href={href({ ...location, page: String(page + 1) })} className="underline underline-offset-4">Next</Link>}
+                </nav>
+              )}
+            </>
           ) : conversations.length ? (
             <ul>
               {conversations.slice(0, 40).map((conversation) => (
@@ -150,7 +183,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
         {selected && history ? (
           <>
             <div className="flex min-h-16 items-center gap-3 border-b border-line bg-paper px-4 py-2 md:rounded-tr-2xl sm:px-6">
-              <Back href={inboxHref} />
+              <Back href={inboxHref} label={compose ? "Back to people" : "Back to inbox"} />
               <Avatar name={selected.name} file={selected.avatarFile} className="h-9 w-9 shrink-0 text-sm" />
               <div className="min-w-0">
                 <h2 className="truncate text-base font-bold"><Link href={`/u/${selected.handle}`} className="hover:underline">{selected.name}</Link></h2>
@@ -204,9 +237,9 @@ function Filter({ href: url, current, children }: { href: string; current: boole
   );
 }
 
-function Back({ href: url }: { href: string }) {
+function Back({ href: url, label }: { href: string; label: string }) {
   return (
-    <Link href={url} aria-label="Back to inbox" className="-ml-2 grid h-11 w-10 shrink-0 place-items-center rounded-full hover:bg-field md:hidden">
+    <Link href={url} aria-label={label} className="-ml-2 grid h-11 w-10 shrink-0 place-items-center rounded-full hover:bg-field md:hidden">
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="m14 6-6 6 6 6" />
       </svg>

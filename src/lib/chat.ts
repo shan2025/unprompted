@@ -1,7 +1,8 @@
 import "server-only";
-import { and, desc, eq, ilike, lt, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "./db";
 import { hideDemo } from "./demo";
+import { followMemberIds, followPageSize, type FollowDirection } from "./journal";
 
 const { directMessages, users } = schema;
 const member = { id: users.id, handle: users.handle, name: users.name, avatarFile: users.avatarFile };
@@ -25,12 +26,19 @@ export async function findChatMember(userId: number, handle: string) {
   return person ?? null;
 }
 
-export function searchChatMembers(userId: number, query: string) {
-  const pattern = contains(query.replace(/^@/, ""));
+export function searchChatMembers(userId: number, query: string, direction?: FollowDirection, page = 1) {
+  const term = query.replace(/^@/, "").trim();
+  const pattern = contains(term);
   return db.select(member).from(users)
-    .where(and(ne(users.id, userId), realMember(), or(ilike(users.name, pattern), ilike(users.handle, pattern))))
-    .orderBy(sql`${users.handle} = ${query.replace(/^@/, "").toLowerCase()} desc`, users.name, users.id)
-    .limit(20);
+    .where(and(
+      ne(users.id, userId),
+      realMember(),
+      direction ? inArray(users.id, followMemberIds(userId, direction)) : undefined,
+      term ? or(ilike(users.name, pattern), ilike(users.handle, pattern)) : undefined,
+    ))
+    .orderBy(sql`${users.handle} = ${term.toLowerCase()} desc`, users.name, users.id)
+    .limit(followPageSize + 1)
+    .offset((page - 1) * followPageSize);
 }
 
 export function listConversations(userId: number, query: string, unreadOnly: boolean, before?: number) {

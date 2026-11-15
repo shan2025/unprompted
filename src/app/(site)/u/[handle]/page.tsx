@@ -16,9 +16,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCreator, hasRealWork } from "@/lib/data";
 import { formatDate, siteUrl } from "@/lib/format";
 import { linkLabel, siteName } from "@/lib/links";
-import { followCounts, isFollowing, searchPosts } from "@/lib/journal";
+import { followCounts, followPage, followPageSize, isFollowing, listFollowMembers, searchPosts, type FollowDirection } from "@/lib/journal";
 
-type Props = { params: Promise<{ handle: string }>; searchParams: Promise<{ tab?: string }> };
+type Props = { params: Promise<{ handle: string }>; searchParams: Promise<{ tab?: string; people?: string; page?: string }> };
 
 // The name and bio give search engines and share previews something to show.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -48,18 +48,28 @@ export default function CreatorPage({ params, searchParams }: Props) {
 }
 
 async function Creator({ params, searchParams }: Props) {
-  const [{ handle }, { tab }] = await Promise.all([params, searchParams]);
+  const [{ handle }, { tab, people, page: rawPage }] = await Promise.all([params, searchParams]);
   const data = await getCreator(handle.toLowerCase());
   if (!data) notFound();
   const { creator, listings, stats } = data;
 
   const user = await getCurrentUser();
   const isSelf = user?.id === creator.id;
-  const [posts, counts, following] = await Promise.all([
+  const direction = isSelf && (people === "followers" || people === "following") ? people : undefined;
+  const page = followPage(rawPage);
+  const [posts, counts, following, members] = await Promise.all([
     searchPosts({ authorId: creator.id }),
     followCounts(creator.id),
     user && !isSelf ? isFollowing(user.id, creator.id) : Promise.resolve(false),
+    direction ? listFollowMembers(creator.id, direction, page) : [],
   ]);
+  function profileHref(people?: FollowDirection, page = 1) {
+    const query = new URLSearchParams();
+    if (tab === "for-sale") query.set("tab", tab);
+    if (people) query.set("people", people);
+    if (page > 1) query.set("page", String(page));
+    return `/u/${creator.handle}${query.size ? `?${query}` : ""}`;
+  }
   // Plenty of people are here to look, not to make. Their profile shows the
   // person, without empty work stats or a "for sale" shelf.
   const sells = listings.length > 0;
@@ -155,12 +165,45 @@ async function Creator({ params, searchParams }: Props) {
 
       <dl className="mt-10 grid grid-cols-3 border-y border-line sm:flex sm:flex-wrap">
         {makes && <Stat label="Works" value={posts.length + listings.length} />}
-        <Stat label={counts.followers === 1 ? "Follower" : "Followers"} value={counts.followers} />
-        <Stat label="Following" value={counts.following} />
+        <Stat label={counts.followers === 1 ? "Follower" : "Followers"} value={counts.followers} href={isSelf ? profileHref("followers") : undefined} current={direction === "followers"} />
+        <Stat label="Following" value={counts.following} href={isSelf ? profileHref("following") : undefined} current={direction === "following"} />
         {avgAi !== null && <Stat label="Avg. AI use" value={`${avgAi}%`} tone="text-human" />}
         {makes && <Stat label="With process evidence" value={withEvidence} />}
         {sells && <Stat label={stats.sales === 1 ? "Sale" : "Sales"} value={stats.sales} />}
       </dl>
+
+      {direction && (
+        <section aria-labelledby="profile-people-heading" className="border-b border-line py-6">
+          <div className="flex items-center justify-between gap-4">
+            <h2 id="profile-people-heading" className="text-lg font-semibold">{direction === "followers" ? "Followers" : "Following"}</h2>
+            <Link href={profileHref()} scroll={false} className="btn-ghost min-h-10 px-3">Close</Link>
+          </div>
+          {members.length ? (
+            <ul className="mt-3 max-w-xl divide-y divide-line">
+              {members.slice(0, followPageSize).map((person) => (
+                <li key={person.id} className="flex items-center justify-between gap-3 py-2">
+                  <Link href={`/u/${person.handle}`} className="flex min-w-0 items-center gap-3 rounded-sm hover:underline">
+                    <Avatar name={person.name} file={person.avatarFile} className="h-10 w-10 shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{person.name}</span>
+                      <span className="block truncate text-sm text-muted">@{person.handle}</span>
+                    </span>
+                  </Link>
+                  <Link href={`/chat?with=${person.handle}`} aria-label={`Message ${person.name}`} className="btn-ghost min-h-10 shrink-0 px-3">Message</Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-ink-soft">{page > 1 ? "No people on this page." : direction === "followers" ? "You don’t have any followers yet." : "You aren’t following anyone yet."}</p>
+          )}
+          {(page > 1 || members.length > followPageSize) && (
+            <nav aria-label="People pages" className="mt-4 flex gap-4 text-sm">
+              {page > 1 && <Link href={profileHref(direction, page - 1)} scroll={false} className="underline underline-offset-4">Previous</Link>}
+              {members.length > followPageSize && <Link href={profileHref(direction, page + 1)} scroll={false} className="underline underline-offset-4">Next</Link>}
+            </nav>
+          )}
+        </section>
+      )}
 
       {makes && (
         <section className="mt-10">
@@ -217,11 +260,17 @@ async function Creator({ params, searchParams }: Props) {
   );
 }
 
-function Stat({ label, value, tone = "text-ink" }: { label: string; value: number | string; tone?: string }) {
+function Stat({ label, value, tone = "text-ink", href, current }: { label: string; value: number | string; tone?: string; href?: string; current?: boolean }) {
   return (
     // The number reads first, but the label comes first for screen readers, as a list needs.
-    <div className="flex flex-col-reverse justify-end py-4 pr-4 sm:mr-8 sm:border-r sm:border-line sm:pr-8 sm:last:mr-0 sm:last:border-r-0">
-      <dt className="mt-0.5 text-[13px] text-muted">{label}</dt>
+    <div className="relative flex flex-col-reverse justify-end py-4 pr-4 sm:mr-8 sm:border-r sm:border-line sm:pr-8 sm:last:mr-0 sm:last:border-r-0">
+      <dt className="mt-0.5 text-[13px] text-muted">
+        {href ? (
+          <Link href={href} scroll={false} aria-current={current ? "true" : undefined} className="text-ink underline decoration-muted underline-offset-4 after:absolute after:inset-0 hover:decoration-ink focus-visible:after:outline-2">
+            {label}
+          </Link>
+        ) : label}
+      </dt>
       <dd className={`text-2xl font-light tabular-nums sm:text-[28px] ${tone}`}>{value}</dd>
     </div>
   );
