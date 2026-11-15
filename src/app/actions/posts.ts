@@ -12,6 +12,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
 import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { safeNext } from "@/lib/format";
+import { announce } from "@/lib/indexnow";
+import { worthIndexing } from "@/lib/indexing";
 import { MAX_EVIDENCE, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE } from "@/lib/listing-form";
 import {
   isAutoEvidence,
@@ -142,6 +144,10 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
     }),
   );
 
+  // Ask Bing and others to crawl it now, if it's live and long enough to be in search.
+  if (!result.score.needsReview && worthIndexing({ subtitle: v.subtitle, body: v.body, coverFile, videoUrl: v.videoUrl })) {
+    announce([`/journal/${slug}`, `/u/${user.handle}`]);
+  }
   redirect(`/journal/${slug}?created=1`);
 }
 
@@ -213,6 +219,8 @@ export async function updatePost(_prev: PostCreateState, fd: FormData): Promise<
   revalidatePath("/journal");
   revalidatePath(`/journal/${post.slug}`);
   revalidatePath(`/u/${user.handle}`);
+  // Changed, or back under review: either way search engines should look again.
+  announce([`/journal/${post.slug}`]);
   redirect(`/journal/${post.slug}?updated=1`);
 }
 
@@ -290,7 +298,7 @@ export async function deletePost(fd: FormData) {
   if (!user) return;
 
   const [post] = await db
-    .select({ id: schema.posts.id, authorId: schema.posts.authorId, coverFile: schema.posts.coverFile, evidence: schema.posts.evidence })
+    .select({ id: schema.posts.id, slug: schema.posts.slug, authorId: schema.posts.authorId, coverFile: schema.posts.coverFile, evidence: schema.posts.evidence })
     .from(schema.posts)
     .where(eq(schema.posts.slug, String(fd.get("slug") ?? "")))
     .limit(1);
@@ -304,6 +312,8 @@ export async function deletePost(fd: FormData) {
   });
   revalidatePath("/journal");
   revalidatePath(`/u/${user.handle}`);
+  // Gone now; a crawl sees the 404 and drops it from search.
+  announce([`/journal/${post.slug}`]);
   const fallback = post.authorId === user.id ? "/dashboard" : "/journal";
   redirect(safeNext(String(fd.get("returnTo") ?? ""), fallback));
 }

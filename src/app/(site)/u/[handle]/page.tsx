@@ -13,7 +13,7 @@ import { FollowButton } from "@/components/Social";
 import { JsonLd } from "@/components/JsonLd";
 import { fileUrl } from "@/lib/structured-data";
 import { getCurrentUser } from "@/lib/auth";
-import { getCreator } from "@/lib/data";
+import { getCreator, hasRealWork } from "@/lib/data";
 import { formatDate, siteUrl } from "@/lib/format";
 import { linkLabel, siteName } from "@/lib/links";
 import { followCounts, isFollowing, searchPosts } from "@/lib/journal";
@@ -31,6 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${creator.name} (@${creator.handle})`,
     description,
     alternates: { canonical: `/u/${creator.handle}` },
+    // Demo creators and people with no real work yet stay out of search.
+    robots: (await hasRealWork(creator.id)) ? undefined : { index: false },
     openGraph: { siteName: "Unprompters", title: creator.name, description, type: "profile" },
   };
 }

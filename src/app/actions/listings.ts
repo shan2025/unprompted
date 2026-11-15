@@ -12,6 +12,7 @@ import { db, schema } from "@/lib/db";
 import { escapeHtml, sendEmail } from "@/lib/email";
 import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { siteUrl } from "@/lib/format";
+import { announce } from "@/lib/indexnow";
 import { parseListingForm, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
 import { PAYMENT_LINK_HELP, parsePaymentLink } from "@/lib/payment-link";
 import { withinLimit } from "@/lib/rate-limit";
@@ -106,6 +107,8 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
     }),
   );
 
+  // Ask Bing and others to crawl it now, if it went live straight away.
+  if (!score.needsReview) announce([`/listing/${slug}`, `/u/${user.handle}`]);
   redirect(`/listing/${slug}?created=1`);
 }
 

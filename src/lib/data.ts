@@ -168,6 +168,26 @@ export async function salesCount(listingId: number) {
   return row?.n ?? 0;
 }
 
+/**
+ * Whether someone has real (non-demo) public work. Profiles without any stay out of
+ * search, as the sitemap already leaves them out: demo creators and people who only look.
+ */
+export async function hasRealWork(userId: number) {
+  const [listing, post] = await Promise.all([
+    db
+      .select({ id: listings.id })
+      .from(listings)
+      .where(and(eq(listings.creatorId, userId), inArray(listings.status, PUBLIC_STATUSES), eq(listings.isDemo, false)))
+      .limit(1),
+    db
+      .select({ id: posts.id })
+      .from(posts)
+      .where(and(eq(posts.authorId, userId), eq(posts.status, "published"), eq(posts.isDemo, false)))
+      .limit(1),
+  ]);
+  return listing.length > 0 || post.length > 0;
+}
+
 export async function getCreator(handle: string) {
   const [creator] = await db
     .select({ id: users.id, name: users.name, handle: users.handle, bio: users.bio, avatarFile: users.avatarFile, links: users.links, founding: users.founding, createdAt: users.createdAt })

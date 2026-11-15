@@ -4,6 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
+import { announce } from "@/lib/indexnow";
 import { parseWorkLink } from "@/lib/work-link";
 
 // revalidatePath rather than refresh(): in testing on Next 16.4, refresh()
@@ -14,10 +15,13 @@ export async function reviewListing(fd: FormData) {
   const id = Number(fd.get("id"));
   const decision = fd.get("decision");
   if (!Number.isInteger(id) || (decision !== "approve" && decision !== "remove")) return;
-  await db
+  const changed = await db
     .update(schema.listings)
     .set({ status: decision === "approve" ? "published" : "removed" })
-    .where(eq(schema.listings.id, id));
+    .where(eq(schema.listings.id, id))
+    .returning({ slug: schema.listings.slug });
+  // Now live, or now gone: either way search engines should look again.
+  announce(changed.map((l) => `/listing/${l.slug}`));
   revalidatePath("/admin");
 }
 
@@ -26,10 +30,12 @@ export async function reviewPost(fd: FormData) {
   const id = Number(fd.get("id"));
   const decision = fd.get("decision");
   if (!Number.isInteger(id) || (decision !== "approve" && decision !== "remove")) return;
-  await db
+  const changed = await db
     .update(schema.posts)
     .set({ status: decision === "approve" ? "published" : "removed" })
-    .where(eq(schema.posts.id, id));
+    .where(eq(schema.posts.id, id))
+    .returning({ slug: schema.posts.slug });
+  announce(changed.map((p) => `/journal/${p.slug}`));
   revalidatePath("/admin");
 }
 
