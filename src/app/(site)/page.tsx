@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FeedGrid } from "@/components/FeedGrid";
+import { JsonLd } from "@/components/JsonLd";
 import { HomeFeed, HomeFeedSkeleton, type HomeFeedParams } from "@/components/HomeFeed";
 import { GridSkeleton } from "@/components/ListingCard";
 import { Reveal } from "@/components/Reveal";
@@ -13,6 +14,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { featuredFeed, searchFeed } from "@/lib/feed";
 import { followCounts } from "@/lib/journal";
 import { computeScore } from "@/lib/scoring";
+import { organization, website } from "@/lib/structured-data";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -53,6 +55,8 @@ const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
 export default function Home({ searchParams }: { searchParams: Promise<HomeFeedParams> }) {
   return (
     <>
+      {/* Who we are, for search engines and AI tools. */}
+      <JsonLd data={{ "@context": "https://schema.org", "@graph": [organization(), website()] }} />
       {/* Phones get a feed to scroll down, like a social app. */}
       <div className="md:hidden">
         <Suspense fallback={<HomeFeedSkeleton />}>

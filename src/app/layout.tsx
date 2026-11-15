@@ -3,9 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/figtree";
 import "./globals.css";
 import { siteUrl } from "@/lib/format";
-
-const DESCRIPTION =
-  "Explore writing, art, film, code, handicrafts and more, made by people. See how each piece was made and how much AI was involved, and buy it if it's for sale.";
+import { SITE_DESCRIPTION as DESCRIPTION } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),

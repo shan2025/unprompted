@@ -21,6 +21,7 @@ import { getListing, getOrderStatus, hasPendingOrder, salesCount, searchListings
 import { formatDate, formatPrice, plural, siteUrl } from "@/lib/format";
 import { paymentProvider, upiId } from "@/lib/payment-link";
 import { EVIDENCE_KINDS, TIER_INFO, type Tier } from "@/lib/scoring";
+import { aiInvolvement, breadcrumbs, fileUrl } from "@/lib/structured-data";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -151,18 +152,33 @@ async function ListingView({ params, searchParams }: Props) {
         <JsonLd
           data={{
             "@context": "https://schema.org",
-            "@type": "Product",
-            name: listing.title,
-            description: listing.summary,
-            url: `${siteUrl()}/listing/${listing.slug}`,
-            brand: { "@type": "Person", name: creator.name },
-            offers: {
-              "@type": "Offer",
-              price: (listing.priceCents / 100).toFixed(2),
-              priceCurrency: listing.currency,
-              availability: listing.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
-              url: `${siteUrl()}/listing/${listing.slug}`,
-            },
+            "@graph": [
+              {
+                "@type": "Product",
+                name: listing.title,
+                description: listing.summary,
+                url: `${siteUrl()}/listing/${listing.slug}`,
+                // Only an uploaded cover has a stable address. The drawn share card's URL
+                // carries a generated suffix, and crawlers still find it through og:image.
+                ...(listing.coverFile ? { image: fileUrl(listing.coverFile) } : {}),
+                category: categoryLabel(listing.category),
+                brand: { "@type": "Brand", name: creator.name },
+                additionalProperty: aiInvolvement(listing.aiPercent, listing.tier),
+                offers: {
+                  "@type": "Offer",
+                  price: (listing.priceCents / 100).toFixed(2),
+                  priceCurrency: listing.currency,
+                  availability: listing.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+                  url: `${siteUrl()}/listing/${listing.slug}`,
+                  seller: { "@type": "Person", name: creator.name, url: `${siteUrl()}/u/${creator.handle}` },
+                },
+              },
+              breadcrumbs([
+                { name: listing.priceCents > 0 ? "Marketplace" : "Explore", path: listing.priceCents > 0 ? "/marketplace" : "/explore" },
+                { name: categoryLabel(listing.category), path: `${listing.priceCents > 0 ? "/marketplace" : "/explore"}?category=${listing.category}` },
+                { name: listing.title, path: `/listing/${listing.slug}` },
+              ]),
+            ],
           }}
         />
       )}

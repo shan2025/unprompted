@@ -10,6 +10,8 @@ import { Reveal } from "@/components/Reveal";
 import { SiteIcon } from "@/components/SiteIcon";
 import { FoundingBadge } from "@/components/FoundingBadge";
 import { FollowButton } from "@/components/Social";
+import { JsonLd } from "@/components/JsonLd";
+import { fileUrl } from "@/lib/structured-data";
 import { getCurrentUser } from "@/lib/auth";
 import { getCreator } from "@/lib/data";
 import { formatDate, siteUrl } from "@/lib/format";
@@ -78,6 +80,25 @@ async function Creator({ params, searchParams }: Props) {
 
   return (
     <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          url: profileUrl,
+          dateCreated: creator.createdAt.toISOString(),
+          mainEntity: {
+            "@type": "Person",
+            name: creator.name,
+            alternateName: `@${creator.handle}`,
+            identifier: creator.handle,
+            url: profileUrl,
+            ...(creator.bio ? { description: creator.bio } : {}),
+            ...(creator.avatarFile ? { image: fileUrl(creator.avatarFile) } : {}),
+            ...(creator.links.length > 0 ? { sameAs: creator.links } : {}),
+            interactionStatistic: { "@type": "InteractionCounter", interactionType: "https://schema.org/FollowAction", userInteractionCount: counts.followers },
+          },
+        }}
+      />
       <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-6 sm:gap-x-8 md:grid-cols-[auto_minmax(0,1fr)_auto]">
         <Avatar name={creator.name} file={creator.avatarFile} className="h-20 w-20 text-3xl sm:h-28 sm:w-28 sm:text-4xl" />
         <div className="min-w-0">
