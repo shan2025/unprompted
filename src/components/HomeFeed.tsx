@@ -38,10 +38,8 @@ export async function HomeFeed({ searchParams }: { searchParams: Promise<HomeFee
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">
             Watch, read and buy writing, art, film, code and crafts. Every piece shows how much AI was involved.
           </p>
+          {/* Get started is already in the header just above, so it isn't repeated here. */}
           <div className="mt-4 flex gap-2">
-            <Link href="/start" className="btn-primary px-5 py-2.5">
-              Get started
-            </Link>
             <Link href="/standard" className="btn-ghost px-5 py-2.5">
               How scoring works
             </Link>

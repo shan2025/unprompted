@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { formatMoney, formatPrice, safeNext } from "@/lib/format";
+import { formatMoney, formatPrice, safeNext, snippet } from "@/lib/format";
+
+describe("snippet", () => {
+  it("keeps short text whole, on one line", () => {
+    expect(snippet("  A poem\n\nabout   rain. ")).toBe("A poem about rain.");
+  });
+
+  it("cuts long text at a word and marks the cut", () => {
+    const text = "The river ran slow that summer, and we walked beside it every evening until the light went.";
+    const out = snippet(text, 40);
+    expect(out.length).toBeLessThanOrEqual(40);
+    expect(out).toBe("The river ran slow that summer, and we…");
+  });
+
+  it("drops trailing punctuation before the ellipsis", () => {
+    expect(snippet("One, two, three, four, five, six", 20)).toBe("One, two, three…");
+  });
+
+  it("cuts inside a single very long word", () => {
+    expect(snippet("a".repeat(50), 10)).toBe(`${"a".repeat(9)}…`);
+  });
+});
 
 describe("formatPrice", () => {
   it("shows each listing in its own currency, unconverted", () => {

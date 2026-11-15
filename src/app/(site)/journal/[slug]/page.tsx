@@ -20,10 +20,10 @@ import { AppreciateButton, FollowButton } from "@/components/Social";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { getCurrentUser } from "@/lib/auth";
 import { categoryLabel } from "@/lib/categories";
-import { formatDate, plural, siteUrl } from "@/lib/format";
+import { formatDate, plural, siteUrl, snippet } from "@/lib/format";
 import { getPost, getPostActivity, isFollowing } from "@/lib/journal";
 import { clientIp } from "@/lib/rate-limit";
-import { EVIDENCE_KINDS, TIER_INFO, type Tier } from "@/lib/scoring";
+import { EVIDENCE_KINDS } from "@/lib/scoring";
 import { recordView } from "@/lib/views";
 
 type Props = {
@@ -35,14 +35,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const row = await getPost(slug);
   if (!row || row.post.status !== "published") return { title: "Journal", robots: { index: false } };
-  const description = `${row.post.aiPercent}% AI · ${TIER_INFO[row.post.tier as Tier]?.label}. ${row.post.subtitle || row.post.body.slice(0, 200)}`;
+  const { post, author } = row;
+  // Search results show about 155 characters: the work itself comes first, the AI share after.
+  const score = ` · ${post.aiPercent}% AI`;
+  const description = `${snippet(summaryText(post, author.name), 155 - score.length)}${score}`;
   return {
-    title: row.post.title,
+    title: post.title,
     description,
-    alternates: { canonical: `/journal/${row.post.slug}` },
-    robots: row.post.isDemo ? { index: false } : undefined,
-    openGraph: { siteName: "Unprompters", title: row.post.title, description, type: "article" },
+    alternates: { canonical: `/journal/${post.slug}` },
+    robots: post.isDemo ? { index: false } : undefined,
+    // The picture comes from opengraph-image.tsx, which wins over anything set here.
+    openGraph: {
+      siteName: "Unprompters",
+      title: post.title,
+      description,
+      type: "article",
+      publishedTime: post.createdAt.toISOString(),
+      modifiedTime: post.createdAt.toISOString(),
+      authors: [`${siteUrl()}/u/${author.handle}`],
+    },
   };
+}
+
+/** What the post is about, in words: the subtitle, else the writing, else what kind of work it is. */
+function summaryText(post: { subtitle: string; body: string; category: string }, authorName: string) {
+  return post.subtitle.trim() || post.body.trim() || `${categoryLabel(post.category)} by ${authorName}`;
 }
 
 export default function PostPage(props: Props) {
@@ -91,10 +108,30 @@ async function PostView({ params, searchParams }: Props) {
             "@context": "https://schema.org",
             "@type": "Article",
             headline: post.title,
-            description: post.subtitle || post.body.slice(0, 200),
+            description: snippet(summaryText(post, author.name), 300),
+            // The photo itself, as the page shows it. Without one, crawlers take the share card from og:image
+            // (its address carries a suffix Next.js generates, so it isn't repeated here).
+            ...(post.coverFile && !post.videoUrl && { image: `${siteUrl()}/api/files/${post.coverFile}` }),
             datePublished: post.createdAt.toISOString(),
+            dateModified: post.createdAt.toISOString(),
             author: { "@type": "Person", name: author.name, url: `${siteUrl()}/u/${author.handle}` },
+            publisher: { "@type": "Organization", name: "Unprompters", url: siteUrl() },
+            mainEntityOfPage: `${siteUrl()}${path}`,
             url: `${siteUrl()}${path}`,
+          }}
+        />
+      )}
+      {isPublished && !post.isDemo && (
+        // The same trail as the breadcrumb above the title.
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Journal", item: `${siteUrl()}/journal` },
+              { "@type": "ListItem", position: 2, name: categoryLabel(post.category), item: `${siteUrl()}/journal?category=${post.category}` },
+              { "@type": "ListItem", position: 3, name: post.title },
+            ],
           }}
         />
       )}

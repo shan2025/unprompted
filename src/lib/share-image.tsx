@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import sharp from "sharp";
+import { snippet } from "./format";
 
 // The picture link previews show on WhatsApp, Instagram, LinkedIn and X.
 
@@ -18,6 +20,60 @@ function Mark({ size }: { size: number }) {
       <path d="M26 15.5c.2 2.3 0 4.6-.6 6.8" />
       <path d="M20.5 26c.4-.9.8-1.9 1.1-2.9" />
     </svg>
+  );
+}
+
+const PHOTO_HEIGHT = 470;
+
+/** The cover photo cropped to fill the top of the share card, as a JPEG data URL, or null if it can't be read. */
+export async function sharePhoto(bytes: Uint8Array) {
+  try {
+    const jpeg = await sharp(bytes)
+      .resize({ width: SHARE_IMAGE_SIZE.width, height: PHOTO_HEIGHT, fit: "cover", position: "attention" })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+    return `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+/** A work with a cover photo: the photo first, with the title and AI share in a band beneath it. */
+export function photoShareImage({
+  photo,
+  title,
+  byline,
+  aiPercent,
+  tierLabel,
+}: {
+  photo: string;
+  title: string;
+  byline: string;
+  aiPercent: number;
+  tierLabel?: string;
+}) {
+  // Two lines fit in the band.
+  const shown = snippet(title, 64);
+  return new ImageResponse(
+    (
+      <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: "#ffffff", color: INK }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- rendered to a PNG, not a page */}
+        <img src={photo} width={SHARE_IMAGE_SIZE.width} height={PHOTO_HEIGHT} alt="" />
+        <div style={{ display: "flex", flex: 1, alignItems: "center", gap: 28, padding: "0 56px", borderTop: `2px solid ${LINE}` }}>
+          <Mark size={48} />
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: 40, lineHeight: 1.1 }}>{shown}</span>
+            <span style={{ fontSize: 24, color: SOFT }}>{byline}</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <span style={{ fontSize: 40 }}>{aiPercent}% AI</span>
+            {tierLabel && <span style={{ fontSize: 22, color: SOFT }}>{tierLabel}</span>}
+          </div>
+        </div>
+      </div>
+    ),
+    SHARE_IMAGE_SIZE,
   );
 }
 

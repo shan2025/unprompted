@@ -28,6 +28,17 @@ export function plural(n: number, word: string, pluralWord = `${word}s`) {
   return `${n.toLocaleString("en-US")} ${n === 1 ? word : pluralWord}`;
 }
 
+/** `text` on one line, at most `max` characters, cut at a word with "…" when it runs long. For search snippets. */
+export function snippet(text: string, max = 155) {
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max - 1);
+  const space = cut.lastIndexOf(" ");
+  // One very long word: cut inside it rather than leave almost nothing.
+  const kept = space > max * 0.6 ? cut.slice(0, space) : cut;
+  return `${kept.replace(/[\s,.;:!?–—-]+$/, "")}…`;
+}
+
 export function siteUrl() {
   const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   return (process.env.SITE_URL ?? (vercel ? `https://${vercel}` : "http://localhost:3000")).replace(/\/$/, "");
