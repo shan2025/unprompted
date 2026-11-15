@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ChatIcon } from "@/components/ChatIcon";
-import { ChatComposer, ChatHistory, ChatLive } from "@/components/ChatLive";
+import { ChatComposer, ChatHistory, ChatLive, TypingIndicator } from "@/components/ChatLive";
 import { ChatThread } from "@/components/ChatMessage";
 import { ChatTime } from "@/components/ChatTime";
 import { Mark } from "@/components/Logo";
@@ -159,12 +159,15 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
               </Link>
             </div>
             {isNew ? (
-              <div className="grid min-h-0 flex-1 place-content-center justify-items-center gap-1 px-6 text-center">
-                <Link href={`/u/${selected.handle}`} aria-label={`View ${selected.name}'s profile`} className="mb-3">
-                  <Avatar name={selected.name} file={selected.avatarFile} className="h-16 w-16 text-2xl" />
-                </Link>
-                <h2 className="text-lg font-semibold">Say hello to {selected.name}.</h2>
-                <p className="text-sm text-muted">This is the start of your conversation.</p>
+              <div className="flex min-h-0 flex-1 flex-col px-4 py-5 md:px-6">
+                <div className="grid flex-1 place-content-center justify-items-center gap-1 px-2 text-center">
+                  <Link href={`/u/${selected.handle}`} aria-label={`View ${selected.name}'s profile`} className="mb-3">
+                    <Avatar name={selected.name} file={selected.avatarFile} className="h-16 w-16 text-2xl" />
+                  </Link>
+                  <h2 className="text-lg font-semibold">Say hello to {selected.name}.</h2>
+                  <p className="text-sm text-muted">This is the start of your conversation.</p>
+                </div>
+                <TypingIndicator key={selected.id} peerId={selected.id} name={selected.name} />
               </div>
             ) : (
               <ChatHistory key={`${selected.id}:${before ?? ""}`} latestId={latest?.id} ownLatest={latest?.senderId === user.id} older={Boolean(before)}>
@@ -191,6 +194,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                 ) : (
                   <p className="py-6 text-center text-sm text-muted">No earlier messages.</p>
                 )}
+                {!before && <TypingIndicator key={selected.id} peerId={selected.id} name={selected.name} latestId={latest?.id} />}
               </ChatHistory>
             )}
             {!before && <ChatComposer key={selected.id} handle={selected.handle} maxLength={MAX_MESSAGE_LENGTH} />}

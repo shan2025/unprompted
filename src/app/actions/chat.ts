@@ -3,7 +3,7 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
-import { findChatMember, findOwnConversationMessage, MAX_MESSAGE_LENGTH } from "@/lib/chat";
+import { clearTyping, findChatMember, findOwnConversationMessage, getChatPulse, markTyping, MAX_MESSAGE_LENGTH } from "@/lib/chat";
 import { canEdit, isReaction } from "@/lib/chat-rules";
 import { db, schema } from "@/lib/db";
 import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
@@ -45,8 +45,26 @@ export async function sendDirectMessage(
   const [message] = await db.insert(directMessages)
     .values({ senderId: user.id, recipientId: recipient.id, body })
     .returning({ id: directMessages.id });
+  await clearTyping(user.id, recipient.id);
   refresh();
   return { sentId: message.id };
+}
+
+/** Tells the other person "typing…" for a few seconds. The composer renews it while the member types. */
+export async function setTyping(handle: string, typing: boolean) {
+  const user = await getCurrentUser();
+  if (!user?.verified || typeof handle !== "string") return;
+  const recipient = await findChatMember(user.id, handle.toLowerCase());
+  if (!recipient) return;
+  if (typing) await markTyping(user.id, recipient.id);
+  else await clearTyping(user.id, recipient.id);
+}
+
+/** Polled by an open conversation: is the other person typing, and has a newer message arrived? */
+export async function checkConversation(peerId: number) {
+  const user = await getCurrentUser();
+  if (!user?.verified || !validId(peerId) || peerId === user.id) return null;
+  return getChatPulse(user.id, peerId);
 }
 
 export async function editDirectMessage(id: number, text: string): Promise<{ error?: string }> {

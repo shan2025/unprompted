@@ -105,6 +105,38 @@ export async function getMessageHistory(userId: number, peerId: number, before?:
   return { messages, older: rows.length > historySize ? messages[0].id : undefined };
 }
 
+// "Typing" is a short-lived signal, so it lives in the rate_limits table,
+// which is already a self-cleaning store of keys that expire: the key says who
+// is typing to whom and reset_at says when the signal lapses. Each keystroke
+// burst renews it; it lapses on its own a few seconds after typing stops.
+const TYPING_SECONDS = 6;
+
+function typingKey(fromId: number, toId: number) {
+  return `typing:${fromId}:${toId}`;
+}
+
+export async function markTyping(fromId: number, toId: number) {
+  await db.execute(sql`
+    insert into rate_limits (key, count, reset_at)
+    values (${typingKey(fromId, toId)}, 1, now() + make_interval(secs => ${TYPING_SECONDS}))
+    on conflict (key) do update set reset_at = excluded.reset_at`);
+}
+
+export async function clearTyping(fromId: number, toId: number) {
+  await db.execute(sql`delete from rate_limits where key = ${typingKey(fromId, toId)}`);
+}
+
+/** Whether the peer is typing to the member right now, and the newest message between them. */
+export async function getChatPulse(userId: number, peerId: number) {
+  const [row] = await db.execute<{ typing: boolean; latest: number | null }>(sql`
+    select
+      exists(select 1 from rate_limits where key = ${typingKey(peerId, userId)} and reset_at > now()) as typing,
+      (select max(id) from direct_messages
+        where (sender_id = ${userId} and recipient_id = ${peerId})
+           or (sender_id = ${peerId} and recipient_id = ${userId})) as latest`);
+  return { typing: Boolean(row?.typing), latestId: row?.latest == null ? null : Number(row.latest) };
+}
+
 /** A message the member sent or received, or null if it isn't part of their conversations. */
 export async function findOwnConversationMessage(userId: number, messageId: number) {
   const [message] = await db.select({

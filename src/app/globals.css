@@ -173,6 +173,19 @@ input[type="file"]:active::file-selector-button {
     opacity: 0;
   }
 }
+/* Chat's "typing…" dots: each lifts and brightens in turn. */
+@keyframes typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
 .rise {
   animation: rise 0.45s ease both;
 }

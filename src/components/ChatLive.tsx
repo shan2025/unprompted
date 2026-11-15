@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { markDirectMessagesRead, sendDirectMessage } from "@/app/actions/chat";
+import { checkConversation, markDirectMessagesRead, sendDirectMessage, setTyping } from "@/app/actions/chat";
 import { enterSends } from "./ChatMessage";
 
 export function ChatLive({ unreadIds }: { unreadIds: number[] }) {
@@ -67,6 +67,75 @@ export function ChatHistory({ children, latestId, ownLatest, older }: {
   );
 }
 
+/**
+ * Asks every 2.5 seconds whether the other person is typing, and shows three
+ * bouncing dots while they are. The same check notices a newer message and
+ * refreshes the page, so replies appear within seconds instead of waiting for
+ * the slower background refresh.
+ */
+export function TypingIndicator({ peerId, name, latestId }: { peerId: number; name: string; latestId?: number }) {
+  const router = useRouter();
+  const [typing, setShown] = useState(false);
+  const indicator = useRef<HTMLDivElement>(null);
+  const latest = useRef(latestId ?? 0);
+  const refreshedFor = useRef(0);
+  useEffect(() => { latest.current = latestId ?? 0; }, [latestId]);
+
+  useEffect(() => {
+    let stopped = false;
+    let wasTyping = false;
+    async function check() {
+      if (document.visibilityState !== "visible") return;
+      const pulse = await checkConversation(peerId).catch(() => null);
+      if (stopped || !pulse) return;
+      setShown(pulse.typing);
+      const newest = pulse.latestId ?? 0;
+      // Refresh once for each newer message, and when typing stops (a message has usually just been sent).
+      if ((newest > latest.current && refreshedFor.current !== newest) || (wasTyping && !pulse.typing)) {
+        refreshedFor.current = newest;
+        router.refresh();
+      }
+      wasTyping = pulse.typing;
+    }
+    const timer = window.setInterval(check, 2500);
+    void check();
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [peerId, router]);
+
+  // Keep the dots in view when the reader is already at the bottom of the conversation.
+  useLayoutEffect(() => {
+    const region = indicator.current?.closest<HTMLElement>("[role=region]");
+    if (typing && region && region.scrollHeight - region.scrollTop - region.clientHeight < 140) {
+      region.scrollTop = region.scrollHeight;
+    }
+  }, [typing]);
+
+  return (
+    <div ref={indicator} role="status" aria-live="polite" className="min-h-0">
+      {typing && (
+        <div className="mt-4 flex [animation:rise_0.2s_ease-out_both] motion-reduce:animate-none">
+          <span className="sr-only">{name} is typing</span>
+          <span aria-hidden="true" className="flex h-8 items-center gap-1 bg-field px-3">
+            {[0, 160, 320].map((delay) => (
+              <span
+                key={delay}
+                style={{ animationDelay: `${delay}ms` }}
+                className="h-1.5 w-1.5 rounded-full bg-ink-soft [animation:typing-dot_1.2s_ease-in-out_infinite] motion-reduce:[animation:none]"
+              />
+            ))}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Read only from event handlers, never while rendering. */
+const timeNow = () => Date.now();
+
 const EMOJI = [
   "😀", "😄", "😁", "😂", "🤣", "😊", "🙂", "😉", "😍", "🥰", "😘", "😋",
   "😎", "🤩", "🥳", "🤗", "🤔", "🤭", "😏", "😌", "😴", "😮", "😢", "😭",
@@ -80,11 +149,29 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
   const [picking, setPicking] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLDivElement>(null);
+  const lastPing = useRef(0);
   const [state, action, pending] = useActionState(async (previous: { error?: string; sentId?: number }, form: FormData) => {
     const result = await sendDirectMessage(handle, previous, form);
-    if (result.sentId) setDraft("");
+    if (result.sentId) {
+      setDraft("");
+      lastPing.current = 0; // Sending clears "typing…" on the server.
+    }
     return result;
   }, {});
+
+  /** Updates the draft and keeps the other person's "typing…" alive while there's text, renewing at most every 3 seconds. */
+  function write(value: string) {
+    setDraft(value);
+    const now = timeNow();
+    if (value.trim()) {
+      if (now - lastPing.current < 3000) return;
+      lastPing.current = now;
+      void setTyping(handle, true).catch(() => {});
+    } else if (lastPing.current) {
+      lastPing.current = 0;
+      void setTyping(handle, false).catch(() => {});
+    }
+  }
 
   // Grow with the text, up to the textarea's max height, then scroll.
   useLayoutEffect(() => {
@@ -118,7 +205,7 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
     const start = input?.selectionStart ?? draft.length;
     const end = input?.selectionEnd ?? draft.length;
     const next = (draft.slice(0, start) + emoji + draft.slice(end)).slice(0, maxLength);
-    setDraft(next);
+    write(next);
     requestAnimationFrame(() => {
       const caret = Math.min(start + emoji.length, next.length);
       input?.setSelectionRange(caret, caret);
@@ -168,7 +255,7 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
             required
             readOnly={pending}
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => write(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && enterSends()) {
                 event.preventDefault();
