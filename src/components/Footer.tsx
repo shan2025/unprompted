@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
+import { WRITING_CHECK_PATH } from "@/lib/writing-check";
 import { Mark } from "./Logo";
 
 // Phones don't get a footer, like an app: the tab bar covers the sections, and the
@@ -46,6 +47,12 @@ export function Footer() {
           </Link>
           <Link href="/standard#disputes" className="hover:text-ink">
             Reviews &amp; disputes
+          </Link>
+          <Link href={WRITING_CHECK_PATH} className="hover:text-ink">
+            AI writing check
+          </Link>
+          <Link href="/about" className="hover:text-ink">
+            About
           </Link>
         </div>
         <div className="flex flex-col gap-2">

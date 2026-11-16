@@ -8,4 +8,8 @@ export const SITE = {
   address: process.env.LEGAL_ADDRESS ?? "India",
   grievanceOfficer: process.env.GRIEVANCE_OFFICER ?? "The founder of Unprompters",
   lastUpdated: "5 November 2026",
+  // Who runs the site, shown on the About page. The handle links to their profile here.
+  founderName: process.env.FOUNDER_NAME ?? "Shadin",
+  founderHandle: process.env.FOUNDER_HANDLE ?? "shadin",
+  started: "October 2026",
 };

@@ -50,9 +50,16 @@ export async function HomeFeed({ searchParams }: { searchParams: Promise<HomeFee
             Watch, read and buy writing, art, film, code and crafts. Every piece shows how much AI was involved.
           </p>
           {/* Get started is already in the header just above, so it isn't repeated here. */}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
             <Link href="/standard" className="btn-ghost px-5 py-2.5">
               How scoring works
+            </Link>
+            {/* Phones have no footer, so visitors find these two here. */}
+            <Link href="/about" className="link text-sm text-ink-soft">
+              About
+            </Link>
+            <Link href="/ai-writing-check" className="link text-sm text-ink-soft">
+              Check your writing
             </Link>
           </div>
         </section>

@@ -47,7 +47,8 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 - Buying through **seller payment links**: buyers pay the seller directly (Razorpay, PayPal, Stripe, Instamojo, PayU, Cashfree or UPI), then send a payment reference. The seller marks the order paid, which unlocks the work. Unprompters never touches the money. Free listings unlock at once, and seeded demo listings keep a demo checkout
 - Exclusive licenses that close after one sale, and are reserved while a seller checks a payment; buyer and seller dashboards
 - Embeddable SVG badge for each listing (`/api/badge/<slug>`)
-- Public methodology page at `/standard`
+- Public methodology page at `/standard`, and an About page at `/about` (the founder's name and profile come from `FOUNDER_NAME` and `FOUNDER_HANDLE`)
+- A free "Does my writing look AI-generated?" check at `/ai-writing-check`. It runs the built-in text analyzer in the visitor's browser, so nothing they paste is uploaded
 - Password reset by email (`/forgot-password`), with one-time links that expire after an hour
 - Rate limits on log-in (10 tries per email from one connection, 30 per connection and 100 per email overall, every 15 minutes; a password reset clears them), sign-up (5 per connection per hour), password resets, new listings and posts (20 each per day), comments (10 per 5 minutes), reports and score checks
 - Uploaded images have their metadata removed and are shrunk to 1600px; the originals aren't kept. Buyers keep access to what they bought if a listing is later removed

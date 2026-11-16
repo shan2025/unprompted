@@ -8,7 +8,9 @@ import { LogoutButton } from "./LogoutButton";
 const ITEM = "block w-full px-4 py-2.5 text-left text-sm text-ink hover:bg-line/50";
 
 const SMALL_PRINT = [
+  { href: "/about", label: "About" },
   { href: "/standard", label: "How scoring works" },
+  { href: "/ai-writing-check", label: "AI writing check" },
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
   { href: "/refunds", label: "Refunds" },

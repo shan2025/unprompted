@@ -117,7 +117,11 @@ export default function StandardPage() {
           <strong className="text-ink">Text and poetry</strong> are split into passages and checked for statistical habits
           of language models: stock vocabulary, formulaic constructions, very even sentence rhythm, stacked transition
           words. Each passage gets a heuristic signal score, not a calibrated probability. You
-          can see the passage-level result on every post and listing.
+          can see the passage-level result on every post and listing, and{" "}
+          <Link href="/ai-writing-check" className="link text-ink">
+            try the same check on your own writing
+          </Link>
+          .
         </p>
         <p>
           <strong className="text-ink">Code</strong> is checked for tutorial habits: comments that narrate every line,

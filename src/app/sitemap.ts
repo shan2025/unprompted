@@ -8,7 +8,7 @@ import { siteUrl } from "@/lib/format";
 import { worthIndexing } from "@/lib/indexing";
 
 const { listings, posts, users } = schema;
-const STATIC_PAGES = ["/", "/explore", "/marketplace", "/journal", "/standard", "/contact", "/terms", "/privacy", "/refunds"];
+const STATIC_PAGES = ["/", "/explore", "/marketplace", "/journal", "/about", "/standard", "/ai-writing-check", "/contact", "/terms", "/privacy", "/refunds"];
 // One sitemap file may list 50,000 addresses. This leaves plenty of room.
 const MAX_OF_EACH = 10_000;
 
