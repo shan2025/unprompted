@@ -14,6 +14,25 @@ const nextConfig: NextConfig = {
   htmlLimitedBots: new RegExp(`${NEXT_DEFAULT_BOTS}|${AI_BOTS}`, "i"),
   cacheComponents: true,
   partialPrefetching: true,
+  // Baseline browser protections on every page: no other site may show ours in
+  // a frame (clickjacking), browsers don't guess file types, links to other
+  // sites don't reveal which page they came from, and pages can't use the
+  // camera, microphone or location. The file route is left out because it
+  // sets its own, stricter policy for PDFs.
+  async headers() {
+    return [
+      {
+        source: "/((?!api/files/).*)",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   // One craft has its own page now (src/lib/browse.ts), so old single-craft
   // filter links move there for good. Several crafts stay a filter.
   async redirects() {

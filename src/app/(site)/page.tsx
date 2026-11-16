@@ -13,7 +13,6 @@ import { CATEGORIES } from "@/lib/categories";
 import { usedCategories } from "@/lib/data";
 import { getCurrentUser } from "@/lib/auth";
 import { featuredFeed, searchFeed } from "@/lib/feed";
-import { followCounts } from "@/lib/journal";
 import { computeScore } from "@/lib/scoring";
 import { organization, website } from "@/lib/structured-data";
 
@@ -75,8 +74,7 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
           </h1>
           <p style={d(220)} className="intro-rise mt-8 max-w-xl text-lg leading-relaxed text-ink-soft">
             Explore writing, art, film, code, handicrafts and anything else people make themselves. Each piece shows how
-            AI disclosure and scan signals, with the reasoning behind the score. If it&apos;s for sale, you can buy
-            it.
+            much AI was involved, with the reasoning behind the score. If it&apos;s for sale, you can buy it.
           </p>
           <div style={d(340)} className="intro-rise mt-10 flex flex-wrap gap-3">
             <Link href="/explore" className="btn-primary px-8 py-4">
@@ -213,36 +211,22 @@ async function Featured() {
 }
 
 // Signed-in people see new work from creators they follow, including work for
-// sale. Signed-out visitors see nothing here, so the page reads as before.
+// sale. With nothing to show (signed out, following nobody, or nothing new)
+// the whole section stays away, so the page never opens on an empty box.
 async function Following() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const [items, { following }] = await Promise.all([
-    searchFeed({ followedBy: user.id, sort: "new", limit: 6 }),
-    followCounts(user.id),
-  ]);
+  const items = await searchFeed({ followedBy: user.id, sort: "new", limit: 6 });
+  if (items.length === 0) return null;
   return (
     <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-8">
       <Reveal className="mb-10 flex items-end justify-between gap-4">
         <h2 className="text-4xl font-light">From people you follow</h2>
-        {items.length > 0 && (
-          <Link href="/journal?tab=following" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
-            More writing
-          </Link>
-        )}
+        <Link href="/journal?tab=following" className="text-[13px] font-semibold uppercase tracking-[0.08em] hover:opacity-60">
+          See more
+        </Link>
       </Reveal>
-      {items.length > 0 ? (
-        <FeedGrid items={items} reveal />
-      ) : (
-        <p className="card p-8 text-center text-ink-soft">
-          {following === 0
-            ? "You're not following anyone yet. Follow creators from their work or profile and their new pieces show up here. "
-            : "Nothing new from the people you follow yet. "}
-          <Link href="/explore" className="link text-ink">
-            Explore the work
-          </Link>
-        </p>
-      )}
+      <FeedGrid items={items} reveal />
     </section>
   );
 }

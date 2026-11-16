@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PostGrid, PostGridSkeleton } from "@/components/PostCard";
+import { ShowMore } from "@/components/ShowMore";
 import { getCurrentUser } from "@/lib/auth";
 import { CATEGORIES, categoryLabel, isCategory } from "@/lib/categories";
 import { usedCategories } from "@/lib/data";
 import { searchPosts } from "@/lib/journal";
+import { batches, firstBatches } from "@/lib/paging";
 
 export const metadata: Metadata = {
   title: "Journal",
-  description: "Articles, poems, art, films, process notes and ideas, shared for free. Every post shows how much AI was involved.",
+  description: "Articles, poems, art, films, process notes and ideas from the people who make them. Every post shows how much AI was involved.",
   alternates: { canonical: "/journal" },
 };
 
@@ -23,13 +25,10 @@ export default function JournalPage({ searchParams }: { searchParams: Promise<Pa
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow intro-rise">Journal</p>
-          <h1 className="intro-rise mt-1 text-4xl font-light sm:text-5xl" style={d(80)}>
-            Shared, not sold
-          </h1>
-          <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={d(160)}>
-            Articles, poems, sketches, films, process notes and ideas from the people who make things here. Same honesty
-            rules as the marketplace: every post shows how much AI was involved.
+          <h1 className="intro-rise text-4xl font-light sm:text-5xl">Journal</h1>
+          <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={d(80)}>
+            Articles, poems, sketches, films, process notes and ideas from the people who make them. Every post shows
+            how much AI was involved.
           </p>
         </div>
         <Link href="/journal/new" className="btn-ghost intro-rise" style={d(220)}>
@@ -47,11 +46,15 @@ function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
 }
 
-function feedHref(params: { tab?: string; category?: string; q?: string }) {
+// One batch of posts; "Show more" adds another (lib/paging.ts).
+const BATCH = 60;
+
+function feedHref(params: { tab?: string; category?: string; q?: string; more?: number }) {
   const qs = new URLSearchParams();
   if (params.tab === "following") qs.set("tab", "following");
   if (params.category) qs.set("category", params.category);
   if (params.q) qs.set("q", params.q);
+  if (params.more) qs.set("more", String(params.more));
   return qs.size ? `/journal?${qs}` : "/journal";
 }
 
@@ -63,10 +66,14 @@ async function Feed({ searchParams }: { searchParams: Promise<Params> }) {
   const tab = one(params.tab) === "following" ? "following" : "everyone";
   const user = await getCurrentUser();
 
-  const [posts, available] = await Promise.all([
-    tab === "following" && !user ? [] : searchPosts({ q, category, followedBy: tab === "following" ? user!.id : undefined }),
+  const shown = batches(params.more);
+  const [found, available] = await Promise.all([
+    tab === "following" && !user
+      ? []
+      : searchPosts({ q, category, followedBy: tab === "following" ? user!.id : undefined, limit: shown * BATCH + 1 }),
     usedCategories("journal"),
   ]);
+  const { items: posts, more } = firstBatches(found, shown * BATCH);
   // Chips for categories with posts in them, plus the one picked, so it can be cleared.
   const chips = CATEGORIES.filter((c) => available.includes(c.id) || c.id === category);
 
@@ -115,7 +122,10 @@ async function Feed({ searchParams }: { searchParams: Promise<Params> }) {
           </p>
         </div>
       ) : posts.length > 0 ? (
-        <PostGrid posts={posts} reveal story />
+        <>
+          <PostGrid posts={posts} reveal story />
+          {more && <ShowMore href={feedHref({ tab, category, q, more: shown + 1 })} />}
+        </>
       ) : (
         <div className="card p-10 text-center">
           <p className="font-display text-xl font-medium">

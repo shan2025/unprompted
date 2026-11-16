@@ -129,12 +129,13 @@ export function ScoreCard({
 
       <div className={`mt-2 flex items-baseline gap-3${head.cls}`} style={head.style}>
         <span className={`font-display text-5xl font-light tracking-tight ${tierColor(score.tier)}`}>{intro ? <CountUp to={score.percent} delay={700} /> : score.percent}%</span>
-        <span className="text-sm text-ink-soft">
-          uncalibrated heuristic
-        </span>
+        <span className="text-sm text-ink-soft">estimated AI involvement</span>
       </div>
 
-      <p className="mt-3 text-xs leading-relaxed text-muted">A weighted disclosure and scan score, not a measured share of AI or a probability. No validated confidence interval is available.</p>
+      {/* The one place the card says what the number is and isn't; the full method is on /standard. */}
+      <p className="mt-3 text-xs leading-relaxed text-muted">
+        Built from the creator&apos;s own disclosure and automated scans. It is an uncalibrated estimate, not a measured share of AI or a probability.
+      </p>
 
       <div className="mt-5 border-t border-line pt-4">
         <span className={`eyebrow block${label.cls}`} style={label.style}>

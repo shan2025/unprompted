@@ -4,10 +4,15 @@ import { getCurrentUser } from "@/lib/auth";
 import { CATEGORIES, isCategory } from "@/lib/categories";
 import { usedCategories } from "@/lib/data";
 import { appreciatedPostIds, homeFeed } from "@/lib/home-feed";
+import { batches, firstBatches } from "@/lib/paging";
 import { FeedBar, type FeedTab } from "./FeedBar";
 import { FeedPost } from "./FeedPost";
+import { ShowMore } from "./ShowMore";
 
-export type HomeFeedParams = { feed?: string; category?: string };
+export type HomeFeedParams = { feed?: string; category?: string; more?: string };
+
+// One batch of the feed; "Show more" adds another (lib/paging.ts).
+const BATCH = 30;
 
 /** The phone home page: a short welcome for visitors, then the feed to scroll. */
 export async function HomeFeed({ searchParams }: { searchParams: Promise<HomeFeedParams> }) {
@@ -16,11 +21,17 @@ export async function HomeFeed({ searchParams }: { searchParams: Promise<HomeFee
   const user = await getCurrentUser();
   const feed: FeedTab = params.feed === "following" && user ? "following" : "foryou";
   const category = isCategory(params.category) ? params.category : undefined;
-  const [items, explore, market] = await Promise.all([
-    homeFeed(30, { followedBy: feed === "following" ? user?.id : undefined, category }),
+  const shown = batches(params.more);
+  const [found, explore, market] = await Promise.all([
+    homeFeed(shown * BATCH + 1, { followedBy: feed === "following" ? user?.id : undefined, category }),
     usedCategories("explore"),
     usedCategories("marketplace"),
   ]);
+  const { items, more } = firstBatches(found, shown * BATCH);
+  const moreParams = new URLSearchParams();
+  if (feed === "following") moreParams.set("feed", "following");
+  if (category) moreParams.set("category", category);
+  moreParams.set("more", String(shown + 1));
   // Only crafts with something in them, so a chip never leads to an empty feed.
   const crafts = CATEGORIES.filter((c) => explore.includes(c.id) || market.includes(c.id)).map((c) => ({ id: c.id, label: c.label }));
   const liked = user
@@ -76,19 +87,26 @@ export async function HomeFeed({ searchParams }: { searchParams: Promise<HomeFee
         </p>
       ) : (
         <>
-          {items.map((item) => (
+          {items.map((item, i) => (
             <FeedPost
               key={item.kind === "listing" ? `l-${item.listing.id}` : `p-${item.post.id}`}
               item={item}
               liked={item.kind === "post" && liked.has(item.post.id)}
+              eager={i === 0}
             />
           ))}
-          <p className="px-4 py-10 text-center text-sm text-ink-soft">
-            You&apos;re all caught up.{" "}
-            <Link href="/explore" className="link text-ink">
-              Explore more
-            </Link>
-          </p>
+          {more ? (
+            <div className="pb-10">
+              <ShowMore href={`/?${moreParams}`} />
+            </div>
+          ) : (
+            <p className="px-4 py-10 text-center text-sm text-ink-soft">
+              You&apos;re all caught up.{" "}
+              <Link href="/explore" className="link text-ink">
+                Explore more
+              </Link>
+            </p>
+          )}
         </>
       )}
     </div>

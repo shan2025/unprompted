@@ -2,6 +2,7 @@
 // the slug so it stays the same everywhere, in the creator's chosen theme.
 
 import { COVER_THEMES } from "@/lib/cover-themes";
+import { imageSources } from "@/lib/public-image-size";
 
 const PALETTES = COVER_THEMES;
 
@@ -26,6 +27,8 @@ export function Cover({
   palette,
   theme,
   pattern,
+  sizes = "(min-width: 1024px) 420px, (min-width: 640px) 50vw, 100vw",
+  eager = false,
   className = "",
 }: {
   slug: string;
@@ -38,12 +41,16 @@ export function Cover({
   theme?: string | null;
   /** A pattern id from cover-themes.ts; missing means the category's own pattern. */
   pattern?: string | null;
+  /** How wide the picture is drawn, so the browser fetches a copy that size. Defaults to a card in the grid. */
+  sizes?: string;
+  /** Load at once instead of when scrolled near: for the first picture on a page. */
+  eager?: boolean;
   className?: string;
 }) {
   if (coverFile) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- user uploads are served by our own route
-      <img src={`/api/files/${coverFile}`} alt={title} className={`h-full w-full object-cover ${className}`} />
+      <img {...imageSources(coverFile)} sizes={sizes} alt={title} loading={eager ? "eager" : "lazy"} decoding="async" className={`h-full w-full object-cover ${className}`} />
     );
   }
 

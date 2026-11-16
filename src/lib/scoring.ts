@@ -196,8 +196,8 @@ export function scoreNotes(
   if (contradicted) notes.push("The file's metadata says AI was used where the disclosure says it wasn't, so a person will review this.");
   else if (score.needsReview) notes.push("Automated analysis found noticeably more AI than was disclosed, so a person will review this work.");
   else if (score.discrepancy > 3) notes.push("Automated analysis found slightly more AI than was disclosed. The estimate includes that.");
-  if (!hasDetection) notes.push("Nothing in this work could be scanned automatically, so the range is wider.");
-  notes.push("This is an uncalibrated scoring heuristic, not a measured percentage or a probability of human authorship. Process evidence is assessed separately.");
+  // What the number is and isn't is said once, on the score card itself (Score.tsx).
+  if (!hasDetection) notes.push("Nothing in this work could be scanned automatically, so the score rests on the creator's disclosure alone.");
   return notes;
 }
 

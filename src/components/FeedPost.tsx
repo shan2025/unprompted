@@ -18,9 +18,9 @@ import { StoryCard } from "./StoryCard";
 const ACTION =
   "-m-2 inline-flex items-center gap-1.5 p-2 text-ink transition-[scale] duration-150 ease-out [-webkit-tap-highlight-color:transparent] active:scale-90";
 
-/** `liked`: whether the viewer has already appreciated this post. */
-export function FeedPost({ item, liked = false }: { item: FeedItem; liked?: boolean }) {
-  return item.kind === "post" ? <PostEntry post={item.post} liked={liked} /> : <ListingEntry listing={item.listing} />;
+/** `liked`: whether the viewer has already appreciated this post. `eager`: the first one in the feed, whose picture loads at once. */
+export function FeedPost({ item, liked = false, eager = false }: { item: FeedItem; liked?: boolean; eager?: boolean }) {
+  return item.kind === "post" ? <PostEntry post={item.post} liked={liked} eager={eager} /> : <ListingEntry listing={item.listing} eager={eager} />;
 }
 
 type Post = Extract<FeedItem, { kind: "post" }>["post"];
@@ -59,7 +59,7 @@ function Shell({
   );
 }
 
-function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
+function PostEntry({ post, liked, eager }: { post: Post; liked: boolean; eager: boolean }) {
   const href = `/journal/${post.slug}`;
   const video = post.videoUrl ? videoEmbed(post.videoUrl) : null;
   const hasPicture = Boolean(post.coverFile || post.coverTheme || post.coverPattern);
@@ -99,7 +99,7 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
       ) : hasPicture ? (
         <StoryCard
           href={href}
-          cover={<Cover slug={post.slug} category={post.category} coverFile={post.coverFile} theme={post.coverTheme} pattern={post.coverPattern} title={post.title} />}
+          cover={<Cover slug={post.slug} category={post.category} coverFile={post.coverFile} theme={post.coverTheme} pattern={post.coverPattern} title={post.title} sizes="(min-width: 576px) 576px, 100vw" eager={eager} />}
           kicker={kicker}
           title={post.title}
           lines={post.excerpt}
@@ -123,7 +123,7 @@ function PostEntry({ post, liked }: { post: Post; liked: boolean }) {
   );
 }
 
-function ListingEntry({ listing }: { listing: Listing }) {
+function ListingEntry({ listing, eager }: { listing: Listing; eager: boolean }) {
   const href = `/listing/${listing.slug}`;
   const forSale = listing.priceCents > 0 && listing.status !== "sold";
   const aiPill = <AiPill percent={listing.aiPercent} tier={listing.tier} verified={listing.processVerified} tinted />;
@@ -132,7 +132,7 @@ function ListingEntry({ listing }: { listing: Listing }) {
     <Shell name={listing.creatorName} handle={listing.creatorHandle} avatarFile={null} date={listing.createdAt} aiPill={aiPill}>
       <StoryCard
         href={href}
-        cover={<Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} />}
+        cover={<Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} sizes="(min-width: 576px) 576px, 100vw" eager={eager} />}
         kicker={categoryLabel(listing.category)}
         badge={listing.status === "sold" ? "Sold" : forSale ? "For sale" : "Free"}
         title={listing.title}

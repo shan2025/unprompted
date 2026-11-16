@@ -51,7 +51,7 @@ All demo listings are labelled **DEMO**. The creators are fictional and the samp
 - Password reset by email (`/forgot-password`), with one-time links that expire after an hour
 - Rate limits on log-in (10 tries per email from one connection, 30 per connection and 100 per email overall, every 15 minutes; a password reset clears them), sign-up (5 per connection per hour), password resets, new listings and posts (20 each per day), comments (10 per 5 minutes), reports and score checks
 - Uploaded images have their metadata removed and are shrunk to 1600px; the originals aren't kept. Buyers keep access to what they bought if a listing is later removed
-- A switch to hide all demo listings and posts (`HIDE_DEMO_CONTENT=true`)
+- Demo listings and posts are hidden on the live site and shown locally (`HIDE_DEMO_CONTENT` overrides either way)
 - Light theme; mobile layouts down to 320px wide
 
 ## Not built yet (needed before real launch)
@@ -136,7 +136,8 @@ Notes:
 - The terms, privacy, refunds and contact pages read `LEGAL_NAME`, `CONTACT_EMAIL`, `LEGAL_ADDRESS` and `GRIEVANCE_OFFICER`. Set them once the business is registered, then redeploy. The page text is a starting draft and needs a lawyer's review.
 - **Log in with Google** needs a Google OAuth client. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create a project, set up the OAuth consent screen (External, with your app name and support email), then **Create credentials → OAuth client ID → Web application**. Add `https://www.unprompters.com/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local testing) under **Authorized redirect URIs**. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel and redeploy, and make sure `SITE_URL` matches the address people use (e.g. `https://www.unprompters.com`), since the redirect URI is built from it. Someone whose verified Google email already has an account is logged into it; anyone else gets a new account. Without the keys, the button is hidden.
 - **Password-reset emails** need a free [Resend](https://resend.com) account: set `RESEND_API_KEY`, and `EMAIL_FROM` once you've verified your domain in Resend (until then Resend only delivers to your own address). Without a key, emails are printed to the server log when running locally.
-- **Hide the demo content** by setting `HIDE_DEMO_CONTENT=true` and redeploying. Nothing is deleted; remove the variable to bring it back.
+- **Demo content** is hidden on the live site (Vercel production) and shown everywhere else. Set `HIDE_DEMO_CONTENT=false` to show it on the live site, or `=true` to hide it locally, then redeploy. Nothing is deleted.
+- **Error emails:** every server error is written to the log as a line starting `[error]`. Set `ERROR_EMAIL` (it falls back to `ADMIN_EMAIL`) to also get an email the first time each error happens in an hour, ten a day at most. Needs `RESEND_API_KEY`.
 - Vercel's free Hobby plan is for non-commercial use. Move to a paid plan before taking real payments.
 
 ## Screenshots

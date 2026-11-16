@@ -8,12 +8,14 @@ import { notFound, redirect } from "next/navigation";
 import { ExploreView } from "@/components/ExploreView";
 import { FeedGrid } from "@/components/FeedGrid";
 import { JsonLd } from "@/components/JsonLd";
+import { ShowMore } from "@/components/ShowMore";
 import { browseHref, browseQueryHref, categoryHeading, type BrowsePage } from "@/lib/browse";
 import { CATEGORY_IDS, isCategory, STAGE_WEIGHTS, type CategoryId } from "@/lib/categories";
 import { searchListings, usedCategories } from "@/lib/data";
 import type { FeedItem } from "@/lib/feed";
 import { searchFeed } from "@/lib/feed";
 import { plural, siteUrl } from "@/lib/format";
+import { batches, firstBatches } from "@/lib/paging";
 import { STAGES, type Stage } from "@/lib/scoring";
 import { isShow, type Show } from "@/lib/show";
 import { EXPLORE_SORTS, SORTS, type ExploreSort, type Sort } from "@/lib/sorts";
@@ -53,6 +55,20 @@ function sameFiltersOn(page: BrowsePage, categories: CategoryId[], params: Param
   return browseQueryHref(page, categories, qs);
 }
 
+// One batch of results; "Show more" adds another (lib/paging.ts).
+const BATCH = 60;
+
+/** This page with the same filters and one more batch of results. */
+function moreHref(page: BrowsePage, categories: CategoryId[], params: Params, shown: number) {
+  const qs = new URLSearchParams();
+  for (const key of ["q", "maxAi", "sort", "verified", "show"]) {
+    const v = one(params[key]);
+    if (v) qs.set(key, v);
+  }
+  qs.set("more", String(shown + 1));
+  return browseQueryHref(page, categories, qs);
+}
+
 /** Title, description and canonical address for a craft's page. Unknown crafts and pages with no real work stay out of search. */
 export async function craftMetadata(page: BrowsePage, category: string): Promise<Metadata> {
   // Here as well as in the page, so crawlers get a real 404 before anything streams.
@@ -83,20 +99,23 @@ export async function ExploreResults({ searchParams, category }: { searchParams:
   if (showRaw === "sale") redirect(sameFiltersOn("marketplace", categories, params));
   const show: Show = isShow(showRaw) ? showRaw : "all";
 
-  const [items, available, indexable] = await Promise.all([
-    searchFeed({ q, categories, maxAi, sort, verified, show }),
+  const shown = batches(params.more);
+  const [found, available, indexable] = await Promise.all([
+    searchFeed({ q, categories, maxAi, sort, verified, show, limit: shown * BATCH + 1 }),
     usedCategories("explore"),
     category ? craftPageIndexable("explore", category) : false,
   ]);
+  const { items, more } = firstBatches(found, shown * BATCH);
 
   return (
     <ExploreView category={category} available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show }}>
       {category && indexable && <CraftJsonLd page="explore" category={category} items={items} />}
       {/* The empty state below says it when nothing matches. */}
-      {items.length > 0 && <p className="mb-4 text-sm text-muted">{plural(items.length, "work")}</p>}
+      {items.length > 0 && <p className="mb-4 text-sm text-muted">{more ? `Showing the first ${items.length} works` : plural(items.length, "work")}</p>}
       {items.length > 0 ? (
         <>
           <FeedGrid items={items} reveal />
+          {more && <ShowMore href={moreHref("explore", categories, params, shown)} />}
           <p className="mt-10 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-5 text-ink-soft">
             Looking to buy? Some creators sell their work.
             <Link href={sameFiltersOn("marketplace", categories, params)} className="link text-ink">
@@ -127,19 +146,24 @@ export async function MarketplaceResults({ searchParams, category }: { searchPar
   const categories = category ? [category] : parseCategories(params.category);
   const sort: Sort = sortRaw in SORTS ? (sortRaw as Sort) : "new";
 
-  const [listings, available, indexable] = await Promise.all([
-    searchListings({ q, categories, maxAi, sort, verified, price: "paid" }),
+  const shown = batches(params.more);
+  const [found, available, indexable] = await Promise.all([
+    searchListings({ q, categories, maxAi, sort, verified, price: "paid", limit: shown * BATCH + 1 }),
     usedCategories("marketplace"),
     category ? craftPageIndexable("marketplace", category) : false,
   ]);
+  const { items: listings, more } = firstBatches(found, shown * BATCH);
   const items = listings.map((listing) => ({ kind: "listing" as const, listing }));
 
   return (
     <ExploreView page="marketplace" category={category} available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show: "all" }}>
       {category && indexable && <CraftJsonLd page="marketplace" category={category} items={items} />}
-      {items.length > 0 && <p className="mb-4 text-sm text-muted">{plural(items.length, "piece")} for sale</p>}
+      {items.length > 0 && <p className="mb-4 text-sm text-muted">{more ? `Showing the first ${items.length} pieces for sale` : `${plural(items.length, "piece")} for sale`}</p>}
       {items.length > 0 ? (
-        <FeedGrid items={items} reveal />
+        <>
+          <FeedGrid items={items} reveal />
+          {more && <ShowMore href={moreHref("marketplace", categories, params, shown)} />}
+        </>
       ) : (
         <div className="card p-10 text-center">
           <p className="font-display text-xl font-medium">Nothing for sale here yet.</p>
@@ -178,8 +202,8 @@ function HowCraftIsScored({ page, category }: { page: BrowsePage; category: Cate
       <h2 className="text-2xl font-light">How AI is scored for {noun}</h2>
       <p className="mt-3 leading-relaxed text-ink-soft">
         Every piece on Unprompters carries an estimate of how much of the work came from AI. It weighs four stages, by
-        what matters most in the craft. For {noun}, {sentence}. The creator&apos;s own disclosure is the floor, scans can
-        only raise the heuristic score. Process evidence is reviewed separately and does not change the number.
+        what matters most in the craft. For {noun}, {sentence}. The creator&apos;s own disclosure is the floor, and scans
+        can only raise the score. Process evidence is reviewed separately and does not change the number.
       </p>
       <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <Link href="/standard" className="link text-ink">

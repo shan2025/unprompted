@@ -29,10 +29,13 @@ export function Header() {
           <NavLink href="/explore">Explore</NavLink>
           <NavLink href="/marketplace">Marketplace</NavLink>
           <NavLink href="/journal">Journal</NavLink>
-          <NavLink href="/chat">Chat</NavLink>
           <NavLink href="/standard" className="hidden xl:inline">
             How scoring works
           </NavLink>
+          {/* Last in the row, so nothing shifts when it arrives for someone signed in. */}
+          <Suspense fallback={null}>
+            <ChatLink />
+          </Suspense>
         </nav>
         <div className="ml-auto">
           <Suspense fallback={<div className="h-11 w-36" />}>
@@ -42,6 +45,11 @@ export function Header() {
       </div>
     </header>
   );
+}
+
+// Chat needs an account, so visitors who aren't signed in don't get a link that only leads to the log-in page.
+async function ChatLink() {
+  return (await getCurrentUser()) ? <NavLink href="/chat">Chat</NavLink> : null;
 }
 
 async function UserMenu() {
