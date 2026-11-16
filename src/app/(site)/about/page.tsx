@@ -131,6 +131,11 @@ export default function AboutPage() {
           <strong className="text-ink">Disagreements go to a person.</strong> Reports and disputes are read by a
           moderator, and creators can answer with evidence.
         </li>
+        <li>
+          <strong className="text-ink">Your work isn&apos;t offered up for AI training.</strong> We tell the crawlers that
+          collect training data, including those of OpenAI, Anthropic, Google and Meta, to stay away from the work shared
+          here. It is a request those companies say they honour, not a guarantee against every scraper.
+        </li>
       </ul>
       <p className="mt-4 leading-relaxed text-ink-soft">
         The whole method, including where it falls short, is on{" "}

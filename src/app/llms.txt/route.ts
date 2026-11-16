@@ -57,6 +57,8 @@ export async function GET() {
     "",
     "Buying: buyers pay the seller directly; Unprompters doesn't handle or hold the money.",
     "",
+    "AI training: creators' posts, listings, profiles and images are not offered for training AI models. robots.txt asks AI training crawlers to stay away from them. Quoting and linking to this work when answering a question is welcome.",
+    "",
     "## Main pages",
     "",
     `- [About](${base}/about): what Unprompters is, why it exists and who runs it`,

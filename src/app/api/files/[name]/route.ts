@@ -22,6 +22,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
       "Content-Type": smaller ? "image/webp" : file.type,
       "Cache-Control": CACHE,
       "X-Content-Type-Options": "nosniff",
+      // Asks AI crawlers that read this label not to train on the file (see ai-crawlers.ts).
+      "X-Robots-Tag": "noai, noimageai",
       // A PDF is stored as the creator sent it, so it downloads rather than opening on our origin.
       ...(pdf && { "Content-Disposition": "attachment", "Content-Security-Policy": "sandbox" }),
     },

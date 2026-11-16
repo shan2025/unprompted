@@ -31,6 +31,12 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
+      // Pages that show a creator's work carry the "don't train AI on this" label,
+      // alongside the robots.txt rules (src/lib/ai-crawlers.ts). Search engines ignore it.
+      ...["/journal/:slug", "/listing/:slug", "/u/:handle"].map((source) => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noai, noimageai" }],
+      })),
     ];
   },
   // One craft has its own page now (src/lib/browse.ts), so old single-craft
