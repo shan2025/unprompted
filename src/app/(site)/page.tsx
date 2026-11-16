@@ -15,6 +15,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { featuredFeed, searchFeed } from "@/lib/feed";
 import { computeScore } from "@/lib/scoring";
 import { organization, website } from "@/lib/structured-data";
+import { WRITING_CHECK_PATH } from "@/lib/writing-check";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -101,6 +102,23 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
             </Reveal>
           ))}
         </div>
+      </section>
+
+      {/* The free writing check is how many people first hear of the site, so the home page points to it. */}
+      <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-8">
+        <Reveal className="flex flex-wrap items-center justify-between gap-6 border border-line p-8 sm:p-10">
+          <div>
+            <p className="eyebrow">Free tool</p>
+            <h2 className="mt-2 text-3xl font-light">Does your writing look AI-generated?</h2>
+            <p className="mt-2 max-w-2xl leading-relaxed text-ink-soft">
+              Paste an essay, assignment or article and see which passages AI detectors react to, and why. No account,
+              and nothing you paste is uploaded.
+            </p>
+          </div>
+          <Link href={WRITING_CHECK_PATH} className="btn-ghost px-8 py-4">
+            Check your writing
+          </Link>
+        </Reveal>
       </section>
 
       <Suspense fallback={null}>

@@ -8,11 +8,13 @@ import { breadcrumbs } from "@/lib/structured-data";
 import { WRITING_CHECK_PATH } from "@/lib/writing-check";
 
 const TITLE = "Does my writing look AI-generated?";
+// What people type into a search engine: the page title and description answer that.
+const SEARCH_TITLE = "Free AI Checker for Essays and Assignments";
 const DESCRIPTION =
-  "A free check for writers. Paste your writing and see which passages carry the patterns AI detectors look for, and why. It runs in your browser: nothing is uploaded.";
+  "Free AI checker for essays, assignments and articles. See which passages an AI detector is likely to react to, and why. No sign-up, and your text never leaves your browser.";
 
 export const metadata: Metadata = {
-  title: `${TITLE} Free check`,
+  title: SEARCH_TITLE,
   description: DESCRIPTION,
   alternates: { canonical: WRITING_CHECK_PATH },
   openGraph: { siteName: "Unprompters", title: TITLE, description: DESCRIPTION, type: "website", url: WRITING_CHECK_PATH },
@@ -20,6 +22,18 @@ export const metadata: Metadata = {
 
 // The same questions are shown on the page and given to search engines and AI tools.
 const FAQ: { q: string; a: string }[] = [
+  {
+    q: "Is it really free? Is there a word limit?",
+    a: "Yes. There is no account, no sign-up and no daily limit. You can check up to 30,000 characters at a time, which is about 5,000 words.",
+  },
+  {
+    q: "Can I check an essay or assignment before I submit it?",
+    a: "Yes, and your text stays on your device. Treat the result as a look at your own style, not as clearance. A clean result here doesn't guarantee that another tool won't flag the work.",
+  },
+  {
+    q: "Is this the same as Turnitin or GPTZero?",
+    a: "No. Those are separate products that work in their own ways, and their results can differ from this one and from each other. This check shows the common habits of style that detectors tend to react to. It can't predict what a particular detector will say.",
+  },
   {
     q: "Is this an AI detector?",
     a: "Not in the sense of giving a verdict. It looks for habits of style that are common in AI text, such as stock phrases, formula sentences and very even rhythm, and shows you where they appear. It can't tell who or what wrote the words, and no tool can.",
@@ -70,7 +84,8 @@ export default function WritingCheckPage() {
           "@graph": [
             {
               "@type": "WebApplication",
-              name: TITLE,
+              name: "Unprompters AI writing check",
+              alternateName: SEARCH_TITLE,
               url,
               description: DESCRIPTION,
               applicationCategory: "UtilitiesApplication",
@@ -88,13 +103,13 @@ export default function WritingCheckPage() {
         }}
       />
 
-      <p className="eyebrow intro-rise">Free tool</p>
+      <p className="eyebrow intro-rise">Free AI checker for essays, assignments and articles</p>
       <h1 className="intro-rise mt-2 text-4xl font-light leading-tight sm:text-5xl" style={d(80)}>
         {TITLE}
       </h1>
       <p className="intro-rise mt-5 text-lg leading-relaxed text-ink-soft" style={d(180)}>
-        Paste your writing and see which passages carry the patterns AI detectors look for, and why. It is free, needs no
-        account, and runs in your browser, so nothing you paste is uploaded.
+        Paste your essay, assignment or article and see which passages carry the patterns AI detectors look for, and why.
+        It is free, needs no account, and runs in your browser, so nothing you paste is uploaded.
       </p>
 
       <div className="intro-rise mt-8" style={d(260)}>
@@ -150,6 +165,27 @@ export default function WritingCheckPage() {
           a student, a colleague or a writer.
         </p>
       </div>
+
+      <H2 id="students">Before you hand in an essay or assignment</H2>
+      <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed text-ink-soft">
+        <li>
+          <strong className="text-ink">This is not your school&apos;s detector.</strong> Turnitin and other tools work in
+          their own ways. A clean result here doesn&apos;t mean they won&apos;t flag your work, and a flag here doesn&apos;t
+          mean they will.
+        </li>
+        <li>
+          <strong className="text-ink">Write where your history is saved.</strong> A document with its version history,
+          plus your notes and outline, is the best answer if anyone ever questions your work.
+        </li>
+        <li>
+          <strong className="text-ink">If you used AI for part of it, say so.</strong> Check what your course allows.
+          Being upfront is safer than hoping a detector misses it.
+        </li>
+        <li>
+          <strong className="text-ink">Don&apos;t publish an assignment before it is graded,</strong> here or anywhere
+          else. A copy online can show up as a match when your work is checked for plagiarism.
+        </li>
+      </ul>
 
       <H2>If you&apos;ve been wrongly accused</H2>
       <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed text-ink-soft">

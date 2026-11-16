@@ -9,7 +9,7 @@ import { EXAMPLE_TEXT, isFlagged, isStrong, MAX_CHECK_CHARS, MIN_CHECK_WORDS, re
 type Kind = "prose" | "poetry";
 
 const KINDS: { id: Kind; label: string }[] = [
-  { id: "prose", label: "Article, essay or story" },
+  { id: "prose", label: "Essay, article or story" },
   { id: "poetry", label: "Poem" },
 ];
 
@@ -24,6 +24,7 @@ export function WritingCheck() {
   const [result, setResult] = useState<Result | null>(null);
   const [empty, setEmpty] = useState(false);
   const results = useRef<HTMLDivElement>(null);
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
 
   function check(event: React.FormEvent) {
     event.preventDefault();
@@ -74,13 +75,16 @@ export function WritingCheck() {
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_CHECK_CHARS}
           rows={10}
-          placeholder="Paste a few paragraphs here."
+          placeholder="Paste your essay, assignment or article here."
           aria-describedby="writing-note"
           className="field mt-2 min-h-56 resize-y leading-relaxed"
         />
-        <p id="writing-note" className="hint">
-          Checked in your browser. Your text is not uploaded, stored or used for anything. Up to {MAX_CHECK_CHARS.toLocaleString("en")} characters.
-        </p>
+        <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted">
+          <p id="writing-note">
+            Checked in your browser. Your text is not uploaded, stored or used for anything. Up to {MAX_CHECK_CHARS.toLocaleString("en")} characters.
+          </p>
+          <p className="tabular-nums">{plural(words, "word")}</p>
+        </div>
 
         <fieldset className="mt-5">
           <legend className="text-sm font-medium text-ink">What is it?</legend>

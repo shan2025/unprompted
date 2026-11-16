@@ -327,7 +327,66 @@ Get their Instagram handle on the spot, and message them that evening while they
 
 ---
 
-## 9. Daily routine and what to track
+## 9. Promoting the free writing check
+
+The check at unprompters.com/ai-writing-check is the easiest thing on the site to share: it's free, needs no account and helps someone in two minutes. Use it to bring people in. Most of them will be students and writers, not creators who post, so treat it as reach and keep the creator invites going alongside.
+
+**Say:** free, no sign-up, nothing is uploaded, it shows *why* a passage stands out, and it doesn't give a verdict.
+
+**Never say:** "check if your essay will pass Turnitin", "avoid AI detection", "beat the detector" or "100% accurate". None is true, and the first three are the opposite of what the site stands for.
+
+### Reddit reply, in a "my essay was flagged as AI" thread
+
+Good places: r/college, r/GradSchool, r/Teachers, r/freelanceWriters. Read each one's rules first. Help first, and mention the tool once.
+
+> That's stressful, I'm sorry. Detectors react to style, not to who wrote it, so careful formal writing gets flagged a lot. What helps most is your process: version history in Google Docs or Word, notes, an outline. Offer to walk your instructor through it.
+>
+> If you want to see which passages a detector is reacting to, I made a free check that shows them and says why. It runs in your browser, so your essay isn't uploaded anywhere. Disclosure: it's my project. Happy to share the link if that's allowed here.
+
+### Class or student group message (WhatsApp, Telegram, Discord)
+
+> If you've ever worried your own essay might get flagged as AI: this is a free check that shows which parts a detector reacts to and why. No sign-up, and your text doesn't leave your phone. It isn't Turnitin and it won't tell you if you'll "pass", but it's useful to see before you hand something in.
+> unprompters.com/ai-writing-check
+
+### 30-second video (Reels, Shorts, TikTok)
+
+Screen recording, no face needed. One take.
+
+1. **Text on screen:** "Wrote it yourself and it still got flagged as AI?"
+2. Open the page and tap **Fill in an example**, then **Check my writing**.
+3. Scroll to the highlighted passage and pause on **Why it stands out**.
+4. **Say or caption:** "It shows you why, not a fake percentage. Free, no sign-up, and your essay never leaves your phone."
+5. **End card:** unprompters.com/ai-writing-check
+
+### For teachers (LinkedIn post or email to a teacher you know)
+
+> A lot of students are being accused of using AI on work they wrote. A detector score can't settle that.
+>
+> I built a free page that shows what a detector actually reacts to in a piece of writing: stock phrases, formula sentences, very even rhythm. It's useful for showing a class why a score isn't proof. It doesn't give a verdict and shouldn't be used to accuse anyone. Nothing pasted into it is uploaded.
+>
+> unprompters.com/ai-writing-check
+
+### Show HN
+
+**Title:** Show HN: An AI writing check that runs in your browser and won't give a verdict
+
+> I'm building Unprompters, a place for work made by people. Writers kept asking why their own work gets flagged as AI, so I put the site's text analyzer on a free page.
+>
+> It's a simple, transparent heuristic: stock vocabulary, formula sentences, stacked transitions, even sentence rhythm. It highlights the passages and lists the reasons. It runs entirely client-side, so nothing is uploaded. It deliberately gives no percentage and no verdict, because detection can't settle authorship, and the page says where it falls short.
+>
+> I'd like to hear where it gets your writing wrong.
+
+### Free listings (each one is a link back to the site)
+
+Submit the page once to Product Hunt, There's An AI For That, Futurepedia and AlternativeTo. Use the description from the "Say" line above. Then add the address in Google Search Console and ask for it to be indexed.
+
+### What to watch
+
+Vercel Analytics, weekly: visits to `/ai-writing-check`, and how many of those visitors go on to `/explore`, `/about` or sign up. If lots check and almost nobody clicks further, the page is doing its job as reach but the site behind it needs more work to look at.
+
+---
+
+## 10. Daily routine and what to track
 
 **Every day (about an hour):**
 - 20 new messages, each with its own first line
