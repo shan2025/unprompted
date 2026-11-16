@@ -354,8 +354,8 @@ Screen recording, no face needed. One take.
 
 1. **Text on screen:** "Wrote it yourself and it still got flagged as AI?"
 2. Open the page and tap **Fill in an example**, then **Check my writing**.
-3. Scroll to the highlighted passage and pause on **Why it stands out**.
-4. **Say or caption:** "It shows you why, not a fake percentage. Free, no sign-up, and your essay never leaves your phone."
+3. Let the percentage count up, then scroll to the highlighted passage and pause on **Why it stands out**.
+4. **Say or caption:** "It gives you a percentage and shows you why, passage by passage. Free, no sign-up, and your essay never leaves your phone."
 5. **End card:** unprompters.com/ai-writing-check
 
 ### For teachers (LinkedIn post or email to a teacher you know)
@@ -372,7 +372,7 @@ Screen recording, no face needed. One take.
 
 > I'm building Unprompters, a place for work made by people. Writers kept asking why their own work gets flagged as AI, so I put the site's text analyzer on a free page.
 >
-> It's a simple, transparent heuristic: stock vocabulary, formula sentences, stacked transitions, even sentence rhythm. It highlights the passages and lists the reasons. It runs entirely client-side, so nothing is uploaded. It deliberately gives no percentage and no verdict, because detection can't settle authorship, and the page says where it falls short.
+> It's a simple, transparent heuristic: stock vocabulary, formula sentences, stacked transitions, even sentence rhythm. It gives a rough percentage, highlights the passages and lists the reasons. It runs entirely client-side, so nothing is uploaded. It deliberately gives no verdict, because detection can't settle authorship, and the page says where it falls short.
 >
 > I'd like to hear where it gets your writing wrong.
 

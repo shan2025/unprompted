@@ -11,7 +11,7 @@ const TITLE = "Does my writing look AI-generated?";
 // What people type into a search engine: the page title and description answer that.
 const SEARCH_TITLE = "Free AI Checker for Essays and Assignments";
 const DESCRIPTION =
-  "Free AI checker for essays, assignments and articles. See which passages an AI detector is likely to react to, and why. No sign-up, and your text never leaves your browser.";
+  "Free AI checker for essays, assignments and articles. See what percentage of your writing looks machine-made, which passages, and why. No sign-up, and your text never leaves your browser.";
 
 export const metadata: Metadata = {
   title: SEARCH_TITLE,
@@ -25,6 +25,10 @@ const FAQ: { q: string; a: string }[] = [
   {
     q: "Is it really free? Is there a word limit?",
     a: "Yes. There is no account, no sign-up and no daily limit. You can check up to 30,000 characters at a time, which is about 5,000 words.",
+  },
+  {
+    q: "What does the percentage mean?",
+    a: "It is the share of your text that shows the habits of style common in AI writing, counting longer and more strongly patterned passages for more. It is an uncalibrated estimate. It is not the share that AI wrote, and another tool will give a different number for the same text.",
   },
   {
     q: "Can I check an essay or assignment before I submit it?",
@@ -108,8 +112,8 @@ export default function WritingCheckPage() {
         {TITLE}
       </h1>
       <p className="intro-rise mt-5 text-lg leading-relaxed text-ink-soft" style={d(180)}>
-        Paste your essay, assignment or article and see which passages carry the patterns AI detectors look for, and why.
-        It is free, needs no account, and runs in your browser, so nothing you paste is uploaded.
+        Paste your essay, assignment or article and see what percentage of it looks machine-made, which passages stand
+        out, and why. It is free, needs no account, and runs in your browser, so nothing you paste is uploaded.
       </p>
 
       <div className="intro-rise mt-8" style={d(260)}>

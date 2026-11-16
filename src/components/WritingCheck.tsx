@@ -4,7 +4,18 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { analyzeText, type TextAnalysis } from "@/lib/analysis/text";
 import { plural } from "@/lib/format";
-import { EXAMPLE_TEXT, isFlagged, isStrong, MAX_CHECK_CHARS, MIN_CHECK_WORDS, reasonsFlagged } from "@/lib/writing-check";
+import {
+  EXAMPLE_TEXT,
+  isFlagged,
+  isStrong,
+  MAX_CHECK_CHARS,
+  MIN_CHECK_WORDS,
+  patternLevel,
+  patternPercent,
+  reasonsFlagged,
+  type PatternLevel,
+} from "@/lib/writing-check";
+import { CountUp } from "./CountUp";
 
 type Kind = "prose" | "poetry";
 
@@ -13,8 +24,28 @@ const KINDS: { id: Kind; label: string }[] = [
   { id: "poetry", label: "Poem" },
 ];
 
-/** What was checked, kept apart from the box, so editing the text doesn't move the highlights. */
-type Result = { text: string; kind: Kind; analysis: TextAnalysis };
+/**
+ * What was checked, kept apart from the box, so editing the text doesn't move
+ * the highlights. `run` counts the checks, so each one plays the card's animation afresh.
+ */
+type Result = { text: string; kind: Kind; analysis: TextAnalysis; run: number };
+
+// The label on the card and its colour, in the site's tier colours.
+const LEVELS: Record<PatternLevel, { label: string; text: string; bar: string }> = {
+  few: { label: "Few AI-like patterns", text: "text-human", bar: "bg-human" },
+  some: { label: "Some AI-like patterns", text: "text-led", bar: "bg-led" },
+  many: { label: "Many AI-like patterns", text: "text-assist", bar: "bg-assist" },
+  most: { label: "Mostly AI-like patterns", text: "text-heavy", bar: "bg-heavy" },
+};
+
+/** Words as a word processor counts them, so the number under the box and the one on the result card agree. */
+function countWords(text: string) {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+// Stagger delay for the card's entrance animations (.si-* in globals.css).
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
 
 // Paste writing, see which passages carry the patterns AI detectors look for,
 // and why. The check runs here in the browser: nothing is sent anywhere.
@@ -24,7 +55,7 @@ export function WritingCheck() {
   const [result, setResult] = useState<Result | null>(null);
   const [empty, setEmpty] = useState(false);
   const results = useRef<HTMLDivElement>(null);
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const words = countWords(text);
 
   function check(event: React.FormEvent) {
     event.preventDefault();
@@ -36,7 +67,7 @@ export function WritingCheck() {
       return;
     }
     setEmpty(false);
-    setResult({ text: checked, kind, analysis });
+    setResult((previous) => ({ text: checked, kind, analysis, run: (previous?.run ?? 0) + 1 }));
     // Bring the answer into view once it has been drawn.
     requestAnimationFrame(() => {
       const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -144,6 +175,68 @@ function headline({ analysis }: Result) {
     : `${flagged} of your ${total} passages ${flagged === 1 ? "shows" : "show"} patterns AI detectors look for.`;
 }
 
+// The headline number, formed the way the home page's example score card is:
+// the percentage counts up, the label pops in, the bar grows and the rows rise.
+function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: number }) {
+  const percent = patternPercent(analysis);
+  const level = LEVELS[patternLevel(percent)];
+  const flagged = analysis.segments.filter(isFlagged);
+  const common = analysis.signals.filter((signal) => !signal.endsWith("(human-typical)"));
+  const rows = [
+    { label: "Words checked", value: words.toLocaleString("en") },
+    { label: "Passages checked", value: analysis.segments.length },
+    { label: "Passages with AI-like patterns", value: flagged.length, marked: flagged.length > 0 },
+    { label: "Of those, with strong patterns", value: flagged.filter(isStrong).length },
+  ];
+
+  return (
+    <div className="card mt-3 p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <span className="eyebrow">AI pattern estimate</span>
+        <span className="si-pop" style={d(900)}>
+          <span className={`inline-flex items-center border border-current px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${level.text}`}>
+            {level.label}
+          </span>
+        </span>
+      </div>
+
+      <div className="si-rise mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1" style={d(150)}>
+        <span className={`font-display text-6xl font-light tracking-tight tabular-nums ${level.text}`}>
+          <CountUp to={percent} delay={300} duration={1100} />%
+        </span>
+        <span className="text-sm text-ink-soft">of your text looks machine-made</span>
+      </div>
+
+      <div className="mt-4 h-1.5 bg-field" aria-hidden="true">
+        <div className={`si-grow h-full ${level.bar}`} style={{ width: `${Math.max(percent, percent > 0 ? 2 : 0)}%`, ...d(300) }} />
+      </div>
+
+      <p className="mt-3 text-xs leading-relaxed text-muted">
+        An uncalibrated estimate from habits of style. It is not the share that AI wrote, and other detectors will give different numbers.
+      </p>
+
+      <div className="mt-5 border-t border-line pt-4">
+        <span className="eyebrow si-rise block" style={d(1000)}>
+          What the check found
+        </span>
+        <ul className="mt-2 space-y-2.5">
+          {rows.map((row, i) => (
+            <li key={row.label} className="si-rise flex items-center justify-between gap-3 text-sm" style={d(1100 + i * 80)}>
+              <span className="text-ink-soft">{row.label}</span>
+              <span className={`font-semibold tabular-nums ${row.marked ? "text-assist" : "text-ink"}`}>{row.value}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="si-rise mt-4 border-t border-line pt-4 text-sm" style={d(1100 + rows.length * 80)}>
+        <span className="text-ink-soft">Most common patterns: </span>
+        <span className="text-ink">{common.length > 0 ? common.join(" · ") : "none stood out"}</span>
+      </div>
+    </div>
+  );
+}
+
 function Results({ result }: { result: Result }) {
   const { text, kind, analysis } = result;
   const segments = [...analysis.segments].sort((a, b) => a.start - b.start);
@@ -153,7 +246,9 @@ function Results({ result }: { result: Result }) {
   return (
     <section className="mt-10">
       <p className="eyebrow">Result</p>
-      <h2 className="mt-2 text-3xl font-light leading-tight">{headline(result)}</h2>
+      {/* Keyed by the check, so the card forms again each time. */}
+      <PatternCard key={result.run} analysis={analysis} words={countWords(text)} />
+      <h2 className="mt-8 text-2xl font-light leading-tight sm:text-3xl">{headline(result)}</h2>
       <p className="mt-3 leading-relaxed text-ink-soft">
         {flagged === 0
           ? "That doesn't prove a person wrote it, only that it lacks the usual habits of AI text. A detector that works differently could still flag it."
