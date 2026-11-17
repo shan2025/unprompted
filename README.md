@@ -92,10 +92,11 @@ The built-in analyzer is a transparent baseline, not a production detector. Its 
 | `npm run build` / `npm start` | Production build and server |
 | `npm test` | Unit tests for the analyzer and scorer |
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint |
+| `npm run check` | Types, lint and unit tests together. Every deploy runs it first |
 | `npm run setup` | Migrate and seed (`db:migrate`, `db:seed` separately) |
 | `npm run db:generate` | Create a migration after editing `src/lib/db/schema.ts` |
 | `npm run db:clean-uploads` | Strip metadata from and shrink images uploaded before this was automatic. Overwrites them, so it can't be undone |
-| `npm run build:deploy` | What Vercel runs: migrate, seed an empty database, ensure the moderator, build |
+| `npm run build:deploy` | What Vercel runs: check, migrate, seed an empty database, ensure the moderator, build |
 
 ## Stack
 
@@ -103,7 +104,9 @@ Next.js 16 (App Router, Cache Components, Server Actions) · React 19 · TypeScr
 
 ## Deploying (Vercel + Supabase, both have free tiers)
 
-The site runs on [Vercel](https://vercel.com) and stores its data in a [Supabase](https://supabase.com) Postgres database. Every deploy runs `npm run build:deploy`, which updates the database tables, adds the demo listings to an empty database, makes sure your moderator account exists, and builds the site.
+The site runs on [Vercel](https://vercel.com) and stores its data in a [Supabase](https://supabase.com) Postgres database. Every deploy runs `npm run build:deploy`, which first runs the type check, lint and unit tests, then updates the database tables, adds the demo listings to an empty database, makes sure your moderator account exists, and builds the site.
+
+**If any check fails, the deploy stops before the database is touched,** and Vercel keeps serving the previous version. Open the failed deployment in Vercel to see which check broke. Run `npm run check` before pushing to catch it sooner.
 
 **1. Get the database connection string (Supabase)**
 
