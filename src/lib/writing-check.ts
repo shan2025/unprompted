@@ -24,27 +24,41 @@ export function isStrong(segment: Segment) {
   return segment.ai >= STRONG;
 }
 
+// Plain human writing scores 2–6% a passage in the test samples and obvious
+// AI text 99–100%. Text in between (polished, generic or lightly edited
+// writing) often lands at 15–35%: under the line for a clear flag, but not nothing.
+const MILD = 0.15;
+
+/** Some habits, short of a clear flag. Shown, so a result of "no clear patterns" never hides what was found. */
+export function isMild(segment: Segment) {
+  return segment.ai >= MILD && segment.ai < FLAGGED;
+}
+
 /** The patterns that counted against a passage. Signals that counted in its favour are marked "(human-typical)" and left out. */
 export function reasonsFlagged(segment: Segment) {
   return segment.signals.filter((signal) => !signal.endsWith("(human-typical)"));
 }
 
 /**
- * How much of the text looks machine-made, as a whole percent. It is the same
- * figure a post's score card reports as "Automated scan: N% looks machine-made":
- * passages weighted by length and by how strong their patterns are. It
- * estimates style, not authorship.
+ * How much of the text shows clear signs of AI writing, as a whole percent. It
+ * is the same figure a post's score card reports as "Automated scan: N% looks
+ * machine-made": passages weighted by length and by how strong their patterns
+ * are. It estimates style, not authorship.
  */
 export function patternPercent(analysis: { aiShare: number }) {
   return Math.round(analysis.aiShare * 100);
 }
 
-/** A plain label for the percentage. It describes the writing's patterns and never says who wrote it. */
-export type PatternLevel = "few" | "some" | "many" | "most";
+/**
+ * A plain label for the result. It describes the writing's patterns and never
+ * says who wrote it. There is no "clean" level: this check is a short list of
+ * obvious habits, so finding none is not a pass.
+ */
+export type PatternLevel = "none" | "mild" | "some" | "many" | "most";
 
-// The same steps as the site's tiers (0–5, 6–20, 21–50, 51+), so the colours mean the same thing everywhere.
-export function patternLevel(percent: number): PatternLevel {
-  if (percent <= 5) return "few";
+// Above the bottom step these follow the site's tiers (6–20, 21–50, 51+).
+export function patternLevel(percent: number, mildPassages: number): PatternLevel {
+  if (percent <= 5) return mildPassages > 0 ? "mild" : "none";
   if (percent <= 20) return "some";
   if (percent <= 50) return "many";
   return "most";

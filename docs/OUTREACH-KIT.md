@@ -74,7 +74,7 @@
 
 > Hi [name], I read your post about [the essay / the article] being flagged as AI. I'm sorry, that's a rotten thing to have to argue about.
 >
-> Two things that might help. There's a free check at unprompters.com/ai-writing-check that shows which passages a detector reacts to and why. It runs in your browser, so nothing is uploaded. And if you'd like a public page for your writing with your drafts attached, I'm inviting founding writers to Unprompters. Happy to set it up with you.
+> Two things that might help. There's a free check at unprompters.com/ai-writing-check that shows the obvious signs of AI writing in a piece and why they stand out. It runs in your browser, so nothing is uploaded. And if you'd like a public page for your writing with your drafts attached, I'm inviting founding writers to Unprompters. Happy to set it up with you.
 
 ### Photographer
 
@@ -269,7 +269,7 @@ Theme ideas: first drafts, the mistake that became the piece, before and after, 
 
 > Been told your writing "looks like AI"?
 >
-> I built a free check that shows which passages a detector reacts to, and why. It doesn't give a verdict, because no tool can tell who wrote something. It runs in your browser, so your text isn't uploaded or stored.
+> I built a free check that shows which passages carry the obvious signs of AI writing, and why. It doesn't give a verdict, because no tool can tell who wrote something. It runs in your browser, so your text isn't uploaded or stored.
 >
 > unprompters.com/ai-writing-check
 
@@ -317,7 +317,7 @@ Get their Instagram handle on the spot, and message them that evening while they
 >
 > I'm [your name], founder of Unprompters (unprompters.com), a place where creators share work with their process attached (sketches, drafts, time-lapses) and a plain record of where AI was and wasn't used.
 >
-> Students are increasingly accused of using AI on work they made themselves. A page that shows their process gives them something to point to, and a public portfolio that people can browse and ask about. For writing students there is also a free check at unprompters.com/ai-writing-check that shows what a detector reacts to, without uploading their text.
+> Students are increasingly accused of using AI on work they made themselves. A page that shows their process gives them something to point to, and a public portfolio that people can browse and ask about. For writing students there is also a free check at unprompters.com/ai-writing-check that shows the obvious signs of AI writing in a piece, without uploading their text.
 >
 > I'd love to give a 20-minute talk to your students on keeping and showing their process, and invite any who are interested as founding creators. It's free for them and there's no obligation to sell.
 >
@@ -331,9 +331,11 @@ Get their Instagram handle on the spot, and message them that evening while they
 
 The check at unprompters.com/ai-writing-check is the easiest thing on the site to share: it's free, needs no account and helps someone in two minutes. Use it to bring people in. Most of them will be students and writers, not creators who post, so treat it as reach and keep the creator invites going alongside.
 
-**Say:** free, no sign-up, nothing is uploaded, it shows *why* a passage stands out, and it doesn't give a verdict.
+**Know its limit before you post it anywhere.** The check is a short list of obvious habits, not a trained detector like Turnitin, GPTZero or QuillBot. It gives a low score to a lot of AI-written text that those tools flag. On 16 November 2026 one 176-word piece scored 0% clear patterns here, "100% AI-generated" on QuillBot and "human-written, polished with AI" on GPTZero. Anyone who compares will see the difference, so never present it as their equal. Its honest selling points are that it is private, free and shows its reasons.
 
-**Never say:** "check if your essay will pass Turnitin", "avoid AI detection", "beat the detector" or "100% accurate". None is true, and the first three are the opposite of what the site stands for.
+**Say:** free, no sign-up, nothing is uploaded, it shows the obvious signs of AI writing and *why* a passage stands out, and it doesn't give a verdict.
+
+**Never say:** "check if your essay will pass Turnitin", "avoid AI detection", "beat the detector", "as good as GPTZero" or "100% accurate". None is true, and the first three are the opposite of what the site stands for.
 
 ### Reddit reply, in a "my essay was flagged as AI" thread
 
@@ -341,11 +343,11 @@ Good places: r/college, r/GradSchool, r/Teachers, r/freelanceWriters. Read each 
 
 > That's stressful, I'm sorry. Detectors react to style, not to who wrote it, so careful formal writing gets flagged a lot. What helps most is your process: version history in Google Docs or Word, notes, an outline. Offer to walk your instructor through it.
 >
-> If you want to see which passages a detector is reacting to, I made a free check that shows them and says why. It runs in your browser, so your essay isn't uploaded anywhere. Disclosure: it's my project. Happy to share the link if that's allowed here.
+> If you want to see the obvious things that can make writing look AI-written, I made a free check that highlights them and says why. It's a simple one, not Turnitin, and it runs in your browser, so your essay isn't uploaded anywhere. Disclosure: it's my project. Happy to share the link if that's allowed here.
 
 ### Class or student group message (WhatsApp, Telegram, Discord)
 
-> If you've ever worried your own essay might get flagged as AI: this is a free check that shows which parts a detector reacts to and why. No sign-up, and your text doesn't leave your phone. It isn't Turnitin and it won't tell you if you'll "pass", but it's useful to see before you hand something in.
+> If you've ever worried your own essay might get flagged as AI: this is a free check that shows which parts carry the obvious signs of AI writing, and why. No sign-up, and your text doesn't leave your phone. It isn't Turnitin, and a low score doesn't mean you'll "pass", but it's useful to see before you hand something in.
 > unprompters.com/ai-writing-check
 
 ### 30-second video (Reels, Shorts, TikTok)
@@ -362,7 +364,7 @@ Screen recording, no face needed. One take.
 
 > A lot of students are being accused of using AI on work they wrote. A detector score can't settle that.
 >
-> I built a free page that shows what a detector actually reacts to in a piece of writing: stock phrases, formula sentences, very even rhythm. It's useful for showing a class why a score isn't proof. It doesn't give a verdict and shouldn't be used to accuse anyone. Nothing pasted into it is uploaded.
+> I built a free page that shows the obvious habits that make writing look machine-made: stock phrases, formula sentences, very even rhythm. It's far simpler than a trained detector, which is the point: it's useful for showing a class why a score isn't proof. It doesn't give a verdict and shouldn't be used to accuse anyone. Nothing pasted into it is uploaded.
 >
 > unprompters.com/ai-writing-check
 

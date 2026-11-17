@@ -7,6 +7,7 @@ import { plural } from "@/lib/format";
 import {
   EXAMPLE_TEXT,
   isFlagged,
+  isMild,
   isStrong,
   MAX_CHECK_CHARS,
   MIN_CHECK_WORDS,
@@ -30,12 +31,14 @@ const KINDS: { id: Kind; label: string }[] = [
  */
 type Result = { text: string; kind: Kind; analysis: TextAnalysis; run: number };
 
-// The label on the card and its colour, in the site's tier colours.
+// The label on the card and its colour. The low levels are plain ink, never
+// green: finding no obvious habits is not a pass, and mustn't look like one.
 const LEVELS: Record<PatternLevel, { label: string; text: string; bar: string }> = {
-  few: { label: "Few AI-like patterns", text: "text-human", bar: "bg-human" },
-  some: { label: "Some AI-like patterns", text: "text-led", bar: "bg-led" },
-  many: { label: "Many AI-like patterns", text: "text-assist", bar: "bg-assist" },
-  most: { label: "Mostly AI-like patterns", text: "text-heavy", bar: "bg-heavy" },
+  none: { label: "No obvious patterns", text: "text-ink", bar: "bg-ink" },
+  mild: { label: "Mild patterns only", text: "text-ink", bar: "bg-ink" },
+  some: { label: "Some clear patterns", text: "text-led", bar: "bg-led" },
+  many: { label: "Many clear patterns", text: "text-assist", bar: "bg-assist" },
+  most: { label: "Mostly clear patterns", text: "text-heavy", bar: "bg-heavy" },
 };
 
 /** Words as a word processor counts them, so the number under the box and the one on the result card agree. */
@@ -165,34 +168,43 @@ export function WritingCheck() {
 function headline({ analysis }: Result) {
   const total = analysis.segments.length;
   const flagged = analysis.segments.filter(isFlagged).length;
-  if (flagged === 0) {
+  const mild = analysis.segments.filter(isMild).length;
+  if (flagged > 0) {
     return total === 1
-      ? "This passage doesn't show the patterns AI detectors look for."
-      : `None of your ${total} passages show the patterns AI detectors look for.`;
+      ? "This passage shows clear signs of AI writing."
+      : `${flagged} of your ${total} passages ${flagged === 1 ? "shows" : "show"} clear signs of AI writing.`;
+  }
+  if (mild > 0) {
+    return total === 1
+      ? "This passage shows mild signs of AI writing, none of them clear."
+      : `No passage shows clear signs of AI writing, but ${mild} of ${total} ${mild === 1 ? "shows" : "show"} mild ones.`;
   }
   return total === 1
-    ? "This passage shows patterns AI detectors look for."
-    : `${flagged} of your ${total} passages ${flagged === 1 ? "shows" : "show"} patterns AI detectors look for.`;
+    ? "This passage shows none of the obvious signs of AI writing."
+    : `None of your ${total} passages show the obvious signs of AI writing.`;
 }
 
 // The headline number, formed the way the home page's example score card is:
 // the percentage counts up, the label pops in, the bar grows and the rows rise.
 function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: number }) {
   const percent = patternPercent(analysis);
-  const level = LEVELS[patternLevel(percent)];
-  const flagged = analysis.segments.filter(isFlagged);
+  const flagged = analysis.segments.filter(isFlagged).length;
+  const mild = analysis.segments.filter(isMild).length;
+  const level = LEVELS[patternLevel(percent, mild)];
   const common = analysis.signals.filter((signal) => !signal.endsWith("(human-typical)"));
   const rows = [
     { label: "Words checked", value: words.toLocaleString("en") },
     { label: "Passages checked", value: analysis.segments.length },
-    { label: "Passages with AI-like patterns", value: flagged.length, marked: flagged.length > 0 },
-    { label: "Of those, with strong patterns", value: flagged.filter(isStrong).length },
+    { label: "Passages with clear patterns", value: flagged, marked: flagged > 0 },
+    { label: "Passages with mild patterns", value: mild, marked: mild > 0 },
   ];
+  // The lower the number, the more it looks like good news, so that is when the card must say it isn't a pass.
+  const low = percent <= 20;
 
   return (
     <div className="card mt-3 p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <span className="eyebrow">AI pattern estimate</span>
+        <span className="eyebrow">Obvious AI patterns</span>
         <span className="si-pop" style={d(900)}>
           <span className={`inline-flex items-center border border-current px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${level.text}`}>
             {level.label}
@@ -204,7 +216,7 @@ function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: numbe
         <span className={`font-display text-6xl font-light tracking-tight tabular-nums ${level.text}`}>
           <CountUp to={percent} delay={300} duration={1100} />%
         </span>
-        <span className="text-sm text-ink-soft">of your text looks machine-made</span>
+        <span className="text-sm text-ink-soft">of your text shows clear signs of AI writing</span>
       </div>
 
       <div className="mt-4 h-1.5 bg-field" aria-hidden="true">
@@ -212,8 +224,16 @@ function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: numbe
       </div>
 
       <p className="mt-3 text-xs leading-relaxed text-muted">
-        An uncalibrated estimate from habits of style. It is not the share that AI wrote, and other detectors will give different numbers.
+        This check looks for a short list of obvious habits. It is not a trained detector: tools such as Turnitin, GPTZero and QuillBot judge the whole
+        text, and can score it very differently from this and from each other.
       </p>
+
+      {low && (
+        <p className="si-rise mt-4 border-l-2 border-assist bg-field px-3 py-2.5 text-sm leading-relaxed text-ink" style={d(700)}>
+          <strong className="font-semibold">A low score is not a pass.</strong> A lot of AI-written and AI-polished text shows none of these habits, so
+          this result can&apos;t tell you that another detector won&apos;t flag it.
+        </p>
+      )}
 
       <div className="mt-5 border-t border-line pt-4">
         <span className="eyebrow si-rise block" style={d(1000)}>
@@ -251,7 +271,7 @@ function Results({ result }: { result: Result }) {
       <h2 className="mt-8 text-2xl font-light leading-tight sm:text-3xl">{headline(result)}</h2>
       <p className="mt-3 leading-relaxed text-ink-soft">
         {flagged === 0
-          ? "That doesn't prove a person wrote it, only that it lacks the usual habits of AI text. A detector that works differently could still flag it."
+          ? "That is not a pass, and it doesn't show who wrote it. This check only catches obvious habits, and a trained detector may still flag the same text."
           : "That doesn't mean AI wrote it. These are habits of style that many people share, and they are what gets human writing wrongly flagged."}
       </p>
       {short && (
@@ -265,32 +285,38 @@ function Results({ result }: { result: Result }) {
           const piece = text.slice(segment.start, segment.end);
           const reasons = reasonsFlagged(segment);
           const body = `whitespace-pre-wrap break-words leading-relaxed text-ink ${kind === "poetry" ? "" : "text-[16px]"}`;
-          if (!isFlagged(segment)) {
+          if (!isFlagged(segment) && !isMild(segment)) {
             return (
               <li key={segment.start} className="px-4">
                 <p className={body}>{piece}</p>
               </li>
             );
           }
+          // A mild passage gets the outline without the highlight, so it reads as "worth a look", not as a flag.
+          const mild = isMild(segment);
           return (
             <li
               key={segment.start}
-              className="border-l-2 border-assist px-4 py-3"
-              style={{ backgroundColor: isStrong(segment) ? "var(--mark)" : "color-mix(in srgb, var(--mark) 45%, transparent)" }}
+              className={`border-l-2 px-4 py-3 ${mild ? "border-line bg-field/60" : "border-assist"}`}
+              style={mild ? undefined : { backgroundColor: isStrong(segment) ? "var(--mark)" : "color-mix(in srgb, var(--mark) 45%, transparent)" }}
             >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-assist">
-                Passage {i + 1} · {isStrong(segment) ? "strong pattern" : "some pattern"}
+              <p className={`text-[11px] font-semibold uppercase tracking-[0.12em] ${mild ? "text-ink-soft" : "text-assist"}`}>
+                Passage {i + 1} · {mild ? "mild pattern" : isStrong(segment) ? "strong pattern" : "clear pattern"}
               </p>
               <p className={`mt-2 ${body}`}>{piece}</p>
-              <p className="mt-3 text-sm font-medium text-ink">Why it stands out</p>
-              {reasons.length > 0 ? (
+              <p className="mt-3 text-sm font-medium text-ink">{mild ? "What it picked up" : "Why it stands out"}</p>
+              {reasons.length > 0 && (
                 <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-ink-soft">
                   {reasons.map((reason) => (
                     <li key={reason}>{reason}</li>
                   ))}
                 </ul>
-              ) : (
-                <p className="mt-1 text-sm text-ink-soft">Several small habits together, none strong on its own.</p>
+              )}
+              {(mild || reasons.length === 0) && (
+                <p className="mt-1 text-sm text-ink-soft">
+                  {reasons.length > 0 ? "Plus small" : "Small"} habits adding up, such as fairly even sentence lengths or lists of three. None is strong on
+                  its own.
+                </p>
               )}
             </li>
           );

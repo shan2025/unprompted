@@ -111,8 +111,8 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
             <p className="eyebrow">Free tool</p>
             <h2 className="mt-2 text-3xl font-light">Does your writing look AI-generated?</h2>
             <p className="mt-2 max-w-2xl leading-relaxed text-ink-soft">
-              Paste an essay, assignment or article and see which passages AI detectors react to, and why. No account,
-              and nothing you paste is uploaded.
+              Paste an essay, assignment or article and see which passages show the obvious signs of AI writing, and
+              why. No account, and nothing you paste is uploaded.
             </p>
           </div>
           <Link href={WRITING_CHECK_PATH} className="btn-ghost px-8 py-4">

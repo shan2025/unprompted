@@ -11,7 +11,7 @@ const TITLE = "Does my writing look AI-generated?";
 // What people type into a search engine: the page title and description answer that.
 const SEARCH_TITLE = "Free AI Checker for Essays and Assignments";
 const DESCRIPTION =
-  "Free AI checker for essays, assignments and articles. See what percentage of your writing looks machine-made, which passages, and why. No sign-up, and your text never leaves your browser.";
+  "Free AI checker for essays, assignments and articles. See what percentage of your writing shows the obvious signs of AI text, which passages, and why. No sign-up, and your text never leaves your browser.";
 
 export const metadata: Metadata = {
   title: SEARCH_TITLE,
@@ -28,19 +28,23 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What does the percentage mean?",
-    a: "It is the share of your text that shows the habits of style common in AI writing, counting longer and more strongly patterned passages for more. It is an uncalibrated estimate. It is not the share that AI wrote, and another tool will give a different number for the same text.",
+    a: "It is the share of your text that shows clear habits of style common in AI writing, counting longer and more strongly patterned passages for more. It is an uncalibrated estimate, not the share that AI wrote. A low percentage is not a pass: a lot of AI-written text shows none of these habits.",
+  },
+  {
+    q: "Why does another AI detector give a different score?",
+    a: "Because they work differently. Tools such as Turnitin, GPTZero and QuillBot use trained models that judge how predictable the whole text is. This check looks only for a short, public list of obvious habits. It can pass text that they flag and flag text that they pass, and those tools often disagree with each other as well.",
   },
   {
     q: "Can I check an essay or assignment before I submit it?",
-    a: "Yes, and your text stays on your device. Treat the result as a look at your own style, not as clearance. A clean result here doesn't guarantee that another tool won't flag the work.",
+    a: "Yes, and your text stays on your device. Treat the result as a look at your own style, not as clearance. A low score here doesn't mean another tool won't flag the work.",
   },
   {
     q: "Is this the same as Turnitin or GPTZero?",
-    a: "No. Those are separate products that work in their own ways, and their results can differ from this one and from each other. This check shows the common habits of style that detectors tend to react to. It can't predict what a particular detector will say.",
+    a: "No, and it is much simpler. Those are trained detectors; this is a short list of obvious habits of style. It can't predict what any of them will say about your text.",
   },
   {
     q: "Is this an AI detector?",
-    a: "Not in the sense of giving a verdict. It looks for habits of style that are common in AI text, such as stock phrases, formula sentences and very even rhythm, and shows you where they appear. It can't tell who or what wrote the words, and no tool can.",
+    a: "A very simple one, and it gives no verdict. It looks for obvious habits of style that are common in AI text, such as stock phrases, formula sentences and very even rhythm, and shows you where they appear. It is not a trained model, and it can't tell who or what wrote the words. No tool can.",
   },
   {
     q: "A passage was flagged. Does that mean I used AI?",
@@ -48,7 +52,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Nothing was flagged. Does that prove I wrote it?",
-    a: "No. AI text that has been edited, or that was asked for in a casual voice, often shows none of these patterns. A clean result only means the usual habits are missing.",
+    a: "No, and it doesn't mean another detector will pass it either. AI text that has been edited, or that was asked for in a plain or casual voice, often shows none of these habits. A low score only means the obvious ones are missing.",
   },
   {
     q: "Is my text stored or used to train anything?",
@@ -112,8 +116,9 @@ export default function WritingCheckPage() {
         {TITLE}
       </h1>
       <p className="intro-rise mt-5 text-lg leading-relaxed text-ink-soft" style={d(180)}>
-        Paste your essay, assignment or article and see what percentage of it looks machine-made, which passages stand
-        out, and why. It is free, needs no account, and runs in your browser, so nothing you paste is uploaded.
+        Paste your essay, assignment or article and see what percentage of it shows the obvious signs of AI writing,
+        which passages stand out, and why. It is free, needs no account, and runs in your browser, so nothing you paste
+        is uploaded.
       </p>
 
       <div className="intro-rise mt-8" style={d(260)}>
@@ -123,8 +128,8 @@ export default function WritingCheckPage() {
       <H2>What it looks for</H2>
       <div className="prose-ink mt-4 leading-relaxed text-ink-soft">
         <p>
-          The check splits your writing into passages and looks at each one for habits that are common in text written by
-          language models:
+          The check splits your writing into passages and looks at each one for a short list of obvious habits that are
+          common in text written by language models. It is a simple, public list, not a trained detector:
         </p>
       </div>
       <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed text-ink-soft">
@@ -160,8 +165,14 @@ export default function WritingCheckPage() {
           (Weber-Wulff et al., 2023) found none above 80% accuracy.
         </p>
         <p>
+          <strong className="text-ink">It can&apos;t tell you what another detector will say.</strong> Turnitin, GPTZero
+          and QuillBot use trained models. They regularly score the same text differently from this check, and from each
+          other: one may call a piece fully AI-generated while another calls it human-written.
+        </p>
+        <p>
           <strong className="text-ink">It gets people wrong in both directions.</strong> Careful, formal human writing can
-          be flagged. AI text that has been lightly edited, or asked for in a casual voice, can pass.
+          be flagged. AI text that is plain, lightly edited or asked for in a casual voice can score low. A low score is
+          not a pass.
         </p>
         <p>
           <strong className="text-ink">So treat the result as a mirror, not a verdict.</strong> It shows you what a
