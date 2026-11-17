@@ -331,7 +331,9 @@ Get their Instagram handle on the spot, and message them that evening while they
 
 The check at unprompters.com/ai-writing-check is the easiest thing on the site to share: it's free, needs no account and helps someone in two minutes. Use it to bring people in. Most of them will be students and writers, not creators who post, so treat it as reach and keep the creator invites going alongside.
 
-**Know its limit before you post it anywhere.** The check is a short list of obvious habits, not a trained detector like Turnitin, GPTZero or QuillBot. It gives a low score to a lot of AI-written text that those tools flag. On 16 November 2026 one 176-word piece scored 0% clear patterns here, "100% AI-generated" on QuillBot and "human-written, polished with AI" on GPTZero. Anyone who compares will see the difference, so never present it as their equal. Its honest selling points are that it is private, free and shows its reasons.
+**Know its limit before you post it anywhere.** The check is a set of hand-written rules, not a trained detector like Turnitin, GPTZero or QuillBot, and no AI model runs when someone uses it. Since 17 November 2026 it also looks at how an essay is built (lists of three, tidy formulas, no concrete details, matching paragraphs). On a small test (10 AI essays, 47 human texts) it marked 9 of the 10 AI essays and gave no human text more than 5%. That test is small and most of the AI essays came from one model, so expect it to do worse in the wild. It still passes AI writing that is full of names and dates, and it will sometimes mark a careful human writer. Never present it as the equal of the trained tools. Its honest selling points are that it is private, free, uses no AI and shows its reasons.
+
+The piece that prompted this: a ChatGPT rewrite of one of our own Journal posts scored 0% under the old rules, "100% AI-generated" on QuillBot and "human-written, polished with AI" on GPTZero. It now scores about 49% here.
 
 **Say:** free, no sign-up, nothing is uploaded, it shows the obvious signs of AI writing and *why* a passage stands out, and it doesn't give a verdict.
 

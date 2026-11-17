@@ -1,9 +1,12 @@
 import {
+  ESSAY_FORMULAS,
   FORMULAS,
   HUMAN_CODE_TELLS,
   HUMAN_MARKERS,
   NARRATING_COMMENT,
   POETIC_CLICHES,
+  SERIAL_LIST,
+  SIGNPOST_START,
   STRONG_AI_PHRASES,
   TRANSITION_START,
   WEAK_AI_WORDS,
@@ -45,7 +48,19 @@ interface Span {
 
 const MAX_CONFIDENCE: Record<ContentKind, number> = { prose: 0.55, poetry: 0.45, code: 0.4 };
 
-export function analyzeText(text: string, kind: ContentKind): TextAnalysis {
+export interface AnalyzeOptions {
+  /**
+   * Also look at how prose is built: lists of three, tidy reflective formulas,
+   * no concrete details, paragraphs of equal length. Plain modern AI text
+   * avoids the stock vocabulary but still shows these. Used by the free
+   * writing check. Posts and listings are scored without it, because a scan
+   * can hold a creator's work for review and these signals have only been
+   * calibrated on a small set of samples.
+   */
+  essay?: boolean;
+}
+
+export function analyzeText(text: string, kind: ContentKind, options: AnalyzeOptions = {}): TextAnalysis {
   const words = countWords(text);
   if (words === 0) {
     return { kind, aiShare: 0, confidence: 0, words: 0, segments: [], signals: [] };
@@ -54,6 +69,7 @@ export function analyzeText(text: string, kind: ContentKind): TextAnalysis {
   const spans = kind === "code" ? codeBlocks(text) : kind === "poetry" ? stanzas(text) : proseChunks(text);
   const docCode = kind === "code" ? codeDocFeatures(text) : null;
   const docCv = kind === "prose" ? lengthCv(spans.flatMap((s) => sentences(text, s)).map((s) => wordsIn(text, s))) : null;
+  const essay = options.essay && kind === "prose" ? { evenParagraphs: evenParagraphs(text) } : null;
 
   const segments = spans.map((span) => {
     const scored =
@@ -61,7 +77,7 @@ export function analyzeText(text: string, kind: ContentKind): TextAnalysis {
         ? scoreCode(text.slice(span.start, span.end), docCode)
         : kind === "poetry"
           ? scorePoetry(text.slice(span.start, span.end))
-          : scoreProse(text, span, docCv);
+          : scoreProse(text, span, docCv, essay);
     return { ...span, ai: round(scored.p), signals: scored.signals };
   });
 
@@ -112,7 +128,7 @@ export function combineAnalyses(parts: TextAnalysis[]): { aiShare: number; confi
 
 // ---------- prose ----------
 
-function scoreProse(text: string, span: Span, docCv: number | null) {
+function scoreProse(text: string, span: Span, docCv: number | null, essay: { evenParagraphs: boolean } | null = null) {
   const body = text.slice(span.start, span.end);
   const lower = body.toLowerCase();
   const sents = sentences(text, span);
@@ -165,7 +181,89 @@ function scoreProse(text: string, span: Span, docCv: number | null) {
   const lowerStarts = sents.filter((s) => /^[a-z]/.test(text.slice(s.start, s.end))).length;
   z -= 0.5 * Math.min(lowerStarts, 2);
 
+  if (essay) {
+    const built = essaySignals(text, body, sents, nWords, essay.evenParagraphs, formulas.length > 0);
+    z += built.z;
+    signals.push(...built.signals);
+  }
+
   return { p: sigmoid(z), signals };
+}
+
+// How the passage is built, for the essay check (see AnalyzeOptions.essay).
+// No single habit here means much: people write lists of three and tidy
+// closing lines too, and plenty of thoughtful human prose names no names. So
+// one habit on its own counts for half, and they only add up in combination.
+function essaySignals(text: string, body: string, sents: Span[], nWords: number, evenParas: boolean, formulaFound: boolean) {
+  const signals: string[] = [];
+  let z = 0;
+  let habits = 0;
+
+  const formulas = ESSAY_FORMULAS.filter((f) => !(f.overlaps && formulaFound) && f.pattern.test(body));
+  if (formulas.length) {
+    z += 0.75 * Math.min(formulas.length, 3);
+    habits++;
+    signals.push(`Stock reflective phrasing: ${formulas[0].label}`);
+  }
+
+  const lists = (body.match(SERIAL_LIST) ?? []).length;
+  if (lists >= 2) {
+    z += 0.45;
+    habits++;
+    signals.push("Several lists of three in a short passage");
+  } else if (lists === 1) {
+    z += 0.2;
+  }
+
+  const signposts = sents.filter((s) => SIGNPOST_START.test(text.slice(s.start, s.end))).length;
+  if (sents.length >= 3 && signposts / sents.length >= 0.3) {
+    z += 0.5;
+    habits++;
+    signals.push("Sentences opening on signpost words (“Yet,” “Instead,” “In the end,”)");
+  } else if (signposts >= 1) {
+    z += 0.2;
+  }
+
+  // Names, places, dates and figures. Writing from experience or research
+  // usually has some; a generated think-piece often has none at all.
+  if (nWords >= 30) {
+    const specifics = sents.reduce((n, s) => n + countSpecifics(text.slice(s.start, s.end)), 0);
+    const per100 = (specifics / nWords) * 100;
+    if (specifics === 0) {
+      z += 0.45;
+      habits++;
+      signals.push("No names, numbers or concrete details");
+    } else if (per100 < 1.5) {
+      z += 0.2;
+    } else if (per100 >= 5) {
+      z -= 0.7;
+    }
+  }
+
+  if (evenParas) {
+    z += 0.35;
+    habits++;
+    signals.push("Paragraphs of nearly equal length");
+  }
+
+  // A lone habit proves little, and a negative total (lots of concrete detail) stays as it is.
+  return { z: habits <= 1 && z > 0 ? z / 2 : z, signals: habits <= 1 ? [] : signals };
+}
+
+/** Proper nouns and numbers in a sentence, not counting its first word or "I". */
+function countSpecifics(sentence: string) {
+  const tokens = sentence.split(/\s+/).slice(1);
+  return tokens.filter((t) => /\d/.test(t) || (/^["“(']?[A-Z][a-z]/.test(t) && !/^["“(']?I(?:'|’|$)/.test(t))).length;
+}
+
+/** Three or more real paragraphs, all within about a fifth of the same length. */
+function evenParagraphs(text: string) {
+  const lengths = paragraphs(text)
+    .map((p) => wordsIn(text, p))
+    .filter((n) => n >= 25);
+  if (lengths.length < 3) return false;
+  const cv = lengthCv(lengths);
+  return cv !== null && cv < 0.2;
 }
 
 // ---------- poetry ----------

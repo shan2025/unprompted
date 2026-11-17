@@ -119,7 +119,7 @@ export default function StandardPage() {
           words. Each passage gets a heuristic signal score, not a calibrated probability. You
           can see the passage-level result on every post and listing, and{" "}
           <Link href="/ai-writing-check" className="link text-ink">
-            try the same check on your own writing
+            try a stricter version of this check on your own writing
           </Link>
           .
         </p>

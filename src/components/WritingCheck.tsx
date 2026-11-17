@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { analyzeText, type TextAnalysis } from "@/lib/analysis/text";
+import type { TextAnalysis } from "@/lib/analysis/text";
 import { plural } from "@/lib/format";
 import {
+  checkWriting,
   EXAMPLE_TEXT,
   isFlagged,
   isMild,
@@ -63,7 +64,7 @@ export function WritingCheck() {
   function check(event: React.FormEvent) {
     event.preventDefault();
     const checked = text.trim();
-    const analysis = analyzeText(checked, kind);
+    const analysis = checkWriting(checked, kind);
     if (analysis.words === 0) {
       setEmpty(true);
       setResult(null);

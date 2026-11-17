@@ -112,6 +112,42 @@ export const FORMULAS: { pattern: RegExp; label: string }[] = [
   { pattern: /^\s*(?:[-*•]|\d+\.)\s+\*\*[^*\n]+\*\*:?/m, label: "bullet list with bold lead-ins" },
 ];
 
+// ---------- essay signals ----------
+// Newer models rarely use the stock phrases above. What they still do is build
+// an essay the same way every time. These are used only when a text is checked
+// as an essay (the free writing check), and only add up in combination.
+
+// Set phrases of the reflective, tidy-moral voice. These are widely reported
+// habits of current models, not phrases lifted from one sample: an early
+// version keyed on "took on a different meaning", which turned out to be a
+// human writer's own line that a model had kept while rewriting their essay.
+// `overlaps` marks the ones FORMULAS already catches in some wordings, so the
+// same sentence is never counted twice.
+export const ESSAY_FORMULAS: { pattern: RegExp; label: string; overlaps?: boolean }[] = [
+  { pattern: /\b(?:is|are|was|were|does|do|did)n'?t (?:just|only|merely|simply)\b[^.!?]{2,80}?,? but\b/i, label: "“isn't just… but” construction" },
+  {
+    pattern: /\b(?:is|are|was|were)(?:n'?t| not) (?:just |only |simply )?about [^.!?]{2,60}[.,;]\s*(?:but|it(?:'s| is)|they(?:'re| are))\b/i,
+    label: "“it's not about X, it's about Y” turn",
+    overlaps: true,
+  },
+  { pattern: /\bmore than just\b|\bmore than (?:a|an) (?:way|tool|job|skill|hobby|place|means|habit|trend)\b/i, label: "“more than just” phrasing" },
+  { pattern: /\b(?:that'?s|that is|this is) (?:exactly |precisely )?what makes\b/i, label: "“that's what makes it…” closer" },
+  { pattern: /\bwhat makes (?:it|them|this|these|that|those|[a-z]+ [a-z]+) (?:so )?(?:special|unique|different|meaningful|valuable|powerful|worthwhile)\b/i, label: "“what makes it special” closer" },
+  { pattern: /\bin a world (?:where|that|full of|filled with)\b/i, label: "“in a world where…” framing" },
+  { pattern: /\bat (?:its|their) core\b|\bat the heart of\b/i, label: "“at its core” phrasing" },
+  { pattern: /\b(?:reminds|reminding) (?:us|readers) that\b|\ba reminder that\b/i, label: "“a reminder that…” moral" },
+  { pattern: /(?:^|[.!?]\s+)(?:In the end|Ultimately|Looking back|At the end of the day),/i, label: "wrap-up opener (“In the end,” “Ultimately,”)" },
+  { pattern: /\b(?:sets?|setting) the tone\b|\bplays? an? (?:important|key|central|vital|crucial|major) role\b|\blaid the foundation\b|\bopens? the door to\b/i, label: "stock expression (“plays an important role”)" },
+  { pattern: /\bone of (?:our|the) most (?:valuable|important|powerful) (?:resources|tools|skills|gifts|things)\b|\bthe kind of (?:life|person|world) (?:we|you|they)\b/i, label: "sweeping closing claim" },
+];
+
+// "A, B, and C": the list of three (or four) that models reach for constantly.
+export const SERIAL_LIST = /(?:\b[^,.;:!?()]{2,45},\s+){2,}(?:and|or)\s+\w/g;
+
+// Signpost words opening a sentence. People use them too; models stack them.
+export const SIGNPOST_START =
+  /^(?:Yet|Still|Instead|Today|Often|Ultimately|Finally|Next|However|Moreover|Overall|Over time|In many ways|At the same time|In the end|After all|In fact|For many|Even so|In short|Simply put|More importantly|As a result|At first|Looking back),/;
+
 export const TRANSITION_START =
   /^(?:additionally|furthermore|moreover|however|overall|ultimately|importantly|notably|in addition|consequently|thus|therefore|in essence|essentially|indeed|conversely|similarly|that said|in fact),/i;
 

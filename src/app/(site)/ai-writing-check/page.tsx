@@ -149,12 +149,32 @@ export default function WritingCheckPage() {
           <strong className="text-ink">Even rhythm</strong>: sentences that are all about the same length.
         </li>
         <li>
+          <strong className="text-ink">Tidy reflective formulas</strong>: &ldquo;it isn&apos;t just X, but Y&rdquo;,
+          &ldquo;more than just&rdquo;, &ldquo;that&apos;s what makes it special&rdquo;, a closing &ldquo;In the
+          end,&rdquo;.
+        </li>
+        <li>
+          <strong className="text-ink">Lists of three</strong>, again and again in a short passage.
+        </li>
+        <li>
+          <strong className="text-ink">Nothing concrete</strong>: no names, places, dates or numbers anywhere.
+        </li>
+        <li>
+          <strong className="text-ink">Matching paragraphs</strong>: three or more, all nearly the same length.
+        </li>
+        <li>
           <strong className="text-ink">In poems</strong>: stock imagery, very uniform lines and strict rhyming couplets.
         </li>
       </ul>
       <p className="mt-4 leading-relaxed text-ink-soft">
-        Casual, uneven, personal writing counts the other way. It is the same analyzer Unprompters runs on every post and
-        listing, and <Link href="/standard" className="link text-ink">the full method is public</Link>.
+        People do all of these things too, so one habit on its own counts for little: a passage is only marked when
+        several appear together. Casual, uneven, personal writing counts the other way, and so does writing full of
+        specific names and figures. No AI model is involved. These are hand-written rules, built on the analyzer
+        Unprompters runs on posts and listings, and{" "}
+        <Link href="/standard" className="link text-ink">
+          the method is public
+        </Link>
+        .
       </p>
 
       <H2 id="limits">What it can&apos;t tell you</H2>

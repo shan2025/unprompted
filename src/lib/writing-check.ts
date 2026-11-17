@@ -1,8 +1,16 @@
 // The free "Does my writing look AI-generated?" page (/ai-writing-check). It
-// runs the same built-in analyzer as posts and listings, in the visitor's
-// browser, so the text they paste is never sent to us.
+// runs the built-in analyzer in the visitor's browser, so the text they paste
+// is never sent to us. No AI model is involved: the analyzer is a set of
+// hand-written rules. Prose is checked with the essay rules switched on
+// (lists of three, tidy reflective formulas, no concrete details, even
+// paragraphs), which posts and listings don't use yet.
 
-import type { Segment } from "./analysis/text";
+import { analyzeText, type Segment } from "./analysis/text";
+
+/** Runs the check the page shows. */
+export function checkWriting(text: string, kind: "prose" | "poetry") {
+  return analyzeText(text, kind, { essay: true });
+}
 
 export const WRITING_CHECK_PATH = "/ai-writing-check";
 
@@ -24,10 +32,13 @@ export function isStrong(segment: Segment) {
   return segment.ai >= STRONG;
 }
 
-// Plain human writing scores 2–6% a passage in the test samples and obvious
-// AI text 99–100%. Text in between (polished, generic or lightly edited
-// writing) often lands at 15–35%: under the line for a clear flag, but not nothing.
-const MILD = 0.15;
+// Where the lines sit, from scoring 47 known human texts (essays, old and
+// modern, and encyclopaedia articles; 506 passages) and 10 known AI essays (30
+// passages) with the essay check on: 2% of human passages and 70% of AI
+// passages reach the clear line; 3% of human and 17% of AI passages fall in the
+// band just under it. No human text scored above 5% overall. It is a small
+// sample, and most of the AI essays came from one model.
+const MILD = 0.25;
 
 /** Some habits, short of a clear flag. Shown, so a result of "no clear patterns" never hides what was found. */
 export function isMild(segment: Segment) {
