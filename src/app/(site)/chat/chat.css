@@ -1,6 +1,4 @@
 .chat-page {
-  --chat-background: #f8f5f1;
-  --chat-sidebar: #f8f4ee;
   --chat-selected: #f3e5d6;
   --chat-tab: #f7dfc8;
   --chat-orange: #fa8c25;
@@ -8,7 +6,6 @@
   --chat-time: #68615c;
   --chat-receipt: #d45e00;
   --chat-seen: #674934;
-  --paper: #fbf9f6;
   --card: #fffdfa;
   --ink: #241910;
   --ink-soft: #53483f;
@@ -19,7 +16,7 @@
   --accent-soft: var(--field);
 
   color: var(--ink);
-  background: var(--chat-background);
+  background: var(--paper);
 }
 
 .chat-workspace {
@@ -32,7 +29,7 @@
 }
 
 .chat-inbox {
-  background-color: var(--chat-sidebar);
+  background-color: var(--paper);
 }
 
 .chat-inbox-gutter,
