@@ -107,7 +107,7 @@ export function ChatSearchInput({ label, placeholder, query }: { label: string; 
       placeholder={placeholder}
       defaultValue={query}
       maxLength={100}
-      className="min-h-11 min-w-0 flex-1 bg-transparent pr-2 text-base outline-none placeholder:text-muted"
+      className="min-h-11 min-w-0 flex-1 bg-transparent pr-2 text-base outline-none placeholder:text-muted md:text-[15px]"
     />
   );
 }
@@ -342,7 +342,7 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
                 if (draft.trim() && !pending) event.currentTarget.form?.requestSubmit();
               }
             }}
-            className="block max-h-32 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2.5 text-base leading-6 outline-none placeholder:text-muted md:min-h-[50px] md:px-4 md:py-3 xl:min-h-[54px] xl:py-3.5"
+            className="block max-h-32 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2.5 text-base leading-6 outline-none placeholder:text-muted md:min-h-[50px] md:px-4 md:py-3 md:text-[15px] xl:min-h-[54px] xl:py-3.5"
           />
         </div>
         <button type="submit" aria-label={pending ? "Sending message" : "Send message"} disabled={pending || !draft.trim()} className="grid h-11 w-12 shrink-0 place-items-center rounded-[14px] bg-[var(--chat-orange)] text-ink hover:bg-[#f57e12] disabled:cursor-not-allowed disabled:bg-[#ffc38c] disabled:text-[#704420] md:h-13 md:w-15 xl:h-14 xl:w-16">

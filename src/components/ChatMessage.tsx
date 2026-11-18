@@ -65,7 +65,7 @@ function MessageWithDivider({ divider, children }: { divider: string | null; chi
     <>
       {divider && (
         <li aria-hidden="true" className="flex justify-center pt-6">
-          <span className="rounded-full bg-field px-4 py-1.5 text-xs leading-5 font-bold uppercase text-ink md:text-[15px]">{divider}</span>
+          <span className="rounded-full bg-field px-4 py-1.5 text-xs leading-5 font-semibold tracking-[0.08em] uppercase text-ink md:text-sm">{divider}</span>
         </li>
       )}
       {children}
@@ -152,7 +152,7 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
               // On touch screens a tap shows the React and More buttons; with a mouse they appear on hover.
               onClick={() => setRevealed(!revealed)}
               title={client ? `${fullDay(date, true)}, ${clock(date, true)}` : undefined}
-              className={`rounded-[14px] px-3.5 py-2.5 text-[15px] leading-[1.4] whitespace-pre-wrap [overflow-wrap:anywhere] md:px-[18px] md:text-base xl:text-[17px] ${own ? "bg-ink text-white" : "bg-field text-ink"} ${pending ? "opacity-60" : ""}`}
+              className={`rounded-[14px] px-3.5 py-2.5 text-base leading-normal whitespace-pre-wrap [overflow-wrap:anywhere] md:px-[18px] ${own ? "bg-ink text-white" : "bg-field text-ink"} ${pending ? "opacity-60" : ""}`}
             >
               <span className="sr-only">{own ? "You" : author}: </span>{body}
             </div>

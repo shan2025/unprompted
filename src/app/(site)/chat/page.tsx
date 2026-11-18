@@ -40,7 +40,7 @@ function scopeParam(scope: Scope) {
 export default function ChatPage({ searchParams }: { searchParams: Promise<Query> }) {
   return (
     <div className="chat-page">
-      <Suspense fallback={<h1 className="px-4 py-5 text-[28px] font-bold tracking-tight">Chat</h1>}>
+      <Suspense fallback={<h1 className="px-4 py-5 text-3xl leading-tight font-light xl:text-4xl">Chat</h1>}>
         <Inbox searchParams={searchParams} />
       </Suspense>
     </div>
@@ -71,7 +71,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
   if (!user.verified) {
     return (
       <div className="px-4 py-8">
-        <h1 className="mb-6 text-[28px] font-bold tracking-tight">Chat</h1>
+        <h1 className="mb-6 text-3xl leading-tight font-light xl:text-4xl">Chat</h1>
         <ConfirmEmailCard email={user.email ?? ""} doing="send messages" />
       </div>
     );
@@ -101,8 +101,8 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
         ) : (
           <>
             <div className="chat-inbox-heading flex items-center justify-between gap-2">
-              <h1 className="text-[28px] leading-tight font-bold tracking-tight">Chat</h1>
-              <Link href={href({ new: "1" })} className="chat-new-message inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[12px] bg-ink px-3.5 text-sm font-bold text-white active:opacity-80 xl:min-h-12 xl:px-6">
+              <h1 className="text-3xl leading-tight font-light xl:text-4xl">Chat</h1>
+              <Link href={href({ new: "1" })} className="btn-primary chat-new-message min-h-11 shrink-0 rounded-[12px] px-3.5 py-2 xl:min-h-12 xl:px-6">
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="m14 6 4 4M4 20l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L4.9 15Z" />
                 </svg>
@@ -133,7 +133,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                 </ul>
               ) : (
                 <div className="px-4 py-8 text-center md:px-5">
-                  <p className="font-semibold">{query ? "No matching conversations" : unreadOnly ? "You're all caught up" : "No conversations yet"}</p>
+                  <p className="font-medium">{query ? "No matching conversations" : unreadOnly ? "You're all caught up" : "No conversations yet"}</p>
                   <p className="mt-1 text-sm text-muted">{query ? "Try a different name or word." : unreadOnly ? "No unread messages." : "Start one with New message."}</p>
                 </div>
               )}
@@ -157,7 +157,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
               <Link href={`/u/${selected.handle}`} aria-label={`View ${selected.name}'s profile`} className="group flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
                 <Avatar name={selected.name} file={selected.avatarFile} className="size-10 shrink-0 text-base md:size-12 xl:size-[52px]" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-lg leading-tight font-bold group-hover:underline md:text-[22px]">{selected.name}</span>
+                  <span className="block truncate text-lg leading-tight font-medium group-hover:underline md:text-xl">{selected.name}</span>
                   <span className="mt-0.5 block truncate text-sm text-ink-soft">@{selected.handle}</span>
                 </span>
                 <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-ink-soft group-hover:text-ink md:mr-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -171,7 +171,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                   <Link href={`/u/${selected.handle}`} aria-label={`View ${selected.name}'s profile`} className="mb-3">
                     <Avatar name={selected.name} file={selected.avatarFile} className="h-16 w-16 text-2xl" />
                   </Link>
-                  <h2 className="text-lg font-semibold">Say hello to {selected.name}.</h2>
+                  <h2 className="text-lg font-medium">Say hello to {selected.name}.</h2>
                   <p className="text-sm text-muted">This is the start of your conversation.</p>
                 </div>
                 <TypingIndicator key={selected.id} peerId={selected.id} name={selected.name} />
@@ -239,7 +239,7 @@ function PeoplePane({ query, scope, page, people, location, selectedId, hasSearc
     <>
       <div className="chat-inbox-heading flex items-center gap-1.5">
         <Back href="/chat" label="Back to inbox" />
-        <h1 className="text-2xl font-bold tracking-tight">New message</h1>
+        <h1 className="text-2xl leading-tight font-light">New message</h1>
       </div>
       <div className="chat-inbox-gutter">
         <SearchBox label="Search members" placeholder="Name or @handle" query={query} hidden={{ new: "1", people: scopeParam(scope) }} />
@@ -264,7 +264,7 @@ function PeoplePane({ query, scope, page, people, location, selectedId, hasSearc
                 >
                   <Avatar name={person.name} file={person.avatarFile} className="h-9 w-9 shrink-0 text-sm" />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{person.name}</span>
+                    <span className="block truncate text-sm font-medium">{person.name}</span>
                     <span className="block truncate text-xs text-muted">@{person.handle}</span>
                   </span>
                 </Link>
@@ -305,7 +305,7 @@ function SearchBox({ label, placeholder, query, hidden = {} }: {
         </svg>
       </button>
       <ChatSearchInput key={query} label={label} placeholder={placeholder} query={query} />
-      <kbd aria-hidden="true" className="mr-3 hidden shrink-0 rounded-[5px] border border-line bg-card px-1.5 py-0.5 font-sans text-xs font-semibold text-ink-soft xl:block">Ctrl K</kbd>
+      <kbd aria-hidden="true" className="mr-3 hidden shrink-0 rounded-[5px] border border-line bg-card px-1.5 py-0.5 font-sans text-xs font-medium text-ink-soft xl:block">Ctrl K</kbd>
     </form>
   );
 }
@@ -323,7 +323,7 @@ function Tab({ href: url, current, children }: { href: string; current: boolean;
     <Link
       href={url}
       aria-current={current ? "page" : undefined}
-      className={`inline-flex min-h-10 items-center rounded-full px-3 font-semibold sm:px-4 ${current ? "bg-[var(--chat-tab)] text-ink" : "text-ink-soft hover:bg-field hover:text-ink"}`}
+      className={`inline-flex min-h-10 items-center rounded-full px-3 font-medium sm:px-4 ${current ? "bg-[var(--chat-tab)] text-ink" : "text-ink-soft hover:bg-field hover:text-ink"}`}
     >
       {children}
     </Link>
@@ -344,11 +344,11 @@ function ConversationRow({ person, url, selected, preview, time, unread }: {
         <Avatar name={person.name} file={person.avatarFile} className={`size-11 shrink-0 text-base xl:size-[50px] ${selected ? "ring-1 ring-[var(--chat-focus)]" : ""}`} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className="min-w-0 flex-1 truncate text-base font-bold" title={`@${person.handle}`}>{person.name}</span>
+            <span className={`min-w-0 flex-1 truncate text-base ${unread ? "font-semibold" : "font-medium"}`} title={`@${person.handle}`}>{person.name}</span>
             <ChatTime iso={time} className="shrink-0 text-sm font-medium text-[var(--chat-time)] tabular-nums xl:text-[15px]" />
           </span>
           <span className="mt-0.5 flex items-center gap-2">
-            <span className={`min-w-0 flex-1 truncate text-sm ${unread ? "font-semibold text-ink" : "text-ink-soft"}`}>{preview}</span>
+            <span className={`min-w-0 flex-1 truncate text-sm ${unread ? "font-medium text-ink" : "text-ink-soft"}`}>{preview}</span>
             {unread && <span className="size-2.5 shrink-0 rounded-full bg-[var(--chat-orange)]"><span className="sr-only">Unread</span></span>}
           </span>
         </span>
@@ -361,7 +361,7 @@ function EmptyPane({ title, text, children }: { title: string; text: string; chi
   return (
     <div className="grid flex-1 place-content-center justify-items-center gap-1 px-6 text-center">
       <Mark className="mb-3 h-7 w-7 text-ink-soft" />
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="text-lg font-medium">{title}</h2>
       <p className="text-sm text-muted">{text}</p>
       {children}
     </div>
