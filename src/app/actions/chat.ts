@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { clearTyping, findChatMember, findOwnConversationMessage, getChatPulse, markTyping, MAX_MESSAGE_LENGTH } from "@/lib/chat";
@@ -133,13 +133,22 @@ export async function reactToDirectMessage(id: number, emoji: string | null): Pr
   return {};
 }
 
-export async function markDirectMessagesRead(ids: number[]) {
+export async function markDirectMessagesRead(ids: number[], through?: { peerId: number; messageId: number }) {
   const user = await getCurrentUser();
-  if (!user?.verified || !Array.isArray(ids) || !ids.length || ids.length > 50) return;
-  if (ids.some((id) => !Number.isInteger(id) || id < 1 || id > 2147483647)) return;
+  if (!user?.verified) return;
+  if (through && (!validId(through.peerId) || !validId(through.messageId))) return;
+  if (!through && (!Array.isArray(ids) || !ids.length || ids.length > 50 || !ids.every(validId))) return;
 
+  // The latest page acknowledges the conversation up to the history the client rendered.
+  // An older page only acknowledges incoming messages on that page.
   const updated = await db.update(directMessages).set({ readAt: sql`now()` })
-    .where(and(eq(directMessages.recipientId, user.id), isNull(directMessages.readAt), inArray(directMessages.id, ids)))
+    .where(and(
+      eq(directMessages.recipientId, user.id),
+      isNull(directMessages.readAt),
+      through
+        ? and(eq(directMessages.senderId, through.peerId), lte(directMessages.id, through.messageId))
+        : inArray(directMessages.id, ids),
+    ))
     .returning({ id: directMessages.id });
   if (updated.length) refresh();
 }

@@ -86,13 +86,14 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
   const unreadIds = history?.messages.filter((message) => message.senderId !== user.id && !message.readAt).map((message) => message.id) ?? [];
   const olderConversations = conversations.length > 40 ? conversations[39].messageId : undefined;
   const latest = history?.messages.at(-1);
+  const readThrough = !before && (unreadIds.length || history?.older) ? latest?.id : undefined;
   const hasDetail = Boolean(rawHandle);
   const isNew = Boolean(history && !history.messages.length && !before);
   const listHref = href(location);
 
   return (
     <div className="grid h-[calc(100dvh-7.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-80 bg-paper md:h-[clamp(480px,calc(100dvh-140px),900px)] md:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] md:border md:border-line">
-      <ChatLive unreadIds={unreadIds} />
+      <ChatLive peerId={selected?.id} readThrough={readThrough} unreadIds={unreadIds} />
 
       <section className={`${hasDetail ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col md:border-r md:border-line`}>
         {compose ? (

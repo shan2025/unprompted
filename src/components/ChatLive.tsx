@@ -5,29 +5,78 @@ import { useActionState, useEffect, useLayoutEffect, useRef, useState, type Reac
 import { checkConversation, markDirectMessagesRead, sendDirectMessage, setTyping } from "@/app/actions/chat";
 import { enterSends } from "./ChatMessage";
 
-export function ChatLive({ unreadIds }: { unreadIds: number[] }) {
+export function ChatLive({ peerId, readThrough, unreadIds }: {
+  peerId?: number;
+  readThrough?: number;
+  unreadIds: number[];
+}) {
   const router = useRouter();
   const unread = unreadIds.join(",");
 
   useEffect(() => {
+    let events: EventSource | undefined;
+
     function update() {
       if (document.visibilityState === "visible") router.refresh();
     }
+    function watch() {
+      if (document.visibilityState !== "visible") {
+        events?.close();
+        events = undefined;
+        return;
+      }
+      if (!events && typeof EventSource !== "undefined") {
+        events = new EventSource("/api/chat/events");
+        events.addEventListener("change", update);
+      }
+    }
+    function onVisibilityChange() {
+      watch();
+      update();
+    }
+
+    watch();
     const timer = window.setInterval(update, 10_000);
-    document.addEventListener("visibilitychange", update);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
+      events?.close();
       window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", update);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [router]);
 
   useEffect(() => {
-    if (unread && document.visibilityState === "visible") {
-      void markDirectMessagesRead(unread.split(",").map(Number)).catch(() => {
-        // The next refresh can retry an interrupted read update.
-      });
+    if (!peerId || (!readThrough && !unread)) return;
+    const sender = peerId;
+    const ids = unread ? unread.split(",").map(Number) : [];
+    let stopped = false;
+    let pending = false;
+    let retry: number | undefined;
+
+    async function acknowledge() {
+      if (stopped || pending || document.visibilityState !== "visible") return;
+      window.clearTimeout(retry);
+      pending = true;
+      try {
+        await markDirectMessagesRead(ids, readThrough ? { peerId: sender, messageId: readThrough } : undefined);
+      } catch {
+        if (!stopped) retry = window.setTimeout(acknowledge, 2000);
+      } finally {
+        pending = false;
+      }
     }
-  }, [unread]);
+    function onVisibilityChange() {
+      void acknowledge();
+    }
+
+    void acknowledge();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      stopped = true;
+      window.clearTimeout(retry);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [peerId, readThrough, unread]);
 
   return null;
 }
