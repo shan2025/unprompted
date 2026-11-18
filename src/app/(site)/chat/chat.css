@@ -88,17 +88,6 @@
 }
 
 @media (min-width: 48rem) {
-  body:has(.chat-page) > header {
-    background: #fbf9f6;
-    border-color: #ece5df;
-  }
-
-  body:has(.chat-page) > header > div {
-    max-width: 104rem;
-    height: clamp(4.5rem, 6.2vw, 6.25rem);
-    padding-inline: clamp(1.5rem, 4.25vw, 4.25rem) clamp(1.5rem, 2.7vw, 2.75rem);
-  }
-
   .chat-page {
     padding: clamp(1rem, 1.4vw, 1.5rem) clamp(1rem, 2.65vw, 3rem) clamp(1.25rem, 1.75vw, 2rem);
   }
@@ -108,7 +97,7 @@
     --chat-thread-gutter: clamp(1.25rem, 2.25vw, 2.25rem);
 
     max-width: 100rem;
-    height: clamp(30rem, calc(100dvh - clamp(4.5rem, 6.2vw, 6.25rem) - clamp(1rem, 1.4vw, 1.5rem) - clamp(1.25rem, 1.75vw, 2rem)), 64rem);
+    height: clamp(30rem, calc(100dvh - 4.5rem - clamp(1rem, 1.4vw, 1.5rem) - clamp(1.25rem, 1.75vw, 2rem)), 64rem);
     grid-template-columns: clamp(17.5rem, 29.5%, 28.25rem) minmax(0, 1fr);
     margin-inline: auto;
     overflow: clip;
@@ -148,12 +137,5 @@
   .chat-thread-heading {
     min-height: clamp(4.5rem, 6vw, 6rem);
     padding-inline: max(1.25rem, calc(var(--chat-thread-gutter) - 0.4rem));
-  }
-}
-
-@media (min-width: 48rem) and (max-width: 63.999rem) {
-  body:has(.chat-page) > header > div {
-    gap: 1rem;
-    padding-inline: 1rem;
   }
 }

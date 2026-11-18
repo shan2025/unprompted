@@ -49,7 +49,7 @@ export function Header() {
 
 // Chat needs an account, so visitors who aren't signed in don't get a link that only leads to the log-in page.
 async function ChatLink() {
-  return (await getCurrentUser()) ? <NavLink href="/chat" className="aria-[current=page]:border-[#e97418] aria-[current=page]:font-bold">Chat</NavLink> : null;
+  return (await getCurrentUser()) ? <NavLink href="/chat">Chat</NavLink> : null;
 }
 
 async function UserMenu() {
