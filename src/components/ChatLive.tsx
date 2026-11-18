@@ -81,6 +81,37 @@ export function ChatLive({ peerId, readThrough, unreadIds }: {
   return null;
 }
 
+export function ChatSearchInput({ label, placeholder, query }: { label: string; placeholder: string; query: string }) {
+  const field = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "k") return;
+      const input = field.current;
+      if (!input?.getClientRects().length) return;
+      event.preventDefault();
+      input.focus();
+      input.select();
+    }
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
+  return (
+    <input
+      ref={field}
+      type="search"
+      name="q"
+      aria-label={label}
+      aria-keyshortcuts="Control+K Meta+K"
+      placeholder={placeholder}
+      defaultValue={query}
+      maxLength={100}
+      className="min-h-11 min-w-0 flex-1 bg-transparent pr-2 text-base outline-none placeholder:text-muted"
+    />
+  );
+}
+
 export function ChatHistory({ children, latestId, ownLatest, older }: {
   children: ReactNode;
   latestId?: number;
@@ -109,7 +140,7 @@ export function ChatHistory({ children, latestId, ownLatest, older }: {
         const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
         nearBottom.current = scrollHeight - scrollTop - clientHeight < 100;
       }}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6"
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[var(--chat-thread-gutter)] py-5 md:py-6"
     >
       {children}
     </div>
@@ -167,7 +198,7 @@ export function TypingIndicator({ peerId, name, latestId }: { peerId: number; na
       {typing && (
         <div className="mt-4 flex [animation:rise_0.2s_ease-out_both] motion-reduce:animate-none">
           <span className="sr-only">{name} is typing</span>
-          <span aria-hidden="true" className="flex h-8 items-center gap-1 bg-field px-3">
+          <span aria-hidden="true" className="flex h-8 items-center gap-1 rounded-[12px] bg-field px-3">
             {[0, 160, 320].map((delay) => (
               <span
                 key={delay}
@@ -262,30 +293,30 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
   }
 
   return (
-    <form action={action} className="border-t border-line bg-paper px-4 py-3 md:px-5">
+    <form action={action} className="border-t border-line bg-paper px-3 py-3 md:px-5 md:py-3.5">
       {state.error && <p role="alert" className="mb-2 text-sm text-heavy">{state.error}</p>}
-      <div className="flex items-end gap-2.5">
+      <div className="flex items-end gap-2 sm:gap-2.5">
         <div ref={picker} className="relative shrink-0">
           <button
             type="button"
             aria-label="Add emoji"
             aria-expanded={picking}
             onClick={() => setPicking(!picking)}
-            className={`grid h-11 w-9 place-items-center text-ink-soft hover:text-ink ${picking ? "text-ink" : ""}`}
+            className={`grid size-11 place-items-center rounded-[14px] bg-field text-ink-soft hover:text-ink md:size-13 xl:size-14 ${picking ? "text-ink" : ""}`}
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="8.5" /><path d="M8.8 14.2a4 4 0 0 0 6.4 0" /><path d="M9.3 9.8h.01M14.7 9.8h.01" strokeWidth="2.4" />
             </svg>
           </button>
           {picking && (
-            <div role="group" aria-label="Emoji" className="absolute bottom-full left-0 z-40 mb-2 grid w-[min(19.5rem,calc(100vw-2rem))] grid-cols-8 gap-0.5 border border-line bg-paper p-2 shadow-lg">
+            <div role="group" aria-label="Emoji" className="absolute bottom-full left-0 z-40 mb-2 grid max-h-[min(20rem,45dvh)] w-[min(21rem,calc(100vw-2rem))] grid-cols-6 gap-0.5 overflow-y-auto rounded-[16px] border border-line bg-paper p-2 shadow-lg">
               {EMOJI.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => insert(emoji)}
                   aria-label={`Insert ${emoji}`}
-                  className="grid aspect-square place-items-center text-xl hover:bg-field"
+                  className="grid aspect-square min-h-10 place-items-center rounded-[9px] text-xl hover:bg-field"
                 >
                   {emoji}
                 </button>
@@ -293,7 +324,7 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
             </div>
           )}
         </div>
-        <div className="flex min-w-0 flex-1 border-b border-transparent bg-field focus-within:border-ink">
+        <div className="flex min-w-0 flex-1 rounded-[15px] border border-transparent bg-field focus-within:border-[var(--chat-focus)]">
           <textarea
             ref={field}
             name="message"
@@ -311,11 +342,15 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
                 if (draft.trim() && !pending) event.currentTarget.form?.requestSubmit();
               }
             }}
-            className="block max-h-32 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3 py-2.5 text-base leading-6 outline-none placeholder:text-muted md:text-sm"
+            className="block max-h-32 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2.5 text-base leading-6 outline-none placeholder:text-muted md:min-h-[50px] md:px-4 md:py-3 xl:min-h-[54px] xl:py-3.5"
           />
         </div>
-        <button type="submit" disabled={pending || !draft.trim()} className="btn-primary min-h-11 px-6 py-0 disabled:bg-field disabled:text-muted disabled:opacity-100">
-          {pending ? "Sending…" : "Send"}
+        <button type="submit" aria-label={pending ? "Sending message" : "Send message"} disabled={pending || !draft.trim()} className="grid h-11 w-12 shrink-0 place-items-center rounded-[14px] bg-[var(--chat-orange)] text-ink hover:bg-[#f57e12] disabled:cursor-not-allowed disabled:bg-[#ffc38c] disabled:text-[#704420] md:h-13 md:w-15 xl:h-14 xl:w-16">
+          <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {pending
+              ? <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3" />
+              : <path d="m21 3-6.2 18-3.9-7.9L3 9.2 21 3Zm0 0L10.9 13.1" />}
+          </svg>
         </button>
       </div>
     </form>

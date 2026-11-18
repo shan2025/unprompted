@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useOptimistic, useRef, useState, useTransition, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { deleteDirectMessage, editDirectMessage, reactToDirectMessage } from "@/app/actions/chat";
 import { MAX_MESSAGE_LENGTH, REACTIONS } from "@/lib/chat-rules";
+import { Avatar } from "./Avatar";
 import { ChatTime, clock, fullDay, sameDay, useIsClient } from "./ChatTime";
 
 type Reaction = { emoji: string; mine: boolean };
@@ -16,7 +17,7 @@ export type ThreadMessage = {
   edited: boolean;
   editableUntil: number;
   reactions: Reaction[];
-  seen: boolean;
+  receipt?: "read" | "seen";
 };
 
 /** Enter sends on keyboards with a mouse; on phones it adds a new line and the button sends. */
@@ -35,19 +36,20 @@ function together(a: ThreadMessage | undefined, b: ThreadMessage | undefined, cl
 }
 
 /** The messages of one conversation, with a divider wherever the day changes in the viewer's timezone. */
-export function ChatThread({ messages, author }: { messages: ThreadMessage[]; author: string }) {
+export function ChatThread({ messages, author, avatarFile }: { messages: ThreadMessage[]; author: string; avatarFile: string | null }) {
   const client = useIsClient();
   return (
     <ol>
       {messages.map((message, index) => {
         const date = new Date(message.createdAt);
         const previous = messages[index - 1];
-        const newDay = !previous || !sameDay(new Date(previous.createdAt), date, client);
+        const newDay = previous && !sameDay(new Date(previous.createdAt), date, client);
         return (
           <MessageWithDivider key={message.id} divider={newDay ? fullDay(date, client) : null}>
             <ChatMessage
               {...message}
               author={author}
+              avatarFile={avatarFile}
               groupStart={!together(previous, message, client)}
               groupEnd={!together(message, messages[index + 1], client)}
             />
@@ -62,8 +64,8 @@ function MessageWithDivider({ divider, children }: { divider: string | null; chi
   return (
     <>
       {divider && (
-        <li aria-hidden="true" className="eyebrow flex items-center gap-4 pb-4 pt-6 first:pt-0">
-          <span className="h-px flex-1 bg-line" />{divider}<span className="h-px flex-1 bg-line" />
+        <li aria-hidden="true" className="flex justify-center pt-6">
+          <span className="rounded-full bg-field px-4 py-1.5 text-xs leading-5 font-bold uppercase text-ink md:text-[15px]">{divider}</span>
         </li>
       )}
       {children}
@@ -71,8 +73,9 @@ function MessageWithDivider({ divider, children }: { divider: string | null; chi
   );
 }
 
-function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, reactions, seen, groupStart, groupEnd }: ThreadMessage & {
+function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, editableUntil, reactions, receipt, groupStart, groupEnd }: ThreadMessage & {
   author: string;
+  avatarFile: string | null;
   groupStart: boolean;
   groupEnd: boolean;
 }) {
@@ -131,7 +134,10 @@ function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, 
   const meta = groupEnd || edited || copied;
 
   return (
-    <li className={`group flex flex-col ${own ? "items-end" : "items-start"} ${groupStart ? "mt-4 first:mt-0" : "mt-1"}`}>
+    <li className={`group relative flex min-w-0 flex-col ${own ? "items-end" : "items-start pl-10 sm:pl-14"} ${groupStart ? "mt-4 first:mt-0 md:mt-5" : "mt-0.5"}`}>
+      {!own && groupStart && (
+        <Avatar name={author} file={avatarFile} className="absolute top-0.5 left-0 size-8 text-sm sm:size-10" />
+      )}
       <div className={`flex w-full items-center gap-1 ${own ? "flex-row-reverse" : ""}`}>
         {editing ? (
           <EditBox
@@ -141,12 +147,12 @@ function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, 
             onSave={(text) => text.trim() === body ? setEditing(false) : run(() => editDirectMessage(id, text), () => setEditing(false))}
           />
         ) : (
-          <div className="max-w-[80%] md:max-w-[70%]">
+          <div className="min-w-0 max-w-[88%] md:max-w-[min(75%,66ch)]">
             <div
               // On touch screens a tap shows the React and More buttons; with a mouse they appear on hover.
               onClick={() => setRevealed(!revealed)}
               title={client ? `${fullDay(date, true)}, ${clock(date, true)}` : undefined}
-              className={`px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] md:text-sm ${own ? "bg-ink text-white" : "bg-field text-ink"} ${pending ? "opacity-60" : ""}`}
+              className={`rounded-[14px] px-3.5 py-2.5 text-[15px] leading-[1.4] whitespace-pre-wrap [overflow-wrap:anywhere] md:px-[18px] md:text-base xl:text-[17px] ${own ? "bg-ink text-white" : "bg-field text-ink"} ${pending ? "opacity-60" : ""}`}
             >
               <span className="sr-only">{own ? "You" : author}: </span>{body}
             </div>
@@ -172,7 +178,7 @@ function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, 
           type="button"
           onClick={() => (mine ? react(mine) : setPanel("react"))}
           aria-label={`Reactions: ${shown.map((reaction) => `${reaction.emoji}${reaction.mine ? " (yours)" : ""}`).join(", ")}${mine ? ". Remove yours" : ""}`}
-          className={`-mt-1 ${own ? "mr-1.5" : "ml-1.5"} relative flex h-6 items-center gap-0.5 border border-line bg-paper px-1 text-xs leading-none hover:bg-field`}
+          className={`-mt-1 ${own ? "mr-1.5" : "ml-1.5"} relative flex h-6 items-center gap-0.5 rounded-full border border-line bg-paper px-1.5 text-xs leading-none hover:bg-field`}
         >
           {grouped.map(([emoji, count]) => (
             <span key={emoji} className="flex items-center">{emoji}{count > 1 && <span className="ml-0.5 text-[11px] text-ink-soft">{count}</span>}</span>
@@ -182,7 +188,7 @@ function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, 
 
       {panel === "react" && (
         <Floating anchor={reactButton} alignEnd={own} onClose={() => { setPanel(null); setRevealed(false); }}>
-          <div role="group" aria-label="Choose a reaction" className="flex gap-0.5 border border-line bg-paper p-1 shadow-lg">
+          <div role="group" aria-label="Choose a reaction" className="flex gap-0.5 rounded-[12px] border border-line bg-paper p-1 shadow-lg">
             {REACTIONS.map((emoji) => (
               <button
                 key={emoji}
@@ -201,7 +207,7 @@ function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, 
 
       {(panel === "menu" || panel === "confirm") && (
         <Floating anchor={menuButton} alignEnd={own} prefer="below" onClose={() => { setPanel(null); setRevealed(false); }}>
-          <div className="min-w-48 border border-line bg-paper py-1 text-sm shadow-lg">
+          <div className="min-w-48 overflow-hidden rounded-[12px] border border-line bg-paper py-1 text-sm shadow-lg">
             {panel === "confirm" ? (
               <div className="px-4 py-3">
                 <p className="mb-1 font-semibold">Unsend for everyone?</p>
@@ -223,10 +229,18 @@ function ChatMessage({ id, body, own, author, createdAt, edited, editableUntil, 
       )}
 
       {meta && (
-        <p className="mt-1 flex gap-1.5 px-0.5 text-[11px] text-muted">
+        <p className="mt-1.5 flex items-center gap-1.5 px-0.5 text-xs leading-5 font-medium text-[var(--chat-time)] tabular-nums md:text-[15px]">
           {groupEnd && <ChatTime iso={createdAt} style="thread" />}
           {edited && <span>{groupEnd ? "· " : ""}Edited</span>}
-          {seen && <span>· Seen</span>}
+          {receipt === "seen" && <span className="text-[var(--chat-seen)]">· Seen</span>}
+          {receipt === "read" && groupEnd && (
+            <span className="text-[var(--chat-receipt)]">
+              <span className="sr-only">Read</span>
+              <svg viewBox="0 0 24 24" className="size-[18px] md:size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m3 12 4 4 9-9m-5 8 2 2L22 8" />
+              </svg>
+            </span>
+          )}
           {copied && <span role="status">· Copied</span>}
         </p>
       )}
@@ -369,7 +383,7 @@ function EditBox({ initial, pending, onSave, onCancel }: {
             event.currentTarget.form?.requestSubmit();
           }
         }}
-        className="w-full resize-none border border-ink bg-paper px-3 py-2 text-base leading-relaxed outline-none md:text-sm"
+        className="w-full resize-none rounded-[12px] border border-ink bg-paper px-3 py-2 text-base leading-relaxed outline-none focus-visible:border-[var(--chat-focus)]"
       />
       <div className="mt-1.5 flex justify-end gap-2">
         <span className="mr-auto hidden self-center text-xs text-muted [@media(hover:hover)_and_(pointer:fine)]:inline">Esc to cancel · Enter to save</span>

@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
-import { ChatIcon } from "@/components/ChatIcon";
-import { ChatComposer, ChatHistory, ChatLive, TypingIndicator } from "@/components/ChatLive";
+import { ChatComposer, ChatHistory, ChatLive, ChatSearchInput, TypingIndicator } from "@/components/ChatLive";
 import { ChatThread } from "@/components/ChatMessage";
 import { ChatTime } from "@/components/ChatTime";
 import { Mark } from "@/components/Logo";
@@ -12,6 +11,7 @@ import { requireUser } from "@/lib/auth";
 import { findChatMember, getMessageHistory, listConversations, MAX_MESSAGE_LENGTH, searchChatMembers } from "@/lib/chat";
 import { EDIT_WINDOW_MS } from "@/lib/chat-rules";
 import { followPage, followPageSize } from "@/lib/journal";
+import "./chat.css";
 
 export const metadata: Metadata = { title: "Chat", robots: { index: false, follow: false } };
 
@@ -39,7 +39,7 @@ function scopeParam(scope: Scope) {
 
 export default function ChatPage({ searchParams }: { searchParams: Promise<Query> }) {
   return (
-    <div className="mx-auto max-w-6xl md:px-6 md:py-8">
+    <div className="chat-page">
       <Suspense fallback={<h1 className="px-4 py-5 text-[28px] font-bold tracking-tight">Chat</h1>}>
         <Inbox searchParams={searchParams} />
       </Suspense>
@@ -92,28 +92,31 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
   const listHref = href(location);
 
   return (
-    <div className="grid h-[calc(100dvh-7.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-80 bg-paper md:h-[clamp(480px,calc(100dvh-140px),900px)] md:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] md:border md:border-line">
+    <div className="chat-workspace grid min-h-80">
       <ChatLive peerId={selected?.id} readThrough={readThrough} unreadIds={unreadIds} />
 
-      <section className={`${hasDetail ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col md:border-r md:border-line`}>
+      <section aria-label={compose ? "Find people" : "Inbox"} className={`chat-inbox ${hasDetail ? "hidden md:flex" : "flex"} min-h-0 min-w-0 flex-col md:border-r md:border-line`}>
         {compose ? (
           <PeoplePane query={query} scope={scope} page={page} people={people} location={location} selectedId={selected?.id} hasSearch={hasSearch} />
         ) : (
           <>
-            <div className="flex items-center justify-between gap-4 px-4 pb-4 pt-5 md:px-5">
-              <h1 className="text-[28px] font-bold tracking-tight">Chat</h1>
-              <Link href={href({ new: "1" })} className="btn-primary gap-2 px-4 py-2.5 text-[11px]">
-                <ChatIcon className="h-4 w-4" /> New message
+            <div className="chat-inbox-heading flex items-center justify-between gap-2">
+              <h1 className="text-[28px] leading-tight font-bold tracking-tight">Chat</h1>
+              <Link href={href({ new: "1" })} className="chat-new-message inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[12px] bg-ink px-3.5 text-sm font-bold text-white active:opacity-80 xl:min-h-12 xl:px-6">
+                <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m14 6 4 4M4 20l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L4.9 15Z" />
+                </svg>
+                New Message
               </Link>
             </div>
-            <div className="px-4 md:px-5">
+            <div className="chat-inbox-gutter">
               <SearchBox label="Search conversations" placeholder="Search conversations" query={query} hidden={{ filter: location.filter }} />
             </div>
             <Tabs label="Filter conversations">
               <Tab href={href({ q: query })} current={!unreadOnly}>All</Tab>
               <Tab href={href({ q: query, filter: "unread" })} current={unreadOnly}>Unread</Tab>
             </Tabs>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1">
               {conversations.length ? (
                 <ul>
                   {conversations.slice(0, 40).map((conversation) => (
@@ -146,17 +149,20 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
       </section>
 
       <section aria-label="Conversation" className={`${hasDetail ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-col`}>
-        {hasDetail && <h1 className="sr-only">Chat</h1>}
+        {hasDetail && <h1 className="sr-only md:hidden">Chat</h1>}
         {selected && history ? (
           <>
-            <div className="flex min-h-16 items-center gap-3 border-b border-line px-4 py-3 md:px-5">
+            <div className="chat-thread-heading flex items-center gap-2 border-b border-line">
               <Back href={listHref} label={compose ? "Back to people" : "Back to inbox"} className="md:hidden" />
-              <Link href={`/u/${selected.handle}`} aria-label={`View ${selected.name}'s profile`} className="group flex min-w-0 items-center gap-3">
-                <Avatar name={selected.name} file={selected.avatarFile} className="h-10 w-10 shrink-0 text-sm" />
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold group-hover:underline">{selected.name}</span>
-                  <span className="block truncate text-xs text-muted">@{selected.handle}</span>
+              <Link href={`/u/${selected.handle}`} aria-label={`View ${selected.name}'s profile`} className="group flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                <Avatar name={selected.name} file={selected.avatarFile} className="size-10 shrink-0 text-base md:size-12 xl:size-[52px]" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-lg leading-tight font-bold group-hover:underline md:text-[22px]">{selected.name}</span>
+                  <span className="mt-0.5 block truncate text-sm text-ink-soft">@{selected.handle}</span>
                 </span>
+                <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-ink-soft group-hover:text-ink md:mr-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" />
+                </svg>
               </Link>
             </div>
             {isNew ? (
@@ -181,6 +187,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                 {history.messages.length ? (
                   <ChatThread
                     author={selected.name}
+                    avatarFile={selected.avatarFile}
                     messages={history.messages.map((message) => ({
                       id: message.id,
                       body: message.body,
@@ -189,7 +196,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                       edited: Boolean(message.editedAt),
                       editableUntil: message.createdAt.getTime() + EDIT_WINDOW_MS,
                       reactions: message.reactions.map((reaction) => ({ emoji: reaction.emoji, mine: reaction.userId === user.id })),
-                      seen: message === latest && message.senderId === user.id && Boolean(message.readAt),
+                      receipt: message.senderId === user.id && message.readAt ? (message === latest ? "seen" : "read") : undefined,
                     }))}
                   />
                 ) : (
@@ -230,12 +237,12 @@ function PeoplePane({ query, scope, page, people, location, selectedId, hasSearc
 }) {
   return (
     <>
-      <div className="flex items-center gap-1.5 px-4 pb-4 pt-5 md:px-5">
+      <div className="chat-inbox-heading flex items-center gap-1.5">
         <Back href="/chat" label="Back to inbox" />
         <h1 className="text-2xl font-bold tracking-tight">New message</h1>
       </div>
-      <div className="px-4 md:px-5">
-        <SearchBox label="Search members" placeholder="Name or @handle" query={query} hidden={{ new: "1", people: scopeParam(scope) }} underline />
+      <div className="chat-inbox-gutter">
+        <SearchBox label="Search members" placeholder="Name or @handle" query={query} hidden={{ new: "1", people: scopeParam(scope) }} />
       </div>
       <Tabs label="Find people by connection">
         {(["followers", "following", "all"] as const).map((value) => (
@@ -246,14 +253,14 @@ function PeoplePane({ query, scope, page, people, location, selectedId, hasSearc
       </Tabs>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {people.length ? (
-          <ul>
+          <ul className="px-1">
             {people.slice(0, followPageSize).map((person) => (
-              <li key={person.id} className="border-b border-line">
+              <li key={person.id}>
                 <Link
                   href={href({ ...location, with: person.handle })}
                   prefetch={false}
                   aria-current={person.id === selectedId ? "page" : undefined}
-                  className={`flex items-center gap-3 px-4 py-3 md:px-5 ${person.id === selectedId ? "bg-field" : "hover:bg-field/60"}`}
+                  className="chat-conversation-row flex items-center gap-3"
                 >
                   <Avatar name={person.name} file={person.avatarFile} className="h-9 w-9 shrink-0 text-sm" />
                   <span className="min-w-0">
@@ -283,38 +290,29 @@ function PeoplePane({ query, scope, page, people, location, selectedId, hasSearc
   );
 }
 
-function SearchBox({ label, placeholder, query, hidden = {}, underline = false }: {
+function SearchBox({ label, placeholder, query, hidden = {} }: {
   label: string;
   placeholder: string;
   query: string;
   hidden?: Record<string, string | undefined>;
-  underline?: boolean;
 }) {
   return (
-    <form action="/chat" method="get" role="search" className={`flex items-center gap-2 border-b bg-field pl-3 focus-within:border-ink ${underline ? "border-ink/60" : "border-transparent"}`}>
+    <form action="/chat" method="get" role="search" className="chat-search flex items-center rounded-[14px] border border-line bg-field focus-within:outline-2 focus-within:outline-[var(--chat-focus)]">
       {Object.entries(hidden).map(([name, value]) => value && <input key={name} type="hidden" name={name} value={value} />)}
-      <input
-        key={query}
-        type="search"
-        name="q"
-        aria-label={label}
-        placeholder={placeholder}
-        defaultValue={query}
-        maxLength={100}
-        className="min-w-0 flex-1 bg-transparent py-2.5 text-base outline-none placeholder:text-muted md:text-sm"
-      />
-      <button type="submit" aria-label={label} className="grid h-10 w-10 shrink-0 place-items-center text-ink-soft hover:text-ink">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <button type="submit" aria-label={label} className="grid size-11 shrink-0 place-items-center rounded-[12px] text-ink-soft hover:text-ink">
+        <svg viewBox="0 0 24 24" className="size-[19px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" />
         </svg>
       </button>
+      <ChatSearchInput key={query} label={label} placeholder={placeholder} query={query} />
+      <kbd aria-hidden="true" className="mr-3 hidden shrink-0 rounded-[5px] border border-line bg-card px-1.5 py-0.5 font-sans text-xs font-semibold text-ink-soft xl:block">Ctrl K</kbd>
     </form>
   );
 }
 
 function Tabs({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <nav aria-label={label} className="mt-3 flex gap-5 border-b border-line px-4 text-[13px] md:px-5">
+    <nav aria-label={label} className="chat-inbox-gutter mt-3 mb-2 flex gap-1.5 text-sm md:mt-4 md:mb-3 xl:mb-4">
       {children}
     </nav>
   );
@@ -325,7 +323,7 @@ function Tab({ href: url, current, children }: { href: string; current: boolean;
     <Link
       href={url}
       aria-current={current ? "page" : undefined}
-      className={`-mb-px border-b-2 pb-2.5 pt-1 ${current ? "border-ink font-medium text-ink" : "border-transparent text-ink-soft hover:text-ink"}`}
+      className={`inline-flex min-h-10 items-center rounded-full px-3 font-semibold sm:px-4 ${current ? "bg-[var(--chat-tab)] text-ink" : "text-ink-soft hover:bg-field hover:text-ink"}`}
     >
       {children}
     </Link>
@@ -341,20 +339,17 @@ function ConversationRow({ person, url, selected, preview, time, unread }: {
   unread: boolean;
 }) {
   return (
-    <li className="border-b border-line">
-      <Link href={url} prefetch={false} aria-current={selected ? "page" : undefined} className={`flex items-center gap-3 px-4 py-3.5 md:px-5 ${selected ? "bg-field" : "hover:bg-field/60"}`}>
-        <Avatar name={person.name} file={person.avatarFile} className="h-10 w-10 shrink-0 text-sm" />
+    <li>
+      <Link href={url} prefetch={false} aria-current={selected ? "page" : undefined} className="chat-conversation-row flex items-center gap-3 md:gap-4">
+        <Avatar name={person.name} file={person.avatarFile} className={`size-11 shrink-0 text-base xl:size-[50px] ${selected ? "ring-1 ring-[var(--chat-focus)]" : ""}`} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-              <span className={`truncate text-sm ${unread ? "font-bold" : "font-semibold"}`}>{person.name}</span>
-              <span className="min-w-0 shrink-[3] truncate text-xs text-muted">@{person.handle}</span>
-            </span>
-            <ChatTime iso={time} className={`shrink-0 text-xs ${unread ? "font-semibold text-ink" : "text-muted"}`} />
+            <span className="min-w-0 flex-1 truncate text-base font-bold" title={`@${person.handle}`}>{person.name}</span>
+            <ChatTime iso={time} className="shrink-0 text-sm font-medium text-[var(--chat-time)] tabular-nums xl:text-[15px]" />
           </span>
           <span className="mt-0.5 flex items-center gap-2">
-            <span className={`min-w-0 flex-1 truncate text-[13px] ${unread ? "font-medium text-ink" : "text-ink-soft"}`}>{preview}</span>
-            {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-heavy"><span className="sr-only">Unread</span></span>}
+            <span className={`min-w-0 flex-1 truncate text-sm ${unread ? "font-semibold text-ink" : "text-ink-soft"}`}>{preview}</span>
+            {unread && <span className="size-2.5 shrink-0 rounded-full bg-[var(--chat-orange)]"><span className="sr-only">Unread</span></span>}
           </span>
         </span>
       </Link>
@@ -375,7 +370,7 @@ function EmptyPane({ title, text, children }: { title: string; text: string; chi
 
 function Back({ href: url, label, className = "" }: { href: string; label: string; className?: string }) {
   return (
-    <Link href={url} aria-label={label} className={`-ml-2 grid h-10 w-9 shrink-0 place-items-center hover:bg-field ${className}`}>
+    <Link href={url} aria-label={label} className={`-ml-2 grid size-11 shrink-0 place-items-center rounded-[10px] hover:bg-field ${className}`}>
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="m14 6-6 6 6 6" />
       </svg>
