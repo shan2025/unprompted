@@ -1,7 +1,12 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "@fontsource-variable/figtree";
 import "./globals.css";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { ga4MeasurementId } from "@/lib/analytics";
+import { ga4RunsInThisEnvironment, ga4TracksVisitor } from "@/lib/analytics-audience";
+import { getCurrentUser } from "@/lib/auth";
 import { siteUrl } from "@/lib/format";
 import { SITE_DESCRIPTION as DESCRIPTION } from "@/lib/structured-data";
 
@@ -36,7 +41,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="flex min-h-dvh flex-col">
         {children}
         <Analytics />
+        {ga4MeasurementId && ga4RunsInThisEnvironment() && (
+          <Suspense fallback={null}>
+            <AnalyticsForVisitor measurementId={ga4MeasurementId} />
+          </Suspense>
+        )}
       </body>
     </html>
   );
+}
+
+async function AnalyticsForVisitor({ measurementId }: { measurementId: string }) {
+  const user = await getCurrentUser();
+  return <GoogleAnalytics measurementId={measurementId} enabled={ga4TracksVisitor(user)} />;
 }

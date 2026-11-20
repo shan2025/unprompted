@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactLine, LegalPage, List, Section } from "@/components/LegalPage";
+import { ga4MeasurementId } from "@/lib/analytics";
+import { ga4RunsInThisEnvironment } from "@/lib/analytics-audience";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -9,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPage() {
+  const usesGoogleAnalytics = ga4MeasurementId && ga4RunsInThisEnvironment();
   return (
     <LegalPage
       eyebrow="Legal"
@@ -46,6 +49,10 @@ export default function PrivacyPage() {
             <strong className="text-ink">Visit statistics:</strong> pages viewed, where visitors came from, and general
             device and country details, collected through Vercel Web Analytics without cookies, so we can see how the site
             is used.
+            {usesGoogleAnalytics && (
+              <> We also use Google Analytics to measure visits to public pages. It uses analytics cookies. We send page
+              categories for posts, listings and profiles, and remove query strings from the page addresses we send.</>
+            )}
           </li>
           <li>
             <strong className="text-ink">View counts on posts:</strong> when you open a post, we count one view for that
@@ -54,8 +61,8 @@ export default function PrivacyPage() {
             IP address itself, and the code changes every day, so it can&apos;t be used to follow you.
           </li>
           <li>
-            <strong className="text-ink">One login cookie</strong> that keeps you signed in. We use no advertising or
-            tracking cookies.
+            <strong className="text-ink">One login cookie</strong> that keeps you signed in.
+            {usesGoogleAnalytics ? " We use no advertising cookies." : " We use no advertising or tracking cookies."}
           </li>
           <li>
             <strong className="text-ink">Technical logs</strong> kept by our hosting providers (such as IP address and
@@ -104,8 +111,9 @@ export default function PrivacyPage() {
             creators.
           </li>
           <li>
-            <strong className="text-ink">Google</strong>: only if you choose &ldquo;Continue with Google&rdquo;. Google
-            tells us your name and email address, under Google&apos;s own privacy policy.
+            <strong className="text-ink">Google</strong>: if you choose &ldquo;Continue with Google&rdquo;, Google tells
+            us your name and email address under its own privacy policy.
+            {usesGoogleAnalytics && " Google Analytics also processes the visit statistics described above."}
           </li>
           <li>
             The <strong className="text-ink">creator you ask a question</strong>: they see your name, profile handle, email
