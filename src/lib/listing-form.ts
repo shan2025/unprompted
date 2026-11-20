@@ -1,6 +1,8 @@
-import { isCategory, isLicense, type CategoryId, type LicenseId } from "./categories";
+import { isLicense, type CategoryId, type LicenseId } from "./categories";
+import { parseProductPhotos, type ProductPhoto, type SavedPhoto } from "./product-photos";
+import { productType } from "./product-types";
 import { evidenceUrl, hasDuplicateEvidence } from "./evidence";
-import { CURRENCIES, isCurrency, type Currency } from "./currency";
+import { CURRENCIES, isCurrency, listingPrice, type Currency } from "./currency";
 import { sniffImageType } from "./analysis/media";
 import type { MediaScan } from "./analysis/media";
 import type { ContentKind, Segment } from "./analysis/text";
@@ -29,13 +31,15 @@ export interface EvidenceFile {
 export interface ParsedListing {
   title: string;
   category: CategoryId;
+  productType: string;
+  photos: ProductPhoto[];
   summary: string;
   preview: string;
   locked: string;
   priceCents: number;
   currency: Currency;
   paymentUrl: string | null;
-  license: LicenseId;
+  license: LicenseId | "physical";
   aiNotes: string;
   disclosure: Disclosure;
   evidence: Evidence[];
@@ -43,7 +47,9 @@ export interface ParsedListing {
   image: { bytes: Uint8Array } | null;
 }
 
-export interface EditableListing extends Omit<ParsedListing, "image" | "evidenceFiles" | "evidence"> {
+export interface EditableListing extends Omit<ParsedListing, "image" | "evidenceFiles" | "evidence" | "photos" | "productType"> {
+  productType: string | null;
+  gallery: SavedPhoto[];
   slug: string;
   workVersion: string;
   coverFile: string | null;
@@ -144,14 +150,14 @@ export async function parseImage(fd: FormData, errors: FieldErrors): Promise<Par
   return { bytes };
 }
 
-export async function parseListingForm(fd: FormData, { requireAttestation, keepsImage = false }: { requireAttestation: boolean; keepsImage?: boolean }) {
+export async function parseListingForm(fd: FormData, { requireAttestation, keepsImage = false, savedPhotos = [] }: { requireAttestation: boolean; keepsImage?: boolean; savedPhotos?: SavedPhoto[] }) {
   const errors: FieldErrors = {};
 
   const title = str(fd, "title");
   if (title.length < 3 || title.length > 100) errors.title = "Use 3 to 100 characters.";
 
-  const category = str(fd, "category");
-  if (!isCategory(category)) errors.category = "Pick a category.";
+  const product = productType(str(fd, "category"));
+  if (!product) errors.category = "Pick a product type.";
 
   const summary = str(fd, "summary");
   if (summary.length < 10 || summary.length > 280) errors.summary = "Use 10 to 280 characters.";
@@ -171,9 +177,8 @@ export async function parseListingForm(fd: FormData, { requireAttestation, keeps
   const max = CURRENCIES[currency].max;
 
   // People type "1,500" or "₹1500"; both mean 1500.
-  const priceText = str(fd, "price").replace(/^[$₹€£]\s*/, "").replace(/,/g, "");
-  const price = Number(priceText);
-  if (priceText === "" || !Number.isFinite(price) || price < 0 || price > max) {
+  const price = listingPrice(str(fd, "price"));
+  if (!Number.isFinite(price) || price < 0 || price > max) {
     errors.price = `Enter a price from 0 to ${max.toLocaleString("en-US")}.`;
   }
 
@@ -183,15 +188,19 @@ export async function parseListingForm(fd: FormData, { requireAttestation, keeps
   // Only needed to publish, so a score can be checked before the link is ready.
   else if (requireAttestation && !paymentLink && price > 0) errors.paymentUrl = "Add a payment link so buyers can pay you.";
 
-  const license = str(fd, "license");
-  if (!isLicense(license)) errors.license = "Pick a license.";
+  const license = product?.physical ? "physical" : str(fd, "license");
+  if (product && !product.physical && !isLicense(license)) errors.license = "Pick a license.";
 
   const disclosure = parseDisclosure(fd, errors);
   const { evidence, files: evidenceFiles } = await parseEvidence(fd, errors);
-  const image = await parseImage(fd, errors);
+  const photos = await parseProductPhotos(fd, savedPhotos, errors);
+  const first = photos[0];
+  const image = first && "bytes" in first ? { bytes: first.bytes } : null;
 
-  if (!preview && !locked && !image && !keepsImage && !errors.cover) {
-    errors.preview = "Add a preview, the deliverable, or an image so there is something to show and check.";
+  if (!preview && !locked && !keepsImage && !photos.length && !errors.gallery && !errors.cover) {
+    errors.preview = product?.physical
+      ? "Add a product photo, more product details, or delivery instructions."
+      : "Add a preview, the deliverable, or an image so there is something to show and check.";
   }
 
   if (requireAttestation && fd.get("attest") !== "on") {
@@ -202,14 +211,16 @@ export async function parseListingForm(fd: FormData, { requireAttestation, keeps
 
   const values: ParsedListing = {
     title,
-    category: category as CategoryId,
+    category: product!.craft,
+    productType: product!.id,
+    photos,
     summary,
     preview,
     locked,
     priceCents: Math.round(price * 100),
     currency,
     paymentUrl: price > 0 ? paymentUrl : null,
-    license: license as LicenseId,
+    license: license as ParsedListing["license"],
     aiNotes,
     disclosure,
     evidence,

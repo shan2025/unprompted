@@ -4,6 +4,7 @@ import {
   check,
   customType,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -13,6 +14,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { SavedPhoto } from "../product-photos";
 import type { MediaScan } from "../analysis/media";
 import type { Segment } from "../analysis/text";
 import type { Disclosure, Evidence, Score } from "../scoring";
@@ -81,6 +83,7 @@ export const directMessages = pgTable("direct_messages", {
   senderId: integer("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   recipientId: integer("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   body: text("body").notNull(),
+  replyToId: integer("reply_to_id"),
   readAt: timestamp("read_at", { withTimezone: true }),
   /** Set when the sender changes the text. Unsent messages are deleted outright. */
   editedAt: timestamp("edited_at", { withTimezone: true }),
@@ -88,6 +91,8 @@ export const directMessages = pgTable("direct_messages", {
 }, (t) => [
   check("direct_messages_distinct_members", sql`${t.senderId} <> ${t.recipientId}`),
   check("direct_messages_body_length", sql`char_length(${t.body}) between 1 and 2000`),
+  foreignKey({ columns: [t.replyToId], foreignColumns: [t.id] }).onDelete("set null"),
+  index("direct_messages_reply_to_idx").on(t.replyToId).where(sql`${t.replyToId} is not null`),
   index("direct_messages_sender_idx").on(t.senderId, t.recipientId, t.id),
   index("direct_messages_recipient_idx").on(t.recipientId, t.senderId, t.id),
 ]).enableRLS();
@@ -131,6 +136,8 @@ export const listings = pgTable(
     // ISO code the seller priced it in (see currency.ts). Shown as entered, never converted.
     currency: text("currency").notNull().default("USD"),
     license: text("license").notNull(),
+    productType: text("product_type"),
+    gallery: jsonb("gallery").$type<SavedPhoto[]>().notNull().default([]),
     coverFile: text("cover_file"),
     /** Colour theme for the generated cover when there's no image (cover-themes.ts). Null picks from the slug. */
     coverTheme: text("cover_theme"),

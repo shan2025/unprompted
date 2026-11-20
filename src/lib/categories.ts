@@ -64,5 +64,6 @@ export function isLicense(value: unknown): value is LicenseId {
 }
 
 export function licenseLabel(id: string) {
+  if (id === "physical") return "Physical item";
   return LICENSES.find((l) => l.id === id)?.label ?? id;
 }

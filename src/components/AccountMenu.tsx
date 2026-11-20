@@ -23,12 +23,14 @@ export function AccountMenu({
   avatarFile,
   isAdmin,
   creator,
+  devAccounts,
 }: {
   name: string;
   handle: string;
   avatarFile: string | null;
   isAdmin: boolean;
   creator: boolean;
+  devAccounts: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -89,6 +91,7 @@ export function AccountMenu({
             </Link>
           )}
           <div className="mt-1 border-t border-line pt-1">
+            {devAccounts && <Link href="/login" className={ITEM} onClick={close}>Switch test account</Link>}
             <LogoutButton className={ITEM} />
           </div>
           {/* Phones have no footer, so the trust and legal pages live here, small and quiet. */}

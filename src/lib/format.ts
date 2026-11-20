@@ -51,7 +51,7 @@ export function safeNext(value: unknown, fallback = "/dashboard") {
   const base = "http://same-site.invalid";
   try {
     const url = new URL(value, base);
-    return url.origin === base ? `${url.pathname}${url.search}${url.hash}` : fallback;
+    return url.origin === base && !url.pathname.startsWith("//") ? `${url.pathname}${url.search}${url.hash}` : fallback;
   } catch {
     return fallback;
   }

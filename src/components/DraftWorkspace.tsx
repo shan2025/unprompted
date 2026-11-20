@@ -27,6 +27,7 @@ async function recovery(key: string, value?: Recovery | null): Promise<Recovery 
 }
 
 type DraftContextValue = {
+  changed: () => void;
   initial: DraftPayload;
   value: (name: string) => string | undefined;
   prepare: (form: FormData) => Promise<boolean>;
@@ -154,7 +155,7 @@ export function DraftWorkspace({ userId, kind, targetSlug = "", children }: { us
         <button type="button" className="btn-primary" onClick={() => { setInitial(candidate.payload); setCandidate(null); dirty.current = true; setMessage("Device copy restored. Save it to your account when ready."); }}>Use device recovery</button>
         <button type="button" className="btn-ghost" onClick={() => { setInitial(draft.payload); setCandidate(null); void recovery(key, null).catch(() => {}); setMessage("Saved account draft restored."); }}>Use saved account draft</button>
       </div>}
-      {initial && <DraftContext.Provider value={{ initial, value: (name) => initial.fields.find(([key]) => key === name)?.[1], prepare, resume: () => { publishing.current = false; } }}>
+      {initial && <DraftContext.Provider value={{ initial, changed, value: (name) => initial.fields.find(([key]) => key === name)?.[1], prepare, resume: () => { publishing.current = false; } }}>
         {children}
         <RestoreDraft root={root} payload={initial} />
       </DraftContext.Provider>}
@@ -172,6 +173,7 @@ function RestoreDraft({ root, payload }: { root: React.RefObject<HTMLDivElement 
     for (const control of Array.from(form.elements)) {
       if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement)) continue;
       const name = control.name;
+      if (control.closest("[data-product-photos]")) continue;
       if (!name || ["attest", "ownVideo", "editSlug", "draftId", "draftVersion"].includes(name)) continue;
       if (control instanceof HTMLInputElement && control.type === "file") {
         const file = data.get(name);

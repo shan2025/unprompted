@@ -34,6 +34,10 @@ Demo accounts (password `demo-password`):
 | `mara@unprompted.test` | Creator with poetry and fiction listings |
 | `alex@unprompted.test` | Buyer with two purchases |
 
+For password-free local testing, set `DEV_ACCOUNT_PICKER=1` in `.env.local` and open `/login`.
+Choose any account in your local database. Use **Switch test account** in the account menu to change accounts.
+The picker requires a loopback host and database and runs only under `next dev`.
+
 All demo listings are labelled **DEMO**. The creators are fictional and the sample text was written for testing.
 
 ## What works today
@@ -123,6 +127,7 @@ The site runs on [Vercel](https://vercel.com) and stores its data in a [Supabase
    | --- | --- |
    | `DATABASE_URL` | the connection string from step 1 |
    | `ADMIN_EMAIL` | the email you'll use to moderate |
+   | `COMPANY_OWNER_USER_ID` | the user ID of the company owner in this deployment's database. This account can open **Dashboard → My merch analytics** to see sales of its Marketplace merchandise. Leave blank to disable the report. |
    | `ADMIN_PASSWORD` | a password of at least 10 characters |
 
 3. Click **Deploy**. In a couple of minutes you get a live `https://unprompted-….vercel.app` address. Log in there with `ADMIN_EMAIL` and `ADMIN_PASSWORD` to reach `/admin`.

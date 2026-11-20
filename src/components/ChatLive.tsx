@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { checkConversation, markDirectMessagesRead, sendDirectMessage, setTyping } from "@/app/actions/chat";
 import { enterSends } from "./ChatMessage";
+import { ChatQuote, useChatReply } from "./ChatReply";
 
 export function ChatLive({ peerId, readThrough, unreadIds }: {
   peerId?: number;
@@ -224,7 +225,10 @@ const EMOJI = [
   "💯", "⭐", "🌸", "🎨", "✍️", "📸", "🎵", "☕",
 ];
 
-export function ChatComposer({ handle, maxLength }: { handle: string; maxLength: number }) {
+export function ChatComposer({ handle, maxLength, latestHref }: { handle: string; maxLength: number; latestHref?: string }) {
+  const router = useRouter();
+  const { reply, setReply } = useChatReply();
+  const showComposer = !latestHref || Boolean(reply);
   const [draft, setDraft] = useState("");
   const [picking, setPicking] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -234,7 +238,9 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
     const result = await sendDirectMessage(handle, previous, form);
     if (result.sentId) {
       setDraft("");
+      setReply((current) => current && String(current.id) === form.get("replyTo") ? null : current);
       lastPing.current = 0; // Sending clears "typing…" on the server.
+      if (latestHref) router.replace(latestHref);
     }
     return result;
   }, {});
@@ -259,7 +265,11 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
     if (!input) return;
     input.style.height = "auto";
     input.style.height = `${input.scrollHeight}px`;
-  }, [draft]);
+  }, [draft, showComposer]);
+
+  useEffect(() => {
+    if (reply) field.current?.focus({ preventScroll: true });
+  }, [reply]);
 
   useEffect(() => {
     if (!picking) return;
@@ -292,9 +302,24 @@ export function ChatComposer({ handle, maxLength }: { handle: string; maxLength:
     });
   }
 
+  if (!showComposer) return null;
+
   return (
     <form action={action} className="border-t border-line bg-paper px-3 py-3 md:px-5 md:py-3.5">
       {state.error && <p role="alert" className="mb-2 text-sm text-heavy">{state.error}</p>}
+      {reply && (
+        <div className="mb-2 flex items-start gap-2">
+          <input type="hidden" name="replyTo" value={reply.id} />
+          <div className="min-w-0 flex-1">
+            <ChatQuote quote={reply} draft />
+          </div>
+          <button type="button" aria-label="Cancel reply" disabled={pending} onClick={() => setReply(null)} className="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-field hover:text-ink disabled:opacity-50">
+            <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+      )}
       <div className="flex items-end gap-2 sm:gap-2.5">
         <div ref={picker} className="relative shrink-0">
           <button

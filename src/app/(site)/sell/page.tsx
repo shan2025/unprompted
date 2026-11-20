@@ -15,20 +15,18 @@ const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
 
 export default function SellPage({ searchParams }: Props) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <p className="eyebrow intro-rise">New listing</p>
       <h1 className="intro-rise mt-1 text-4xl font-light sm:text-5xl" style={d(80)}>
-        List something you made
+        Sell your work
       </h1>
       <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={d(160)}>
-        Tell buyers what it is, where AI was and wasn&apos;t involved, and show how you made it. You&apos;ll see your score
-        before anything is published.
+        Add your product, set a price, and disclose how you made it.
       </p>
       <p className="intro-rise mt-3 text-ink-soft" style={d(220)}>
-        Not ready to sell?{" "}
-        <Link href="/explore" className="link font-semibold text-ink">
-          Skip this and explore other people&apos;s work
-        </Link>
+        Just showing what you made?{" "}
+        <Link href="/journal/new" className="link font-semibold text-ink">Share your work</Link>
+        {" · "}<Link href="/explore" className="link">Explore other people&apos;s work</Link>
       </p>
       <div className="mt-10">
         <Suspense fallback={<div className="card h-96 animate-pulse" />}>

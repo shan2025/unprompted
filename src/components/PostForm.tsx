@@ -65,6 +65,12 @@ export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory
             <FieldError errors={errors} name="title" />
           </div>
 
+          <ImageField
+            errors={errors}
+            currentFile={post?.coverFile}
+            hint="Upload a photo, sketch or cover (up to 4 MB). For art and photography, use your exported file. We check its metadata for generator tags and Content Credentials, then remove the metadata. Readers see a preview up to 1600px."
+          />
+
           <div>
             <label htmlFor="subtitle" className="label">
               Subtitle <span className="font-normal text-muted">(optional)</span>
@@ -133,11 +139,6 @@ export function PostForm({ defaultCategory, defaultAi, post }: { defaultCategory
             )}
           </div>
 
-          <ImageField
-            errors={errors}
-            currentFile={post?.coverFile}
-            hint="A photo of the work, a sketch, or a cover, up to 4 MB. For art and photography, upload the file you exported: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px."
-          />
           <CoverThemeField
             saved={post?.coverTheme}
             savedPattern={post?.coverPattern}

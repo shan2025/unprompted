@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ChatComposer, ChatHistory, ChatLive, ChatSearchInput, TypingIndicator } from "@/components/ChatLive";
 import { ChatThread } from "@/components/ChatMessage";
+import { ChatReplyProvider } from "@/components/ChatReply";
 import { ChatTime } from "@/components/ChatTime";
 import { Mark } from "@/components/Logo";
 import { ConfirmEmailCard } from "@/components/VerifyEmailNotice";
@@ -151,7 +152,7 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
       <section aria-label="Conversation" className={`${hasDetail ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-col`}>
         {hasDetail && <h1 className="sr-only md:hidden">Chat</h1>}
         {selected && history ? (
-          <>
+          <ChatReplyProvider key={`${selected.id}:${before ?? ""}`}>
             <div className="chat-thread-heading flex items-center gap-2 border-b border-line">
               <Back href={listHref} label={compose ? "Back to people" : "Back to inbox"} className="md:hidden" />
               <Link href={`/u/${selected.handle}`} aria-label={`View ${selected.name}'s profile`} className="group flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
@@ -195,6 +196,10 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                       createdAt: message.createdAt.toISOString(),
                       edited: Boolean(message.editedAt),
                       editableUntil: message.createdAt.getTime() + EDIT_WINDOW_MS,
+                      quote: message.reply ? {
+                        author: message.reply.senderId === user.id ? "You" : selected.name,
+                        body: message.reply.body,
+                      } : undefined,
                       reactions: message.reactions.map((reaction) => ({ emoji: reaction.emoji, mine: reaction.userId === user.id })),
                       receipt: message.senderId === user.id && message.readAt ? (message === latest ? "seen" : "read") : undefined,
                     }))}
@@ -205,8 +210,8 @@ async function Inbox({ searchParams }: { searchParams: Promise<Query> }) {
                 {!before && <TypingIndicator key={selected.id} peerId={selected.id} name={selected.name} latestId={latest?.id} />}
               </ChatHistory>
             )}
-            {!before && <ChatComposer key={selected.id} handle={selected.handle} maxLength={MAX_MESSAGE_LENGTH} />}
-          </>
+            <ChatComposer handle={selected.handle} maxLength={MAX_MESSAGE_LENGTH} latestHref={before ? href({ ...location, with: handle }) : undefined} />
+          </ChatReplyProvider>
         ) : hasDetail ? (
           <>
             <div className="flex min-h-16 items-center border-b border-line px-4 md:hidden">

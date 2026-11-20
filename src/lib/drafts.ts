@@ -4,8 +4,8 @@ export type DraftPayload = { fields: [string, string][]; files: [string, DraftFi
 export type WorkDraft = { id: string; kind: DraftKind; targetSlug: string; payload: DraftPayload; version: number; updatedAt: string };
 export const EMPTY_DRAFT: DraftPayload = { fields: [], files: [] };
 export const MAX_DRAFT_FILES_BYTES = 4 * 1024 * 1024;
-const FIELD = /^(title|subtitle|category|body|summary|preview|locked|aiNotes|videoUrl|price|currency|paymentUrl|license|cover_theme|cover_pattern|remove_cover|keep_evidence|evidence_kind|evidence_row|evidence_url|evidence_note|workVersion|disclosure_(ideation|creation|refinement|assets))$/;
-const FILE = /^(cover|evidence_file_\d+)$/;
+const FIELD = /^(title|subtitle|category|body|summary|preview|locked|aiNotes|videoUrl|price|currency|paymentUrl|license|cover_theme|cover_pattern|remove_cover|photo_slot|keep_evidence|evidence_kind|evidence_row|evidence_url|evidence_note|workVersion|disclosure_(mode|ideation|creation|refinement|assets))$/;
+const FILE = /^(cover|gallery|evidence_file_\d+)$/;
 
 /** No attestation, account identifiers, review flags, or action metadata is saved. */
 export async function draftPayload(fd: FormData): Promise<DraftPayload> {
@@ -20,7 +20,7 @@ export async function draftPayload(fd: FormData): Promise<DraftPayload> {
       fields.push([key, value]);
     } else if (FILE.test(key) && value.size) {
       fileSize += value.size;
-      if (fileSize > MAX_DRAFT_FILES_BYTES || files.length >= 7) throw new Error("Draft attachments must total 4 MB or less.");
+      if (fileSize > MAX_DRAFT_FILES_BYTES || files.length >= 12) throw new Error("Use up to six product photos and six evidence files, totalling 4 MB or less.");
       const bytes = new Uint8Array(await value.arrayBuffer());
       // Works in both Node and the browser; chunking avoids argument limits.
       let binary = "";

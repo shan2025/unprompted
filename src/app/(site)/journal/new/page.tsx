@@ -1,5 +1,6 @@
 import { DraftWorkspace } from "@/components/DraftWorkspace";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { PostForm } from "@/components/PostForm";
 import { ConfirmEmailCard } from "@/components/VerifyEmailNotice";
@@ -21,6 +22,9 @@ export default function NewPostPage({ searchParams }: Props) {
       <p className="intro-rise mt-3 max-w-2xl text-lg text-ink-soft" style={{ "--d": "160ms" } as React.CSSProperties}>
         Not everything has to be for sale. Post an article, a poem, a sketch or a half-finished idea. It gets the same AI
         score as a listing, and you&apos;ll see yours before anything is published.
+      </p>
+      <p className="mt-3 text-ink-soft">
+        Offering this work for sale? <Link href="/sell" className="link font-semibold text-ink">Create a sale listing</Link>
       </p>
       <div className="mt-10">
         <Suspense fallback={<div className="card h-96 animate-pulse" />}>

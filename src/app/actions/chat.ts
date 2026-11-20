@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { clearTyping, findChatMember, findOwnConversationMessage, getChatPulse, markTyping, MAX_MESSAGE_LENGTH } from "@/lib/chat";
@@ -35,6 +35,11 @@ export async function sendDirectMessage(
   const body = typeof input === "string" ? input.trim() : "";
   if (!body) return { error: "Write a message first." };
   if (body.length > MAX_MESSAGE_LENGTH) return { error: "Keep your message at 2,000 characters or fewer." };
+  const target = form.get("replyTo");
+  const replyToId = target === null ? null : Number(target);
+  if (target !== null && (typeof target !== "string" || !validId(replyToId))) {
+    return { error: "That message isn't available to reply to." };
+  }
 
   const recipient = await findChatMember(user.id, handle);
   if (!recipient) return { error: "This member isn't available for chat." };
@@ -42,9 +47,21 @@ export async function sendDirectMessage(
     return { error: "You've sent several messages recently. Try again in a minute." };
   }
 
-  const [message] = await db.insert(directMessages)
-    .values({ senderId: user.id, recipientId: recipient.id, body })
-    .returning({ id: directMessages.id });
+  const values = { senderId: user.id, recipientId: recipient.id, body, replyToId };
+  const [message] = replyToId === null
+    ? await db.insert(directMessages).values(values).returning({ id: directMessages.id })
+    : await db.transaction(async (tx) => {
+      // Keep the original in place between checking membership and inserting the reply.
+      const [original] = await tx.select({ id: directMessages.id }).from(directMessages)
+        .where(and(eq(directMessages.id, replyToId), or(
+          and(eq(directMessages.senderId, user.id), eq(directMessages.recipientId, recipient.id)),
+          and(eq(directMessages.senderId, recipient.id), eq(directMessages.recipientId, user.id)),
+        )))
+        .for("key share");
+      if (!original) return [];
+      return tx.insert(directMessages).values(values).returning({ id: directMessages.id });
+    });
+  if (!message) return { error: "That message isn't available to reply to. Remove the reply to send your draft." };
   await clearTyping(user.id, recipient.id);
   refresh();
   return { sentId: message.id };

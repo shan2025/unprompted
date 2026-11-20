@@ -6,6 +6,8 @@ import { Suspense } from "react";
 import { buyListing } from "@/app/actions/listings";
 import { AskCreator } from "@/components/AskCreator";
 import { Cover } from "@/components/Cover";
+import { ProductGallery } from "@/components/ProductGallery";
+import { productLabel } from "@/lib/product-types";
 import { CountedText, CountUp } from "@/components/CountUp";
 import { Reveal } from "@/components/Reveal";
 import { EvidenceSource } from "@/components/EvidenceSource";
@@ -80,6 +82,8 @@ async function ListingView({ params, searchParams }: Props) {
   const showBuyBar = listing.status === "published" && !isOwner && !purchased && orderStatus !== "pending";
   const { analysis } = listing;
   const evidence = listing.evidence;
+  const photos = [...(listing.coverFile ? [listing.coverFile] : []), ...listing.gallery.map(photo => photo.file)];
+  const physical = listing.license === "physical";
 
   // The craft's own page, on whichever side the listing lives.
   const browsePage = listing.priceCents > 0 ? "marketplace" : "explore";
@@ -96,7 +100,7 @@ async function ListingView({ params, searchParams }: Props) {
         </span>
         <span className="text-sm text-muted">{plural(sales, "sale")}</span>
       </div>
-      <p className="mt-1 text-sm text-ink-soft">{licenseLabel(listing.license)}</p>
+      <p className="mt-1 text-sm text-ink-soft">{physical ? productLabel(listing.productType, listing.category) : licenseLabel(listing.license)}</p>
       <div className="mt-4">
         {isOwner ? (
           <>
@@ -166,8 +170,8 @@ async function ListingView({ params, searchParams }: Props) {
                 url: `${siteUrl()}/listing/${listing.slug}`,
                 // Only an uploaded cover has a stable address. The drawn share card's URL
                 // carries a generated suffix, and crawlers still find it through og:image.
-                ...(listing.coverFile ? { image: fileUrl(listing.coverFile) } : {}),
-                category: categoryLabel(listing.category),
+                ...(photos.length ? { image: photos.map(fileUrl) } : {}),
+                category: productLabel(listing.productType, listing.category),
                 brand: { "@type": "Brand", name: creator.name },
                 additionalProperty: aiInvolvement(listing.aiPercent, listing.tier),
                 offers: {
@@ -213,15 +217,15 @@ async function ListingView({ params, searchParams }: Props) {
             {listing.isDemo && <span className="ml-2 rounded bg-line/70 px-1.5 py-0.5 text-[11px] font-semibold text-muted">DEMO LISTING</span>}
           </p>
 
-          <Reveal className="card mt-6 aspect-[16/9] overflow-hidden max-lg:order-first max-lg:mb-6 max-lg:mt-0 max-sm:-mx-4 max-sm:aspect-square max-sm:border-x-0">
-            <Cover
+          <Reveal className="card mt-6 overflow-hidden max-lg:order-first max-lg:mb-6 max-lg:mt-0 max-sm:-mx-4 max-sm:border-x-0">
+            {photos.length ? <ProductGallery key={photos.join(",")} files={photos} title={listing.title} /> : <div className="aspect-[16/9] max-sm:aspect-square"><Cover
               slug={listing.slug}
               category={listing.category}
               coverFile={listing.coverFile}
               theme={listing.coverTheme}
               pattern={listing.coverPattern}
               title={listing.title}
-            />
+            /></div>}
           </Reveal>
 
           <p className="intro-rise mt-6 text-lg leading-relaxed text-ink-soft" style={{ "--d": "200ms" } as React.CSSProperties}>
@@ -238,7 +242,7 @@ async function ListingView({ params, searchParams }: Props) {
 
           {listing.preview && (
             <Reveal className="mt-10">
-              <h2 className="text-2xl font-normal">Preview</h2>
+              <h2 className="text-2xl font-normal">{physical ? "Product details" : "Preview"}</h2>
               <div className="card mt-4 p-5 sm:p-6">
                 <SegmentView text={listing.preview} segments={analysis.previewSegments} kind={analysis.previewKind} />
               </div>
@@ -246,7 +250,7 @@ async function ListingView({ params, searchParams }: Props) {
           )}
 
           <Reveal className="mt-10">
-            <h2 className="text-2xl font-normal">What you get</h2>
+            <h2 className="text-2xl font-normal">{physical ? "Delivery" : "What you get"}</h2>
             {canSeeDeliverable ? (
               <div className="card mt-4 p-5 sm:p-6">
                 {listing.locked ? (
@@ -254,23 +258,23 @@ async function ListingView({ params, searchParams }: Props) {
                     {listing.locked}
                   </div>
                 ) : (
-                  <p className="text-ink-soft">The preview above is the full work.</p>
+                  <p className="text-ink-soft">{physical ? "Contact the seller to arrange delivery." : "The preview above is the full work."}</p>
                 )}
               </div>
             ) : (
               <div className="card mt-4 flex flex-col items-start gap-3 border-dashed p-6 sm:flex-row sm:items-center">
                 <LockIcon />
                 <p className="flex-1 text-ink-soft">
-                  {listing.locked
+                  {physical ? (listing.locked ? "The seller’s delivery instructions will appear here after purchase." : "Contact the seller for shipping or pickup details.") : listing.locked
                     ? "The full work unlocks after purchase. It was scanned along with the preview, so the score covers it too."
                     : "The preview above is the full work. Buying supports the creator and grants the license below."}
                 </p>
               </div>
             )}
-            <p className="mt-3 text-sm text-muted">
+            {!physical && <p className="mt-3 text-sm text-muted">
               License: <strong className="text-ink">{licenseLabel(listing.license)}</strong>.{" "}
               {LICENSES.find((l) => l.id === listing.license)?.blurb}
-            </p>
+            </p>}
           </Reveal>
 
           {listing.aiNotes && (

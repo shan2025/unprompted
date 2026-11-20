@@ -4,6 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db, schema } from "./db";
 import type { EvidenceFile } from "./listing-form";
 import { makePublicImage } from "./public-image";
+import type { Transaction } from "./publishing";
 import type { Evidence } from "./scoring";
 
 // Files are stored in the database, so the app runs on hosts without a
@@ -25,11 +26,11 @@ function newName(extension: keyof typeof CONTENT_TYPES) {
 }
 
 /** Stores the public copy and returns its name, or null if the image can't be read. */
-export async function saveUpload(original: Uint8Array) {
+export async function saveUpload(original: Uint8Array, store: Pick<Transaction, "insert"> = db) {
   const bytes = await makePublicImage(original);
   if (!bytes) return null;
   const name = newName("webp");
-  await db.insert(schema.uploads).values({ name, contentType: CONTENT_TYPES.webp, bytes });
+  await store.insert(schema.uploads).values({ name, contentType: CONTENT_TYPES.webp, bytes });
   return name;
 }
 

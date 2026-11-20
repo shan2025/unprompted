@@ -9,12 +9,14 @@ import { ExploreView } from "@/components/ExploreView";
 import { FeedGrid } from "@/components/FeedGrid";
 import { JsonLd } from "@/components/JsonLd";
 import { ShowMore } from "@/components/ShowMore";
+import { getCurrentUser } from "@/lib/auth";
 import { browseHref, browseQueryHref, categoryHeading, type BrowsePage } from "@/lib/browse";
 import { CATEGORY_IDS, isCategory, STAGE_WEIGHTS, type CategoryId } from "@/lib/categories";
 import { searchListings, usedCategories } from "@/lib/data";
 import type { FeedItem } from "@/lib/feed";
 import { searchFeed } from "@/lib/feed";
 import { plural, siteUrl } from "@/lib/format";
+import { isCompanyOwner, merchStoreUrl } from "@/lib/merch";
 import { batches, firstBatches } from "@/lib/paging";
 import { STAGES, type Stage } from "@/lib/scoring";
 import { isShow, type Show } from "@/lib/show";
@@ -142,21 +144,34 @@ export async function ExploreResults({ searchParams, category }: { searchParams:
 
 export async function MarketplaceResults({ searchParams, category }: { searchParams: Promise<Params>; category?: CategoryId }) {
   const params = await searchParams;
+  const storeUrl = merchStoreUrl();
   const { q, maxAi, sortRaw, verified } = readFilters(params);
   const categories = category ? [category] : parseCategories(params.category);
   const sort: Sort = sortRaw in SORTS ? (sortRaw as Sort) : "new";
+  const filtered = Boolean(q || categories.length || maxAi !== undefined || verified);
 
   const shown = batches(params.more);
-  const [found, available, indexable] = await Promise.all([
+  const [found, available, indexable, viewer] = await Promise.all([
     searchListings({ q, categories, maxAi, sort, verified, price: "paid", limit: shown * BATCH + 1 }),
     usedCategories("marketplace"),
     category ? craftPageIndexable("marketplace", category) : false,
+    getCurrentUser(),
   ]);
   const { items: listings, more } = firstBatches(found, shown * BATCH);
   const items = listings.map((listing) => ({ kind: "listing" as const, listing }));
 
   return (
-    <ExploreView page="marketplace" category={category} available={available} filters={{ categories }} fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show: "all" }}>
+    <ExploreView
+      page="marketplace" category={category} available={available} filters={{ categories }}
+      fields={{ q, maxAi: maxAi?.toString() ?? "", sort, verified, show: "all" }}
+      actions={
+        <nav aria-label="Marketplace actions" className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <Link href="/sell" className="btn-primary">List your work</Link>
+          {storeUrl && <a href={storeUrl} className="link">Shop Unprompters merch</a>}
+          {isCompanyOwner(viewer) && <Link href="/admin/merch" className="link">My merch analytics</Link>}
+        </nav>
+      }
+    >
       {category && indexable && <CraftJsonLd page="marketplace" category={category} items={items} />}
       {items.length > 0 && <p className="mb-4 text-sm text-muted">{more ? `Showing the first ${items.length} pieces for sale` : `${plural(items.length, "piece")} for sale`}</p>}
       {items.length > 0 ? (
@@ -166,14 +181,10 @@ export async function MarketplaceResults({ searchParams, category }: { searchPar
         </>
       ) : (
         <div className="card p-10 text-center">
-          <p className="font-display text-xl font-medium">Nothing for sale here yet.</p>
-          <p className="mt-2 text-ink-soft">
-            Try loosening the filters, or{" "}
-            <Link href="/sell" className="link font-semibold text-ink">
-              list something you made
-            </Link>
-            .
+          <p className="font-display text-xl font-medium">
+            {filtered ? "No creator listings match your filters." : "No creator listings yet."}
           </p>
+          {filtered && <Link href="/marketplace" className="link mt-2 inline-block">Clear filters</Link>}
         </div>
       )}
       {category && <HowCraftIsScored page="marketplace" category={category} />}

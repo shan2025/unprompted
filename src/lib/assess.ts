@@ -18,6 +18,7 @@ export interface AssessmentInput {
    * metadata can't be read again.
    */
   priorMedia?: MediaScan | null;
+  galleryMedia?: (MediaScan | null)[];
   disclosure: Disclosure;
   evidence: Evidence[];
 }
@@ -62,15 +63,11 @@ export async function assess(input: AssessmentInput): Promise<Assessment> {
   if (!(input.image && input.image.byteLength > 0) && input.priorMedia) {
     media = updateMetadataWording(input.priorMedia)!;
     sources.push("Image metadata scan (IPTC, C2PA, EXIF, generator tags), from the original upload");
-    if (media.aiSignal === "strong") detections.push({ stage: imageStage, share: 1, confidence: 0.9, source: METADATA_SOURCE });
-    if (media.aiSignal === "partial") detections.push({ stage: imageStage, share: 0.5, confidence: 0.8, source: METADATA_SOURCE });
   }
   if (input.image && input.image.byteLength > 0) {
     const stage = imageStage;
     media = scanImageMetadata(input.image);
     sources.push("Image metadata scan (IPTC, C2PA, EXIF, generator tags)");
-    if (media.aiSignal === "strong") detections.push({ stage, share: 1, confidence: 0.9, source: METADATA_SOURCE });
-    if (media.aiSignal === "partial") detections.push({ stage, share: 0.5, confidence: 0.8, source: METADATA_SOURCE });
     // A metadata marker is not authenticated provenance and earns no evidence credit.
 
     for (const provider of externalProviders) {
@@ -83,6 +80,12 @@ export async function assess(input: AssessmentInput): Promise<Assessment> {
     }
   }
 
+  // Count metadata once, regardless of the order or number of photos showing the same item.
+  const gallery = input.galleryMedia ?? [];
+  if (gallery.length) sources.push(`Metadata checked on ${gallery.length} additional product ${gallery.length === 1 ? "photo" : "photos"}`);
+  const signals = [media, ...gallery].map(scan => scan?.aiSignal);
+  if (signals.includes("strong")) detections.push({ stage: imageStage, share: 1, confidence: 0.9, source: METADATA_SOURCE });
+  else if (signals.includes("partial")) detections.push({ stage: imageStage, share: 0.5, confidence: 0.8, source: METADATA_SOURCE });
   const score = computeScore({ category: input.category, disclosure: input.disclosure, evidence, detections });
   return { score, preview, media, evidence, sources };
 }

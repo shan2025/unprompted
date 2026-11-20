@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, avg, count, desc, eq, gt, ilike, inArray, isNotNull, lte, or, sql, sum } from "drizzle-orm";
 import { isCategory } from "./categories";
+import { PRODUCTS } from "./product-types";
 import type { Sort } from "./sorts";
 import { hideDemo } from "./demo";
 import { db, schema } from "./db";
@@ -19,6 +20,7 @@ const cardFields = {
   slug: listings.slug,
   title: listings.title,
   category: listings.category,
+  productType: listings.productType,
   summary: listings.summary,
   priceCents: listings.priceCents,
   currency: listings.currency,
@@ -221,6 +223,38 @@ export async function getCreator(handle: string) {
     listings: items,
     stats: { avgAi, verified: items.filter((l) => l.processVerified).length, sales: stats?.sales ?? 0 },
   };
+}
+
+export async function getMerchSales(ownerId: number) {
+  const rows = await db.select({
+    id: listings.id, slug: listings.slug, title: listings.title, currency: orders.currency,
+    confirmed: sql<number>`count(*) filter (where ${orders.status} = 'paid')`.mapWith(Number),
+    pending: sql<number>`count(*) filter (where ${orders.status} = 'pending')`.mapWith(Number),
+    revenue: sql<number>`coalesce(sum(${orders.amountCents}) filter (where ${orders.status} = 'paid'), 0)`.mapWith(Number),
+  }).from(listings).leftJoin(orders, and(
+    eq(orders.listingId, listings.id), gt(orders.amountCents, 0), inArray(orders.status, ["paid", "pending"]),
+  )).where(and(
+    eq(listings.creatorId, ownerId), eq(listings.isDemo, false),
+    inArray(listings.productType, PRODUCTS.filter(product => product.physical).map(product => product.id)),
+  )).groupBy(listings.id, orders.currency).orderBy(asc(listings.title), asc(listings.id), asc(orders.currency));
+
+  type ProductSales = { slug: string; title: string; confirmed: number; revenue: Map<string, number> };
+  const products = new Map<number, ProductSales>();
+  const revenue = new Map<string, number>();
+  let confirmed = 0;
+  let pending = 0;
+  for (const row of rows) {
+    const product = products.get(row.id) ?? { slug: row.slug, title: row.title, confirmed: 0, revenue: new Map<string, number>() };
+    product.confirmed += row.confirmed;
+    confirmed += row.confirmed;
+    pending += row.pending;
+    if (row.currency && row.confirmed) {
+      product.revenue.set(row.currency, row.revenue);
+      revenue.set(row.currency, (revenue.get(row.currency) ?? 0) + row.revenue);
+    }
+    products.set(row.id, product);
+  }
+  return { confirmed, pending, revenue, products: [...products.values()].sort((a, b) => b.confirmed - a.confirmed) };
 }
 
 export async function getDashboard(userId: number) {

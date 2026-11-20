@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { count, desc, eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import sharp from "sharp";
+import { draftFormData } from "@/lib/drafts";
 
 // Run only against an explicitly supplied disposable localhost database.
 const configured = process.env.TEST_DATABASE_URL;
@@ -32,7 +34,7 @@ import { openWorkDraft, saveWorkDraft } from "@/app/actions/drafts";
 import { createPost, updatePost } from "@/app/actions/posts";
 import { createListing, updateListing, withdrawListing } from "@/app/actions/listings";
 import { reviewProcessEvidence } from "@/app/actions/admin";
-import { getOrderStatus, searchListings } from "@/lib/data";
+import { getMerchSales, getOrderStatus, searchListings } from "@/lib/data";
 import { STAGES } from "@/lib/scoring";
 
 let creator = 0, other = 0;
@@ -58,6 +60,53 @@ describe.skipIf(!configured)("publishing against isolated PostgreSQL", () => {
   }, 30_000);
   beforeEach(() => { session.id = creator; session.role = "member"; });
   afterAll(async () => { await closeDb(); });
+
+  it("counts only confirmed sales of the owner's merchandise in each order's currency", async () => {
+    const [owner, buyerA, buyerB, buyerC, buyerD] = await db.insert(schema.users).values(
+      ["owner", "buyer_a", "buyer_b", "buyer_c", "buyer_d"].map(name => ({
+        handle: `merch_${name}`, name, email: `merch_${name}@publishing.test`, passwordHash: "test-only",
+      })),
+    ).returning();
+    async function publish(seller: number, category: string, title: string) {
+      session.id = seller;
+      const fd = form("listing");
+      fd.set("category", category);
+      fd.set("title", title);
+      await expect(createListing(null, fd)).rejects.toThrow("REDIRECT:");
+      const [listing] = await db.select().from(schema.listings).where(eq(schema.listings.title, title));
+      return listing.id;
+    }
+    const tee = await publish(owner.id, "tshirt", "Company T-shirt");
+    const cap = await publish(owner.id, "cap", "Company cap");
+    await publish(owner.id, "homeware", "Unsold mug");
+    const book = await publish(owner.id, "writing", "Company book");
+    const outside = await publish(other, "tshirt", "Another seller's T-shirt");
+    const demo = await publish(owner.id, "merch", "Company sample");
+    await db.update(schema.listings).set({ isDemo: true }).where(eq(schema.listings.id, demo));
+    await db.insert(schema.orders).values([
+      { listingId: tee, buyerId: buyerA.id, status: "paid", amountCents: 60000, currency: "INR" },
+      { listingId: tee, buyerId: buyerB.id, status: "paid", amountCents: 900, currency: "USD" },
+      { listingId: tee, buyerId: buyerC.id, status: "pending", amountCents: 70000, currency: "INR" },
+      { listingId: tee, buyerId: buyerD.id, status: "refunded", amountCents: 50000 },
+      { listingId: cap, buyerId: buyerA.id, status: "paid", amountCents: 30000, currency: "INR" },
+      { listingId: cap, buyerId: buyerB.id, status: "declined", amountCents: 3000 },
+      { listingId: cap, buyerId: buyerC.id, status: "demo", amountCents: 3000 },
+      { listingId: cap, buyerId: buyerD.id, status: "paid", amountCents: 0 },
+      { listingId: book, buyerId: buyerA.id, status: "paid", amountCents: 5000 },
+      { listingId: outside, buyerId: buyerA.id, status: "paid", amountCents: 5000 },
+      { listingId: demo, buyerId: buyerA.id, status: "paid", amountCents: 5000 },
+    ]);
+
+    const report = await getMerchSales(owner.id);
+    expect(report.confirmed).toBe(3);
+    expect(report.pending).toBe(1);
+    expect(Object.fromEntries(report.revenue)).toEqual({ INR: 90000, USD: 900 });
+    expect(report.products.map(p => [p.title, p.confirmed, Object.fromEntries(p.revenue)])).toEqual([
+      ["Company T-shirt", 2, { INR: 60000, USD: 900 }],
+      ["Company cap", 1, { INR: 30000 }],
+      ["Unsold mug", 0, {}],
+    ]);
+  });
 
   it("keeps draft content and files private to its owner and rejects stale saves", async () => {
     const draft = await openWorkDraft("post", "");
@@ -114,6 +163,47 @@ describe.skipIf(!configured)("publishing against isolated PostgreSQL", () => {
     expect((await db.select().from(schema.listings).where(eq(schema.listings.id, listing.id)))[0]).toMatchObject({ status: "withdrawn", locked: "Original buyer delivery" });
     expect(await getOrderStatus(listing.id, other)).toBe("paid");
     expect((await searchListings({})).some((l) => l.id === listing.id)).toBe(false);
+  });
+
+  it("restores product photos from a draft and applies a new cover and mixed photo order on edit", async () => {
+    async function photo(colour: string) {
+      const png = await sharp({ create: { width: 12, height: 12, channels: 3, background: colour } }).png().toBuffer();
+      return new File([Uint8Array.from(png)], colour + ".png", { type: "image/png" });
+    }
+    const fd = form("listing");
+    fd.set("category", "tshirt");
+    fd.delete("license");
+    fd.append("photo_slot", "");
+    for (const colour of ["red", "blue", "green"]) {
+      fd.append("photo_slot", "upload");
+      fd.append("gallery", await photo(colour));
+    }
+    const draft = await openWorkDraft("listing", "");
+    if ("error" in draft) throw Error(draft.error);
+    expect(await saveWorkDraft(draft.id, 0, fd)).toHaveProperty("version", 1);
+    const restored = await openWorkDraft("listing", "", draft.id);
+    if ("error" in restored) throw Error(restored.error);
+    const publish = draftFormData(restored.payload);
+    expect(publish.getAll("gallery").map(f => (f as File).name)).toEqual(["red.png", "blue.png", "green.png"]);
+    publish.set("draftId", draft.id); publish.set("draftVersion", "1"); publish.set("attest", "on");
+    await expect(createListing(null, publish)).rejects.toThrow("REDIRECT:");
+    const [listing] = await db.select().from(schema.listings).orderBy(desc(schema.listings.id)).limit(1);
+    expect(listing).toMatchObject({ productType: "tshirt", category: "design", license: "physical" });
+    expect(listing.gallery).toHaveLength(2);
+    const edit = form("listing");
+    edit.set("editSlug", listing.slug);
+    edit.set("category", "cap");
+    edit.append("photo_slot", listing.gallery[1].file);
+    edit.append("photo_slot", "upload");
+    edit.append("photo_slot", listing.coverFile!);
+    edit.append("gallery", await photo("yellow"));
+    await expect(updateListing(null, edit)).rejects.toThrow("REDIRECT:");
+    const [updated] = await db.select().from(schema.listings).where(eq(schema.listings.id, listing.id));
+    expect(updated.productType).toBe("cap");
+    expect(updated.coverFile).toBe(listing.gallery[1].file);
+    expect(updated.gallery).toHaveLength(2);
+    expect(updated.gallery[1].file).toBe(listing.coverFile);
+    expect(await db.select({ name: schema.uploads.name }).from(schema.uploads).where(eq(schema.uploads.name, listing.gallery[0].file))).toEqual([]);
   });
 
   it("allows an unsold listing to be revised but keeps removed listings under review", async () => {

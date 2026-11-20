@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { categoryLabel } from "@/lib/categories";
+import { productLabel } from "@/lib/product-types";
 import type { FeedItem } from "@/lib/feed";
 import { formatPrice, formatShortDate } from "@/lib/format";
 import { videoEmbed } from "@/lib/video";
@@ -133,7 +134,7 @@ function ListingEntry({ listing, eager }: { listing: Listing; eager: boolean }) 
       <StoryCard
         href={href}
         cover={<Cover slug={listing.slug} category={listing.category} coverFile={listing.coverFile} theme={listing.coverTheme} pattern={listing.coverPattern} title={listing.title} sizes="(min-width: 576px) 576px, 100vw" eager={eager} />}
-        kicker={categoryLabel(listing.category)}
+        kicker={productLabel(listing.productType, listing.category)}
         badge={listing.status === "sold" ? "Sold" : forSale ? "For sale" : "Free"}
         title={listing.title}
         lines={listing.summary}

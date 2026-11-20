@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { isCreator } from "@/lib/data";
 import { AccountMenu } from "./AccountMenu";
+import { devAccountsEnabled } from "@/lib/dev-accounts";
 import { HideOnPath } from "./HideOnPath";
 import { Logo, Mark } from "./Logo";
 import { NavLink } from "./NavLink";
@@ -100,7 +101,7 @@ async function UserMenu() {
           </HideOnPath>
         </>
       )}
-      <AccountMenu name={user.name} handle={user.handle} avatarFile={user.avatarFile} isAdmin={user.role === "admin"} creator={creator} />
+      <AccountMenu name={user.name} handle={user.handle} avatarFile={user.avatarFile} isAdmin={user.role === "admin"} creator={creator} devAccounts={await devAccountsEnabled()} />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useOptimistic, useRef, useState, useTransition, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useOptimistic, useRef, useState, useTransition, type CSSProperties, type MouseEventHandler, type ReactNode, type RefObject } from "react";
 import { deleteDirectMessage, editDirectMessage, reactToDirectMessage } from "@/app/actions/chat";
 import { MAX_MESSAGE_LENGTH, REACTIONS } from "@/lib/chat-rules";
 import { Avatar } from "./Avatar";
+import { ChatQuote, useChatReply, type MessageQuote } from "./ChatReply";
 import { ChatTime, clock, fullDay, sameDay, useIsClient } from "./ChatTime";
 
 type Reaction = { emoji: string; mine: boolean };
@@ -16,6 +17,7 @@ export type ThreadMessage = {
   createdAt: string;
   edited: boolean;
   editableUntil: number;
+  quote?: MessageQuote;
   reactions: Reaction[];
   receipt?: "read" | "seen";
 };
@@ -73,25 +75,25 @@ function MessageWithDivider({ divider, children }: { divider: string | null; chi
   );
 }
 
-function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, editableUntil, reactions, receipt, groupStart, groupEnd }: ThreadMessage & {
+function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, editableUntil, quote, reactions, receipt, groupStart, groupEnd }: ThreadMessage & {
   author: string;
   avatarFile: string | null;
   groupStart: boolean;
   groupEnd: boolean;
 }) {
   const client = useIsClient();
+  const { setReply } = useChatReply();
   const [panel, setPanel] = useState<Panel>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [editable, setEditable] = useState(false);
-  const [revealed, setRevealed] = useState(false);
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(reactions, (current, emoji: string | null) => [
     ...current.filter((reaction) => !reaction.mine),
     ...(emoji ? [{ emoji, mine: true }] : []),
   ]);
-  const reactButton = useRef<HTMLButtonElement>(null);
+  const reactionAnchor = useRef<HTMLButtonElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const mine = shown.find((reaction) => reaction.mine)?.emoji ?? null;
   const date = new Date(createdAt);
@@ -107,6 +109,7 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
 
   function react(emoji: string) {
     const next = emoji === mine ? null : emoji;
+    if (panel === "react") reactionAnchor.current?.focus({ preventScroll: true });
     setPanel(null);
     setError("");
     startTransition(async () => {
@@ -114,6 +117,17 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
       const result = await reactToDirectMessage(id, next).catch(() => ({ error: "Something went wrong. Try again." }));
       if (result.error) setError(result.error);
     });
+  }
+
+  function openReactions(trigger: HTMLButtonElement | null) {
+    const sameTrigger = reactionAnchor.current === trigger;
+    reactionAnchor.current = trigger;
+    setPanel(panel === "react" && sameTrigger ? null : "react");
+  }
+
+  function replyToMessage() {
+    setPanel(null);
+    setReply({ id, body, author: own ? "You" : author });
   }
 
   async function copy() {
@@ -149,23 +163,25 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
         ) : (
           <div className="min-w-0 max-w-[88%] md:max-w-[min(75%,66ch)]">
             <div
-              // On touch screens a tap shows the React and More buttons; with a mouse they appear on hover.
-              onClick={() => setRevealed(!revealed)}
               title={client ? `${fullDay(date, true)}, ${clock(date, true)}` : undefined}
               className={`rounded-[14px] px-3.5 py-2.5 text-base leading-normal whitespace-pre-wrap [overflow-wrap:anywhere] md:px-[18px] ${own ? "bg-ink text-white" : "bg-field text-ink"} ${pending ? "opacity-60" : ""}`}
             >
+              {quote && <div className="mb-2"><ChatQuote quote={quote} onDark={own} /></div>}
               <span className="sr-only">{own ? "You" : author}: </span>{body}
             </div>
           </div>
         )}
         {!editing && (
-          <div className={`flex shrink-0 items-center opacity-100 transition-opacity focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 ${panel ? "[@media(hover:hover)]:opacity-100" : ""} ${revealed || panel ? "" : "[@media(hover:none)]:hidden"}`}>
-            <ToolButton ref={reactButton} label="React" active={panel === "react"} onClick={() => setPanel(panel === "react" ? null : "react")}>
+          <div className={`flex shrink-0 items-center transition-opacity focus-within:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 ${panel ? "" : "[@media(hover:hover)_and_(pointer:fine)]:opacity-0"}`}>
+            <ToolButton label="Reply" pointerOnly onClick={replyToMessage}>
+              <path d="m9 10-5 5 5 5m-5-5h10a5 5 0 0 0 0-10h-2" />
+            </ToolButton>
+            <ToolButton label="React" pointerOnly active={panel === "react"} onClick={(event) => openReactions(event.currentTarget)}>
               <circle cx="12" cy="12" r="8.5" /><path d="M8.8 14.2a4 4 0 0 0 6.4 0" /><path d="M9.3 9.8h.01M14.7 9.8h.01" strokeWidth="2.4" />
             </ToolButton>
             <ToolButton ref={menuButton} label="More options" active={panel === "menu" || panel === "confirm"} onClick={() => {
               setEditable(Date.now() < editableUntil);
-              setPanel(panel ? null : "menu");
+              setPanel(panel === "menu" || panel === "confirm" ? null : "menu");
             }}>
               <path d="M6 12h.01M12 12h.01M18 12h.01" strokeWidth="2.8" />
             </ToolButton>
@@ -176,7 +192,7 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
       {grouped.length > 0 && !editing && (
         <button
           type="button"
-          onClick={() => (mine ? react(mine) : setPanel("react"))}
+          onClick={(event) => (mine ? react(mine) : openReactions(event.currentTarget))}
           aria-label={`Reactions: ${shown.map((reaction) => `${reaction.emoji}${reaction.mine ? " (yours)" : ""}`).join(", ")}${mine ? ". Remove yours" : ""}`}
           className={`-mt-1 ${own ? "mr-1.5" : "ml-1.5"} relative flex h-6 items-center gap-0.5 rounded-full border border-line bg-paper px-1.5 text-xs leading-none hover:bg-field`}
         >
@@ -187,8 +203,8 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
       )}
 
       {panel === "react" && (
-        <Floating anchor={reactButton} alignEnd={own} onClose={() => { setPanel(null); setRevealed(false); }}>
-          <div role="group" aria-label="Choose a reaction" className="flex gap-0.5 rounded-[12px] border border-line bg-paper p-1 shadow-lg">
+        <Floating anchor={reactionAnchor} alignEnd={own} onClose={() => setPanel(null)}>
+          <div role="group" aria-label="Choose a reaction" className="grid grid-cols-4 gap-0.5 rounded-[12px] border border-line bg-paper p-1 shadow-lg sm:grid-cols-8">
             {REACTIONS.map((emoji) => (
               <button
                 key={emoji}
@@ -196,7 +212,7 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
                 onClick={() => react(emoji)}
                 aria-pressed={emoji === mine}
                 aria-label={emoji === mine ? `Remove ${emoji}` : `React ${emoji}`}
-                className={`grid h-10 w-10 place-items-center text-xl transition-transform hover:scale-115 hover:bg-field ${emoji === mine ? "bg-field" : ""}`}
+                className={`grid size-11 place-items-center rounded-[8px] text-xl hover:bg-field ${emoji === mine ? "bg-[var(--chat-tab)]" : ""}`}
               >
                 {emoji}
               </button>
@@ -206,7 +222,7 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
       )}
 
       {(panel === "menu" || panel === "confirm") && (
-        <Floating anchor={menuButton} alignEnd={own} prefer="below" onClose={() => { setPanel(null); setRevealed(false); }}>
+        <Floating key={panel} anchor={menuButton} alignEnd={own} prefer="below" onClose={() => setPanel(null)}>
           <div className="min-w-48 overflow-hidden rounded-[12px] border border-line bg-paper py-1 text-sm shadow-lg">
             {panel === "confirm" ? (
               <div className="px-4 py-3">
@@ -219,6 +235,8 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
               </div>
             ) : (
               <div role="menu" aria-label="Message options">
+                <MenuItem onClick={replyToMessage}>Reply</MenuItem>
+                <MenuItem onClick={() => openReactions(menuButton.current)}>React</MenuItem>
                 <MenuItem onClick={copy}>Copy text</MenuItem>
                 {own && editable && <MenuItem onClick={() => { setPanel(null); setEditing(true); }}>Edit</MenuItem>}
                 {own && <MenuItem danger onClick={() => setPanel("confirm")}>Unsend</MenuItem>}
@@ -249,11 +267,12 @@ function ChatMessage({ id, body, own, author, avatarFile, createdAt, edited, edi
   );
 }
 
-function ToolButton({ ref, label, active, onClick, children }: {
-  ref: RefObject<HTMLButtonElement | null>;
+function ToolButton({ ref, label, active, pointerOnly = false, onClick, children }: {
+  ref?: RefObject<HTMLButtonElement | null>;
   label: string;
-  active: boolean;
-  onClick: () => void;
+  active?: boolean;
+  pointerOnly?: boolean;
+  onClick: MouseEventHandler<HTMLButtonElement>;
   children: ReactNode;
 }) {
   return (
@@ -263,7 +282,8 @@ function ToolButton({ ref, label, active, onClick, children }: {
       aria-label={label}
       aria-expanded={active}
       onClick={onClick}
-      className={`grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-field hover:text-ink ${active ? "bg-field text-ink" : ""}`}
+      title={label}
+      className={`size-11 place-items-center rounded-full text-muted hover:bg-field hover:text-ink [@media(hover:hover)_and_(pointer:fine)]:size-9 ${pointerOnly ? "hidden [@media(hover:hover)_and_(pointer:fine)]:grid" : "grid"} ${active ? "bg-field text-ink" : ""}`}
     >
       <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {children}
@@ -300,17 +320,18 @@ function Floating({ anchor, alignEnd, prefer = "above", onClose, children }: {
   useLayoutEffect(() => {
     const trigger = anchor.current?.getBoundingClientRect();
     const height = panel.current?.offsetHeight ?? 0;
+    const width = panel.current?.offsetWidth ?? 0;
     if (!trigger) return;
     const gap = 6;
     const above = trigger.top - height - gap;
     const below = trigger.bottom + gap;
     const fitsBelow = below + height <= window.innerHeight - 8;
     const top = prefer === "below" ? (fitsBelow || above < 8 ? below : above) : (above >= 8 ? above : below);
-    const vertical = { top: Math.max(8, Math.min(top, window.innerHeight - height - 8)) };
-    const horizontal = alignEnd
-      ? { right: Math.max(8, window.innerWidth - trigger.right) }
-      : { left: Math.max(8, trigger.left) };
-    setStyle({ ...vertical, ...horizontal });
+    const left = alignEnd ? trigger.right - width : trigger.left;
+    setStyle({
+      top: Math.max(8, Math.min(top, window.innerHeight - height - 8)),
+      left: Math.max(8, Math.min(left, window.innerWidth - width - 8)),
+    });
     panel.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
   }, [anchor, alignEnd, prefer]);
 
@@ -341,7 +362,7 @@ function Floating({ anchor, alignEnd, prefer = "above", onClose, children }: {
     };
   }, [anchor]);
 
-  return <div ref={panel} style={{ position: "fixed", zIndex: 70, ...style }}>{children}</div>;
+  return <div ref={panel} className="fixed z-[70] w-max max-w-[calc(100vw-1rem)]" style={style}>{children}</div>;
 }
 
 function EditBox({ initial, pending, onSave, onCancel }: {

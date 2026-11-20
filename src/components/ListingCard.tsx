@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { categoryLabel } from "@/lib/categories";
+import { productLabel } from "@/lib/product-types";
 import type { ListingCard as ListingCardData } from "@/lib/data";
 import { formatPrice } from "@/lib/format";
 import { Cover } from "./Cover";
@@ -24,7 +24,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
       </div>
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-center gap-2">
-          <span className="eyebrow">{categoryLabel(listing.category)}</span>
+          <span className="eyebrow">{productLabel(listing.productType, listing.category)}</span>
           {listing.isDemo && <span className="rounded bg-line/70 px-1.5 text-[10px] font-semibold text-muted">DEMO</span>}
           {listing.priceCents > 0 && listing.status !== "sold" && <span className="ml-auto text-xs font-medium text-muted">For sale</span>}
         </div>

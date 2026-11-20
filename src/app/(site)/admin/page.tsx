@@ -8,6 +8,7 @@ import { Reveal } from "@/components/Reveal";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth";
+import { isCompanyOwner } from "@/lib/merch";
 import { getFoundingMembers, getReviewQueue } from "@/lib/data";
 import { featuredFeed } from "@/lib/feed";
 import { formatDate } from "@/lib/format";
@@ -107,11 +108,12 @@ async function Curation() {
 }
 
 async function Queue() {
-  await requireAdmin();
+  const user = await requireAdmin();
   const [{ pending, openFlags }, journal] = await Promise.all([getReviewQueue(), getPostReviewQueue()]);
 
   return (
     <>
+      {isCompanyOwner(user) && <Link href="/admin/merch" className="btn-ghost mt-6">My merch analytics</Link>}
       <section className="mt-10">
         <Reveal>
           <h2 className="text-2xl font-normal">

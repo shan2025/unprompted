@@ -1,5 +1,6 @@
 import "server-only";
 import { and, desc, eq, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "./db";
 import { hideDemo } from "./demo";
 import { followMemberIds, followPageSize, type FollowDirection } from "./journal";
@@ -74,6 +75,7 @@ export function listConversations(userId: number, query: string, unreadOnly: boo
 }
 
 export async function getMessageHistory(userId: number, peerId: number, before?: number) {
+  const original = alias(directMessages, "reply_target");
   const rows = await db.select({
     id: directMessages.id,
     body: directMessages.body,
@@ -81,7 +83,15 @@ export async function getMessageHistory(userId: number, peerId: number, before?:
     createdAt: directMessages.createdAt,
     readAt: directMessages.readAt,
     editedAt: directMessages.editedAt,
+    reply: { senderId: original.senderId, body: original.body },
   }).from(directMessages)
+    .leftJoin(original, and(
+      eq(original.id, directMessages.replyToId),
+      or(
+        and(eq(original.senderId, userId), eq(original.recipientId, peerId)),
+        and(eq(original.senderId, peerId), eq(original.recipientId, userId)),
+      ),
+    ))
     .where(and(
       or(
         and(eq(directMessages.senderId, userId), eq(directMessages.recipientId, peerId)),

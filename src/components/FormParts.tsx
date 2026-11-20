@@ -21,7 +21,7 @@ export function filesTooBigMessage(data: FormData) {
   let total = 0;
   for (const value of data.values()) if (value instanceof File) total += value.size;
   if (total <= MAX_FILES_BYTES) return null;
-  return `Your image and evidence files add up to ${(total / (1024 * 1024)).toFixed(1)} MB and the limit is 4 MB. Use a smaller file, or link to it instead.`;
+  return `Your attachments add up to ${(total / (1024 * 1024)).toFixed(1)} MB and the limit is 4 MB. Choose smaller files.`;
 }
 
 /** Shrinks a photo in the browser, so one straight from a phone fits the shared limit. */
@@ -198,7 +198,7 @@ export function ImageField({ errors, hint, currentFile }: { errors: FieldErrors;
   return (
     <div>
       <label htmlFor="cover" className="label">
-        Image <span className="font-normal text-muted">(optional)</span>
+        Cover image <span className="font-normal text-muted">(optional)</span>
       </label>
       <div className="flex items-center gap-4">
         {coverUrl && (

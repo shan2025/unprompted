@@ -6,7 +6,7 @@ export const MAX_MESSAGE_LENGTH = 2000;
 export const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 /** The reactions offered on a message. Anything else is refused. */
-export const REACTIONS = ["❤️", "😂", "😮", "😢", "👏", "🔥"] as const;
+export const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "👏", "🔥"] as const;
 
 export type Reaction = (typeof REACTIONS)[number];
 

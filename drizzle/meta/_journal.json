@@ -141,6 +141,20 @@
       "when": 1794965780774,
       "tag": "0019_chat_events",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794993187159,
+      "tag": "0020_chat_replies",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795076933427,
+      "tag": "0021_listing_product_photos",
+      "breakpoints": true
     }
   ]
 }

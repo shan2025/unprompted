@@ -1,7 +1,8 @@
 "use server";
 
+import type { ProductPhoto, SavedPhoto } from "@/lib/product-photos";
 import { parseCoverPattern, parseCoverTheme } from "@/lib/cover-themes";
-import { publishDraft, PublicationConflict } from "@/lib/publishing";
+import { publishDraft, PublicationConflict, type Transaction } from "@/lib/publishing";
 import { hasDuplicateEvidence } from "@/lib/evidence";
 import { isAutoEvidence } from "@/lib/post-form";
 import { randomBytes } from "node:crypto";
@@ -31,16 +32,40 @@ function slugify(title: string) {
   return `${base || "work"}-${randomBytes(3).toString("hex")}`;
 }
 
+class UnreadableGalleryPhoto extends Error {}
+
+async function saveProductPhotos(tx: Transaction, photos: ProductPhoto[]) {
+  const saved: SavedPhoto[] = [];
+  for (const photo of photos) {
+    if ("file" in photo) {
+      saved.push(photo);
+    } else {
+      const file = await saveUpload(photo.bytes, tx);
+      if (!file) throw new UnreadableGalleryPhoto();
+      saved.push({ file, media: photo.media });
+    }
+  }
+  return { coverFile: saved[0]?.file ?? null, gallery: saved.slice(1) };
+}
+
+function photoAssessment(photos: ProductPhoto[]) {
+  const [first, ...rest] = photos;
+  return {
+    image: first && "bytes" in first ? first.bytes : null,
+    priorMedia: first && "file" in first ? first.media : null,
+    galleryMedia: rest.map(photo => photo.media),
+  };
+}
+
 async function loadListingEdit(fd: FormData, userId: number) {
   const slug = String(fd.get("editSlug") ?? "");
   if (!slug) return null;
   const [listing] = await db.select().from(schema.listings).where(and(eq(schema.listings.slug, slug), eq(schema.listings.creatorId, userId))).limit(1);
   if (!listing) return null;
-  const replaces = fd.get("cover") instanceof File && (fd.get("cover") as File).size > 0;
-  const keepsImage = Boolean(listing.coverFile) && !replaces && fd.get("remove_cover") !== "on";
   const indexes = new Set(fd.getAll("keep_evidence").map(Number));
   const kept = listing.evidence.filter((e, index) => !isAutoEvidence(e) && indexes.has(index));
-  return { listing, kept, keepsImage, priorMedia: keepsImage ? listing.analysis.media : null };
+  const photos = [...(listing.coverFile ? [{ file: listing.coverFile, media: listing.analysis.media }] : []), ...listing.gallery];
+  return { listing, kept, photos };
 }
 
 export async function updateListing(_previous: CreateState, fd: FormData): Promise<CreateState> {
@@ -50,36 +75,38 @@ export async function updateListing(_previous: CreateState, fd: FormData): Promi
   const edit = await loadListingEdit(fd, user.id);
   if (!edit) return { message: "This listing isn't available to edit." };
   if (fd.has("draftId") && fd.get("workVersion") !== edit.listing.analysis.analyzedAt) return { message: "This listing has a newer version. Open a fresh edit from the listing before resubmitting." };
-  const parsed = await parseListingForm(fd, { requireAttestation: true, keepsImage: edit.keepsImage });
+  const parsed = await parseListingForm(fd, { requireAttestation: true, savedPhotos: edit.photos });
   if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
   const v = parsed.values;
   const allEvidence = [...v.evidence, ...edit.kept];
   if (allEvidence.length > MAX_EVIDENCE || hasDuplicateEvidence(allEvidence)) return { errors: { evidence: "Attach at most six different evidence sources. Remove repeated links or files." } };
   if (!(await withinLimit(`listing-edit:user:${user.id}`, 40, 86400))) return { message: "You've made many edits today. Try again tomorrow." };
-  const result = await assess({ ...v, image: v.image?.bytes, evidence: allEvidence, priorMedia: edit.priorMedia });
+  const result = await assess({ ...v, ...photoAssessment(v.photos), evidence: allEvidence });
   if (result.score.blocked) return { errors: { disclosure: "Disclosed AI use must be 50% or less." } };
-  const newCover = v.image ? await saveUpload(v.image.bytes) : null;
-  if (v.image && !newCover) return { errors: { cover: UNREADABLE_IMAGE } };
   const evidence = await saveEvidenceFiles(result.evidence, v.evidenceFiles);
-  if (!evidence) { if (newCover) await deleteUploads([newCover]); return { errors: { evidence: UNREADABLE_EVIDENCE } }; }
-  const coverFile = newCover ?? (edit.keepsImage ? edit.listing.coverFile : null);
+  if (!evidence) return { errors: { evidence: UNREADABLE_EVIDENCE } };
   try {
-    await saveWithUploads([newCover, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () => publishDraft(fd, user.id, "listing", edit.listing.slug, async (tx) => {
+    await saveWithUploads(v.evidenceFiles.map((f) => evidence[f.index].file), () => publishDraft(fd, user.id, "listing", edit.listing.slug, async (tx) => {
       const [current] = await tx.select().from(schema.listings).where(and(eq(schema.listings.id, edit.listing.id), eq(schema.listings.creatorId, user.id))).for("update");
       if (!current || current.analysis.analyzedAt !== edit.listing.analysis.analyzedAt) throw new PublicationConflict("This listing changed while you were editing. Reload before resubmitting.");
       const [order] = await tx.select({ id: schema.orders.id }).from(schema.orders).where(and(eq(schema.orders.listingId, current.id), ne(schema.orders.status, "declined"))).limit(1);
       if (order || current.status === "sold") throw new PublicationConflict("This listing has orders. Its work and terms are protected for those buyers. You can withdraw it, or create a new listing for a new version.");
       await tx.update(schema.listings).set({
+        productType: v.productType, ...await saveProductPhotos(tx, v.photos),
         title: v.title, category: v.category, summary: v.summary, preview: v.preview, locked: v.locked, aiNotes: v.aiNotes,
-        priceCents: v.priceCents, currency: v.currency, paymentUrl: v.paymentUrl, license: v.license, coverFile,
+        priceCents: v.priceCents, currency: v.currency, paymentUrl: v.paymentUrl, license: v.license,
         coverTheme: parseCoverTheme(fd.get("cover_theme")), coverPattern: parseCoverPattern(fd.get("cover_pattern")),
         disclosure: v.disclosure, ...scoreColumns(result), evidence, evidenceReview: null,
         status: current.status === "removed" || current.status === "in_review" || Boolean(current.moderationReason) || result.score.needsReview ? "in_review" : "published",
       }).where(eq(schema.listings.id, current.id));
     }));
-  } catch (error) { if (error instanceof PublicationConflict) return { message: error.message }; throw error; }
-  const used = new Set([coverFile, ...evidence.map((e) => e.file)]);
-  await deleteUploads([edit.listing.coverFile, ...edit.listing.evidence.map((e) => e.file)].filter((name): name is string => Boolean(name) && !used.has(name))).catch(() => {});
+  } catch (error) {
+    if (error instanceof UnreadableGalleryPhoto) return { errors: { gallery: UNREADABLE_IMAGE } };
+    if (error instanceof PublicationConflict) return { message: error.message };
+    throw error;
+  }
+  const used = new Set([...v.photos.flatMap(photo => "file" in photo ? [photo.file] : []), ...evidence.map(e => e.file)]);
+  await deleteUploads([...edit.photos.map(photo => photo.file), ...edit.listing.evidence.map(e => e.file)].filter((name): name is string => Boolean(name) && !used.has(name))).catch(() => {});
   revalidatePath("/", "layout");
   announce([`/listing/${edit.listing.slug}`]);
   redirect(`/listing/${edit.listing.slug}?updated=1`);
@@ -104,14 +131,14 @@ export async function previewAssessment(fd: FormData): Promise<PreviewState> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, errors: {}, message: "Your session expired. Log in again." };
   const edit = await loadListingEdit(fd, user.id);
-  const parsed = await parseListingForm(fd, { requireAttestation: false, keepsImage: edit?.keepsImage });
+  const parsed = await parseListingForm(fd, { requireAttestation: false, savedPhotos: edit?.photos });
   if (!parsed.values) return { ok: false, errors: parsed.errors };
   if (!(await withinLimit(`preview:user:${user.id}`, 60, 60 * 60))) {
     return { ok: false, errors: {}, message: "That's a lot of score checks. Try again in an hour." };
   }
 
   const v = parsed.values;
-  const result = await assess({ ...v, image: v.image?.bytes, evidence: [...v.evidence, ...(edit?.kept ?? [])], priorMedia: edit?.priorMedia });
+  const result = await assess({ ...v, ...photoAssessment(v.photos), evidence: [...v.evidence, ...(edit?.kept ?? [])] });
   return {
     ok: true,
     result: {
@@ -135,7 +162,7 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
   if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
   const v = parsed.values;
 
-  const result = await assess({ ...v, image: v.image?.bytes });
+  const result = await assess({ ...v, ...photoAssessment(v.photos) });
   const { score } = result;
   if (score.blocked) {
     return {
@@ -148,21 +175,18 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
     return { message: "You've reached the limit of 20 new listings a day. Try again tomorrow." };
   }
 
-  const coverFile = v.image ? await saveUpload(v.image.bytes) : null;
-  if (v.image && !coverFile) return { errors: { cover: UNREADABLE_IMAGE }, message: "Some fields need attention." };
   const evidence = await saveEvidenceFiles(result.evidence, v.evidenceFiles);
-  if (!evidence) {
-    if (coverFile) await deleteUploads([coverFile]);
-    return { errors: { evidence: UNREADABLE_EVIDENCE }, message: "Some fields need attention." };
-  }
+  if (!evidence) return { errors: { evidence: UNREADABLE_EVIDENCE }, message: "Some fields need attention." };
   const slug = slugify(v.title);
 
-  try { await saveWithUploads([coverFile, ...v.evidenceFiles.map((f) => evidence[f.index].file)], () =>
-    publishDraft(fd, user.id, "listing", "", (tx) => tx.insert(schema.listings).values({
+  try { await saveWithUploads(v.evidenceFiles.map((f) => evidence[f.index].file), () =>
+    publishDraft(fd, user.id, "listing", "", async (tx) => tx.insert(schema.listings).values({
       slug,
       creatorId: user.id,
       title: v.title,
       category: v.category,
+      productType: v.productType,
+      ...await saveProductPhotos(tx, v.photos),
       summary: v.summary,
       preview: v.preview,
       locked: v.locked,
@@ -171,7 +195,6 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
       currency: v.currency,
       paymentUrl: v.paymentUrl,
       license: v.license,
-      coverFile,
       coverTheme: parseCoverTheme(fd.get("cover_theme")),
       coverPattern: parseCoverPattern(fd.get("cover_pattern")),
       status: score.needsReview ? "in_review" : "published",
@@ -179,10 +202,15 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
       ...scoreColumns(result),
       evidence,
     })),
-  ); } catch (error) { if (error instanceof PublicationConflict) return { message: error.message }; throw error; }
+  ); } catch (error) {
+    if (error instanceof UnreadableGalleryPhoto) return { errors: { gallery: UNREADABLE_IMAGE } };
+    if (error instanceof PublicationConflict) return { message: error.message };
+    throw error;
+  }
 
   // Ask Bing and others to crawl it now, if it went live straight away.
   if (!score.needsReview) announce([`/listing/${slug}`, `/u/${user.handle}`]);
+  revalidatePath("/admin/merch");
   redirect(`/listing/${slug}?created=1`);
 }
 
@@ -377,6 +405,7 @@ export async function reviewOrder(fd: FormData) {
     );
   }
   revalidatePath("/dashboard");
+  revalidatePath("/admin/merch");
 }
 
 export async function updatePaymentLink(_prev: PaymentState, fd: FormData): Promise<PaymentState> {

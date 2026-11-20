@@ -3,11 +3,13 @@
 import { useActionState, useRef, useState, useTransition } from "react";
 import { createListing, previewAssessment, updateListing } from "@/app/actions/listings";
 import { useDraftWorkspace } from "./DraftWorkspace";
-import { CATEGORIES, LICENSES } from "@/lib/categories";
-import { CURRENCIES, FORM_CURRENCY, type Currency } from "@/lib/currency";
+import { LICENSES } from "@/lib/categories";
+import { PRODUCTS, productType } from "@/lib/product-types";
+import { ProductPhotos } from "./ProductPhotos";
+import { CURRENCIES, FORM_CURRENCY, listingPrice, type Currency } from "@/lib/currency";
 import type { EditableListing, FieldErrors, PreviewState } from "@/lib/listing-form";
-import type { Level } from "@/lib/scoring";
-import { CoverThemeField, DisclosureFields, EvidenceFields, FieldError, filesTooBigMessage, ImageField, ScorePreview, Section } from "./FormParts";
+import { LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Level } from "@/lib/scoring";
+import { EvidenceFields, FieldError, filesTooBigMessage, ScorePreview, Section } from "./FormParts";
 
 export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCategory?: string; defaultAi?: Level; listing?: EditableListing }) {
   const draft = useDraftWorkspace();
@@ -20,9 +22,19 @@ export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCateg
   const [, startPublishing] = useTransition();
   const [tooBig, setTooBig] = useState<string | null>(null);
   const [currency, setCurrency] = useState<Currency>((draft?.value("currency") as Currency) ?? listing?.currency ?? FORM_CURRENCY);
+  const [price, setPrice] = useState(draft?.value("price") ?? (listing ? String(listing.priceCents / 100) : ""));
+  const paid = listingPrice(price) > 0;
+  const [product, setProduct] = useState(draft?.value("category") ?? listing?.productType ?? listing?.category ?? defaultCategory ?? "");
+  const physical = productType(product)?.physical;
 
   const errors: FieldErrors = { ...(preview && !preview.ok ? preview.errors : {}), ...(createState?.errors ?? {}) };
   const message = tooBig ?? createState?.message ?? (preview && !preview.ok ? preview.message : undefined);
+
+  const savedPreview = draft?.value("preview") ?? listing?.preview ?? "";
+  const savedDelivery = draft?.value("locked") ?? listing?.locked ?? "";
+  const savedNotes = draft?.value("aiNotes") ?? listing?.aiNotes ?? "";
+  const hasEvidence = Boolean(listing?.evidence.length || draft?.initial.files.some(([key]) => key.startsWith("evidence_file_"))
+    || draft?.initial.fields.some(([key, value]) => ["evidence_url", "evidence_note"].includes(key) && value.trim()));
 
   function fitsLimit(data: FormData) {
     const problem = filesTooBigMessage(data);
@@ -50,13 +62,13 @@ export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCateg
   }
 
   return (
-    <form ref={formRef} onSubmit={submit} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]" noValidate>
+    <form ref={formRef} onSubmit={submit} className="space-y-6" noValidate>
       <div className="space-y-6">
         {listing && <>
           <input type="hidden" name="editSlug" value={listing.slug} />
           <input type="hidden" name="workVersion" defaultValue={draft?.value("workVersion") ?? listing.workVersion} />
         </>}
-        <Section step="01" title="The work">
+        <Section step="01" title="Your product">
           <div>
             <label htmlFor="title" className="label">
               Title
@@ -65,132 +77,119 @@ export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCateg
             <FieldError errors={errors} name="title" />
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label htmlFor="category" className="label">
-                Category
-              </label>
-              <select id="category" name="category" className="field" defaultValue={listing?.category ?? defaultCategory ?? ""}>
-                <option value="" disabled>
-                  Choose one
-                </option>
-                {CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <FieldError errors={errors} name="category" />
-            </div>
-            <div>
-              <label htmlFor="price" className="label">
-                Price
-              </label>
-              <div className="flex gap-2">
-                <select
-                  id="currency"
-                  name="currency"
-                  aria-label="Currency"
-                  className="field w-[108px] shrink-0"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as Currency)}
-                >
-                  {Object.entries(CURRENCIES).map(([code, c]) => (
-                    <option key={code} value={code}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="relative min-w-0 flex-1">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{CURRENCIES[currency].symbol}</span>
-                  <input id="price" name="price" inputMode="decimal" className="field pl-7" placeholder={currency === "INR" ? "500" : "25"} defaultValue={listing ? listing.priceCents / 100 : undefined} />
-                </div>
-              </div>
-              <p className="hint">Use the currency your payment link charges in. Buyers see the price exactly as you enter it. Use 0 to give it away.</p>
-              <FieldError errors={errors} name="currency" />
-              <FieldError errors={errors} name="price" />
-            </div>
-          </div>
+          <ProductPhotos listing={listing} errors={errors} />
 
           <div>
-            <label htmlFor="paymentUrl" className="label">
-              Payment link
+            <label htmlFor="category" className="label">
+              Product type
             </label>
-            <input id="paymentUrl" name="paymentUrl" className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" defaultValue={listing?.paymentUrl ?? ""} />
-            <p className="hint">
-              Needed if you charge. Buyers pay you directly through this link, and Unprompters takes no cut. Use Razorpay, PayPal,
-              Stripe, Instamojo, PayU, Cashfree or UPI, and set it to charge the price above.
-            </p>
-            <FieldError errors={errors} name="paymentUrl" />
+            <select id="category" name="category" className="field" value={product} onChange={e => setProduct(e.target.value)}>
+              <option value="" disabled>
+                Choose one
+              </option>
+              <optgroup label="Merchandise">{PRODUCTS.filter(p => p.physical).map(p => <option key={p.id} value={p.id}>{p.label}</option>)}</optgroup>
+              <optgroup label="Creative products">{PRODUCTS.filter(p => !p.physical).map(p => <option key={p.id} value={p.id}>{p.label}</option>)}</optgroup>
+            </select>
+            <FieldError errors={errors} name="category" />
           </div>
 
           <div>
             <label htmlFor="summary" className="label">
-              Short description
+              Description
             </label>
             <textarea id="summary" name="summary" rows={3} maxLength={280} className="field" defaultValue={listing?.summary} />
-            <p className="hint">Shown on cards and search results. Up to 280 characters.</p>
+            <p className="hint">{physical ? "Include sizes, materials or colours." : "Tell buyers what they’ll receive."} Up to 280 characters.</p>
             <FieldError errors={errors} name="summary" />
           </div>
 
-          <fieldset>
-            <legend className="label">License</legend>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {LICENSES.map((l, i) => (
-                <label
-                  key={l.id}
-                  className="cursor-pointer rounded-xl border border-line p-3 transition-colors hover:border-ink has-checked:border-ink has-checked:bg-paper"
-                >
-                  <input type="radio" name="license" value={l.id} defaultChecked={listing ? listing.license === l.id : i === 0} className="sr-only" />
-                  <span className="block text-sm font-semibold">{l.label}</span>
-                  <span className="mt-0.5 block text-xs text-muted">{l.blurb}</span>
-                </label>
-              ))}
+          <input type="hidden" name="cover_theme" value={draft?.value("cover_theme") ?? listing?.coverTheme ?? ""} />
+          <input type="hidden" name="cover_pattern" value={draft?.value("cover_pattern") ?? listing?.coverPattern ?? ""} />
+        </Section>
+
+        <Section step="02" title="Sale details">
+          <div>
+            <label htmlFor="price" className="label">
+              Price
+            </label>
+            <div className="flex gap-2">
+              <select
+                id="currency"
+                name="currency"
+                aria-label="Currency"
+                className="field w-[108px] shrink-0"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as Currency)}
+              >
+                {Object.entries(CURRENCIES).map(([code, c]) => (
+                  <option key={code} value={code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <div className="relative min-w-0 flex-1">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{CURRENCIES[currency].symbol}</span>
+                <input id="price" name="price" inputMode="decimal" className="field pl-7" placeholder={currency === "INR" ? "500" : "25"} value={price} onChange={(e) => setPrice(e.target.value)} />
+              </div>
             </div>
+            <p className="hint">Enter 0 for a free listing.</p>
+            <FieldError errors={errors} name="currency" />
+            <FieldError errors={errors} name="price" />
+          </div>
+
+          <div hidden={!paid}>
+            <label htmlFor="paymentUrl" className="label">
+              Payment link
+            </label>
+            <input id="paymentUrl" name="paymentUrl" disabled={!paid} className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" defaultValue={draft?.value("paymentUrl") ?? listing?.paymentUrl ?? ""} />
+            <p className="hint">
+              Use a payment link that charges the amount and currency above.
+            </p>
+            <FieldError errors={errors} name="paymentUrl" />
+          </div>
+
+          <div hidden={!product || physical}>
+            <label htmlFor="license" className="label">License</label>
+            <select id="license" name="license" className="field" disabled={!product || physical}
+              defaultValue={draft?.value("license") ?? (listing?.license === "physical" ? "personal" : listing?.license) ?? "personal"}>
+              {LICENSES.map(license => <option key={license.id} value={license.id}>{license.label} — {license.blurb}</option>)}
+            </select>
             <FieldError errors={errors} name="license" />
-          </fieldset>
-
-          <ImageField
-            errors={errors}
-            currentFile={listing?.coverFile}
-            hint="Up to 4 MB. Upload the file you exported, not a screenshot: we read its metadata for generator tags and Content Credentials, then remove it. The public sees a copy up to 1600px, so link the full-resolution file under “What the buyer gets”."
-          />
-          <CoverThemeField saved={listing?.coverTheme} savedPattern={listing?.coverPattern} hint="Without an image, your listing gets a drawn cover. Leave both on their defaults, or make it yours." />
-        </Section>
-
-        <Section step="02" title="Content" intro="Both parts are scanned. Only the preview is ever shown publicly.">
-          <div>
-            <label htmlFor="preview" className="label">
-              Public preview
-            </label>
-            <textarea id="preview" name="preview" rows={8} className="field font-[inherit]" defaultValue={listing?.preview} />
-            <p className="hint">An excerpt, a stanza, a code sample, the pitch. Anyone can read this.</p>
-            <FieldError errors={errors} name="preview" />
           </div>
-          <div>
-            <label htmlFor="locked" className="label">
-              What the buyer gets
-            </label>
-            <textarea id="locked" name="locked" rows={8} className="field" defaultValue={listing?.locked} />
-            <p className="hint">The full text or code, or delivery instructions and download links. Unlocked after purchase.</p>
-            <FieldError errors={errors} name="locked" />
-          </div>
+
+          <details hidden={!product && !savedPreview && !savedDelivery && !errors.preview && !errors.locked}
+            open={Boolean(savedPreview || savedDelivery || errors.preview || errors.locked) || (!!product && !physical)}
+            className="border-t border-line pt-4">
+            <summary className="cursor-pointer font-semibold">{physical ? "Additional product and delivery details (optional)" : "Preview and buyer access"}</summary>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label htmlFor="preview" className="label">{physical ? "More product details" : "Public preview"}</label>
+                <textarea id="preview" name="preview" rows={3} className="field" defaultValue={savedPreview} />
+                <p className="hint">{physical ? "Add a size guide, dimensions or shipping information if buyers need it." : "Share a sample buyers can see before purchase."}</p>
+                <FieldError errors={errors} name="preview" />
+              </div>
+              <div>
+                <label htmlFor="locked" className="label">{physical ? "Delivery instructions" : "What the buyer gets"}</label>
+                <textarea id="locked" name="locked" rows={3} className="field" defaultValue={savedDelivery} />
+                <p className="hint">{physical ? "Private shipping or pickup instructions, shown after purchase." : "Add the full work, a download link or instructions. Buyers get access after purchase."}</p>
+                <FieldError errors={errors} name="locked" />
+              </div>
+            </div>
+          </details>
         </Section>
 
-        <Section
-          step="03"
-          title="AI disclosure"
-          intro="Be precise. Your answers set the floor of your score: we never show less AI than you disclose."
-        >
-          <DisclosureFields errors={errors} defaultAi={defaultAi} saved={listing?.disclosure} savedNotes={listing?.aiNotes} />
-        </Section>
-
-        <Section
-          step="04"
-          title="Process evidence"
-          intro="Show how you made it. Evidence is public and can be reviewed by a moderator; attaching it does not change your numeric score."
-        >
-          <EvidenceFields errors={errors} saved={listing?.evidence} />
+        <Section step="03" title="AI disclosure">
+          <ListingDisclosure listing={listing} defaultAi={defaultAi} errors={errors} />
+          <details open={Boolean(savedNotes || hasEvidence || errors.aiNotes || errors.evidence)} className="border-t border-line pt-4">
+            <summary className="cursor-pointer font-semibold">Process notes and evidence (optional)</summary>
+            <div className="mt-4 space-y-4">
+              <label className="block">
+                <span className="label">How you made it</span>
+                <textarea name="aiNotes" rows={2} maxLength={1000} className="field" defaultValue={savedNotes}/>
+              </label>
+              <FieldError errors={errors} name="aiNotes" />
+              <EvidenceFields errors={errors} saved={listing?.evidence} />
+            </div>
+          </details>
         </Section>
 
         <section className="card space-y-4 p-5 sm:p-7">
@@ -218,16 +217,49 @@ export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCateg
         </section>
       </div>
 
-      <aside
-        className="intro-rise lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:self-start lg:overflow-y-auto no-scrollbar"
-        style={{ "--d": "300ms" } as React.CSSProperties}
-      >
+      {preview?.ok && <aside aria-label="Your score">
         <ScorePreview
-          result={preview?.ok ? preview.result : null}
+          result={preview.result}
           reviewNote="This would go to a human reviewer before it appears in the market. Adding process evidence helps the review go quickly."
           segmentsLabel="Your preview, passage by passage"
         />
-      </aside>
+      </aside>}
     </form>
   );
+}
+
+function ListingDisclosure({ listing, defaultAi, errors }: { listing?: EditableListing; defaultAi?: Level; errors: FieldErrors }) {
+  const draft = useDraftWorkspace();
+  const saved = STAGES.map(stage => draft?.value(`disclosure_${stage}`) ?? listing?.disclosure[stage]
+    ?? (stage === "creation" ? defaultAi : "") ?? "");
+  const [mode, setMode] = useState(() => {
+    const choice = draft?.value("disclosure_mode");
+    if (choice !== undefined) return choice;
+    if (saved.every(value => value === "none")) return "none";
+    return saved.some(Boolean) ? "stages" : "";
+  });
+  return <>
+    <label className="block">
+      <span className="label">AI use</span>
+      <select className="field" name="disclosure_mode" value={mode} onChange={e => setMode(e.target.value)} required>
+        <option value="" disabled>Choose one</option>
+        <option value="none">No AI at any stage</option>
+        <option value="stages">Describe AI use by stage</option>
+      </select>
+    </label>
+    <fieldset hidden={mode !== "stages"} disabled={mode !== "stages"} className="grid gap-4 sm:grid-cols-2">
+      <legend className="sr-only">AI use by stage</legend>
+      {STAGES.map((stage, index) => (
+        <label key={stage} className="block">
+          <span className="label">{STAGE_INFO[stage].label}</span>
+          <select className="field" name={`disclosure_${stage}`} required defaultValue={saved[index]}>
+            <option value="" disabled>Choose level of use</option>
+            {LEVELS.map(level => <option key={level} value={level}>{LEVEL_INFO[level].label}</option>)}
+          </select>
+        </label>
+      ))}
+    </fieldset>
+    {mode === "none" && STAGES.map(stage => <input key={stage} type="hidden" name={`disclosure_${stage}`} value="none" />)}
+    {errors.disclosure && <p className="mt-1.5 text-sm font-medium text-heavy">{mode ? errors.disclosure : "Choose how AI was used."}</p>}
+  </>;
 }

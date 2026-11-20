@@ -55,6 +55,7 @@ export function ExploreView({
   available,
   filters,
   fields,
+  actions,
   children,
 }: {
   page?: Page;
@@ -64,6 +65,7 @@ export function ExploreView({
   available: CategoryId[];
   filters: Filters;
   fields: Fields;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { path, sorts } = PAGES[page];
@@ -159,6 +161,7 @@ export function ExploreView({
             <p className="intro-rise mt-1 text-ink-soft" style={{ "--d": "80ms" } as React.CSSProperties}>
               {intro}
             </p>
+            {actions}
           </div>
           <div className="intro-rise relative w-full sm:w-80" style={{ "--d": "160ms" } as React.CSSProperties}>
             <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />

@@ -11,6 +11,7 @@ import { CommentIcon, HeartIcon } from "@/components/PostCard";
 import { AiPill } from "@/components/Score";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireUser } from "@/lib/auth";
+import { isCompanyOwner } from "@/lib/merch";
 import { getDashboard, getInquiries } from "@/lib/data";
 import { formatDate, formatMoney, formatPrice, formatShortDate } from "@/lib/format";
 import { getCreatorStats, getMyPosts, getRecentActivity } from "@/lib/journal";
@@ -106,6 +107,7 @@ async function Dashboard() {
                 Review queue
               </Link>
             )}
+            {isCompanyOwner(user) && <Link href="/admin/merch" className="link">My merch analytics</Link>}
           </div>
         </div>
         {!creator && (
@@ -121,7 +123,7 @@ async function Dashboard() {
       )}
 
       {data.waiting.length > 0 && (
-        <section className="mt-12">
+        <section id="pending-orders" className="mt-12">
           <h2 className="text-2xl font-normal">Orders waiting for you</h2>
           <p className="mt-1 text-sm text-ink-soft">Check the money arrived before you mark an order as paid. That unlocks the work for the buyer, and it can&apos;t be undone.</p>
           <ul className="mt-4 space-y-3">

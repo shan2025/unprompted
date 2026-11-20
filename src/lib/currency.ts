@@ -17,6 +17,12 @@ export const DEFAULT_CURRENCY: Currency = "USD";
 /** What the sell form starts on: most sellers' payment links charge rupees. */
 export const FORM_CURRENCY: Currency = "INR";
 
+/** Accept the same currency symbols and thousands separators on the form and server. */
+export function listingPrice(value: string): number {
+  const digits = value.trim().replace(/^[$₹€£]\s*/, "").replace(/,/g, "");
+  return digits === "" ? NaN : Number(digits);
+}
+
 export function isCurrency(value: unknown): value is Currency {
   return typeof value === "string" && value in CURRENCIES;
 }

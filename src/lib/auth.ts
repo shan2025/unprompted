@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { db, schema } from "./db";
+import { devAccountsEnabled } from "./dev-accounts";
 
 const COOKIE = "unprompted_session";
 const SESSION_DAYS = 30;
@@ -31,8 +32,8 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function createSession(userId: number) {
-  const token = randomBytes(32).toString("base64url");
+export async function createSession(userId: number, localTest = false) {
+  const token = (localTest ? "dev." : "") + randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await db.insert(schema.sessions).values({ id: hashToken(token), userId, expiresAt });
   (await cookies()).set(COOKIE, token, {
@@ -55,6 +56,8 @@ export async function destroySession() {
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
+  // Test sessions stop working outside this local setup, even against the same database.
+  if (token.startsWith("dev.") && !(await devAccountsEnabled())) return null;
   const [row] = await db
     .select({
       id: schema.users.id,
@@ -86,8 +89,8 @@ export async function requireUser(next: string, { newcomers = false }: { newcome
   return user;
 }
 
-export async function requireAdmin() {
-  const user = await requireUser("/admin");
+export async function requireAdmin(next = "/admin") {
+  const user = await requireUser(next);
   if (user.role !== "admin") redirect("/");
   return user;
 }

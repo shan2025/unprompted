@@ -14,7 +14,7 @@ import type { EditableListing } from "@/lib/listing-form";
 export const metadata: Metadata = { title: "Edit listing", robots: { index: false } };
 type Props = { params: Promise<{ slug: string }> };
 export default function Page({ params }: Props) {
-  return <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6"><h1 className="text-4xl font-light">Edit your listing</h1><div className="mt-8"><Suspense fallback={<p>Loading listing…</p>}><Editor params={params} /></Suspense></div></div>;
+  return <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6"><h1 className="text-4xl font-light">Edit your listing</h1><div className="mt-8"><Suspense fallback={<p>Loading listing…</p>}><Editor params={params} /></Suspense></div></div>;
 }
 async function Editor({ params }: Props) {
   const { slug } = await params;
