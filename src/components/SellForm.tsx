@@ -11,7 +11,7 @@ import type { EditableListing, FieldErrors, PreviewState } from "@/lib/listing-f
 import { LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Level } from "@/lib/scoring";
 import { EvidenceFields, FieldError, filesTooBigMessage, ScorePreview, Section } from "./FormParts";
 
-export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCategory?: string; defaultAi?: Level; listing?: EditableListing }) {
+export function SellForm({ defaultCategory, defaultAi, listing, gatewayCheckout = false }: { defaultCategory?: string; defaultAi?: Level; listing?: EditableListing; gatewayCheckout?: boolean }) {
   const draft = useDraftWorkspace();
   const formRef = useRef<HTMLFormElement>(null);
   const [createState, createAction, publishing] = useActionState(async (previous: Parameters<typeof createListing>[0], form: FormData) => {
@@ -136,16 +136,20 @@ export function SellForm({ defaultCategory, defaultAi, listing }: { defaultCateg
             <FieldError errors={errors} name="price" />
           </div>
 
-          <div hidden={!paid}>
-            <label htmlFor="paymentUrl" className="label">
-              Payment link
-            </label>
-            <input id="paymentUrl" name="paymentUrl" disabled={!paid} className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" defaultValue={draft?.value("paymentUrl") ?? listing?.paymentUrl ?? ""} />
-            <p className="hint">
-              Use a payment link that charges the amount and currency above.
-            </p>
-            <FieldError errors={errors} name="paymentUrl" />
-          </div>
+          {gatewayCheckout ? (
+            <p className="hint" hidden={!paid}>Buyers pay through Cashfree checkout, so you don&apos;t need a payment link.</p>
+          ) : (
+            <div hidden={!paid}>
+              <label htmlFor="paymentUrl" className="label">
+                Payment link
+              </label>
+              <input id="paymentUrl" name="paymentUrl" disabled={!paid} className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" defaultValue={draft?.value("paymentUrl") ?? listing?.paymentUrl ?? ""} />
+              <p className="hint">
+                Use a payment link that charges the amount and currency above.
+              </p>
+              <FieldError errors={errors} name="paymentUrl" />
+            </div>
+          )}
 
           <div hidden={!product || physical}>
             <label htmlFor="license" className="label">License</label>

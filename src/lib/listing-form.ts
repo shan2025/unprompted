@@ -150,7 +150,7 @@ export async function parseImage(fd: FormData, errors: FieldErrors): Promise<Par
   return { bytes };
 }
 
-export async function parseListingForm(fd: FormData, { requireAttestation, keepsImage = false, savedPhotos = [] }: { requireAttestation: boolean; keepsImage?: boolean; savedPhotos?: SavedPhoto[] }) {
+export async function parseListingForm(fd: FormData, { requireAttestation, keepsImage = false, savedPhotos = [], gatewayCheckout = false }: { requireAttestation: boolean; keepsImage?: boolean; savedPhotos?: SavedPhoto[]; /** Buyers pay through Cashfree, so no payment link is needed. */ gatewayCheckout?: boolean }) {
   const errors: FieldErrors = {};
 
   const title = str(fd, "title");
@@ -186,7 +186,7 @@ export async function parseListingForm(fd: FormData, { requireAttestation, keeps
   const paymentUrl = paymentLink ? parsePaymentLink(paymentLink) : null;
   if (paymentLink && !paymentUrl) errors.paymentUrl = PAYMENT_LINK_HELP;
   // Only needed to publish, so a score can be checked before the link is ready.
-  else if (requireAttestation && !paymentLink && price > 0) errors.paymentUrl = "Add a payment link so buyers can pay you.";
+  else if (requireAttestation && !paymentLink && price > 0 && !gatewayCheckout) errors.paymentUrl = "Add a payment link so buyers can pay you.";
 
   const license = product?.physical ? "physical" : str(fd, "license");
   if (product && !product.physical && !isLicense(license)) errors.license = "Pick a license.";

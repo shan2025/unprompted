@@ -190,6 +190,34 @@ export const orders = pgTable(
   (t) => [uniqueIndex("orders_listing_buyer_idx").on(t.listingId, t.buyerId), index("orders_buyer_idx").on(t.buyerId)],
 ).enableRLS();
 
+// Checkouts through a payment gateway (Cashfree), for listings where the money
+// comes to Unprompters rather than the seller. One row per gateway order: it's
+// "created" when the buyer opens checkout, and becomes "paid" (with an order
+// row marked paid) once the gateway confirms it. "refund_due" means the money
+// arrived but the listing couldn't be delivered, such as an exclusive listing
+// another buyer paid for first, so the owner has to refund it.
+export const payments = pgTable(
+  "payments",
+  {
+    id: id(),
+    provider: text("provider", { enum: ["cashfree"] }).notNull(),
+    /** Our order ID at the gateway, also kept on the order as its payment reference. */
+    providerOrderId: text("provider_order_id").notNull().unique(),
+    listingId: integer("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    buyerId: integer("buyer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    status: text("status", { enum: ["created", "paid", "failed", "refund_due"] }).notNull().default("created"),
+    createdAt: createdAt(),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+  },
+  (t) => [index("payments_listing_idx").on(t.listingId, t.status, t.createdAt), index("payments_buyer_idx").on(t.buyerId)],
+).enableRLS();
+
 // Journal posts: work shared for free. Scored exactly like listings, minus
 // price, license and a locked deliverable.
 export const posts = pgTable(

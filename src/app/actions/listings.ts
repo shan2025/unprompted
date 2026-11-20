@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
+import { sellsThroughCashfree } from "@/lib/checkout";
 import { CLAIM_HOLD_DAYS, claimHoldCutoff } from "@/lib/data";
 import { db, schema } from "@/lib/db";
 import { escapeHtml, sendEmail } from "@/lib/email";
@@ -75,7 +76,7 @@ export async function updateListing(_previous: CreateState, fd: FormData): Promi
   const edit = await loadListingEdit(fd, user.id);
   if (!edit) return { message: "This listing isn't available to edit." };
   if (fd.has("draftId") && fd.get("workVersion") !== edit.listing.analysis.analyzedAt) return { message: "This listing has a newer version. Open a fresh edit from the listing before resubmitting." };
-  const parsed = await parseListingForm(fd, { requireAttestation: true, savedPhotos: edit.photos });
+  const parsed = await parseListingForm(fd, { requireAttestation: true, savedPhotos: edit.photos, gatewayCheckout: sellsThroughCashfree(user) });
   if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
   const v = parsed.values;
   const allEvidence = [...v.evidence, ...edit.kept];
@@ -158,7 +159,7 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
   if (!user) return { message: "Your session expired. Log in again." };
   if (!user.verified) return { message: UNVERIFIED_MESSAGE };
 
-  const parsed = await parseListingForm(fd, { requireAttestation: true });
+  const parsed = await parseListingForm(fd, { requireAttestation: true, gatewayCheckout: sellsThroughCashfree(user) });
   if (!parsed.values) return { errors: parsed.errors, message: "Some fields need attention." };
   const v = parsed.values;
 
