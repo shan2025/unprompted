@@ -1,6 +1,7 @@
 import "server-only";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, gt, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { cashfreeEnabled, fetchCashfreeOrder, latestCashfreeAttempt } from "./cashfree";
 import { db, schema } from "./db";
 import { escapeHtml, sendEmail } from "./email";
@@ -45,7 +46,7 @@ async function email(to: string | null, subject: string, lines: string[], path: 
  * the buyer. Safe to call any number of times, from the return page and the
  * webhook alike: only the first call that sees it paid does anything.
  */
-export async function settleCashfreeOrder(orderId: string): Promise<Settled | null> {
+export async function settleCashfreeOrder(orderId: string, options: { revalidate?: boolean } = {}): Promise<Settled | null> {
   const [payment] = await db
     .select({ id: schema.payments.id, status: schema.payments.status, amountCents: schema.payments.amountCents, currency: schema.payments.currency, slug: schema.listings.slug })
     .from(schema.payments)
@@ -113,23 +114,64 @@ export async function settleCashfreeOrder(orderId: string): Promise<Settled | nu
   // Another call settled it first.
   if (!result) return settledAgain(payment.id, payment.slug);
 
-  const { listing } = result;
-  const [buyer] = await db.select({ email: schema.users.email, name: schema.users.name, handle: schema.users.handle }).from(schema.users).where(eq(schema.users.id, result.buyerId)).limit(1);
-  const [owner] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, listing.creatorId)).limit(1);
-  const price = formatPrice(payment.amountCents, payment.currency);
+  const { listing, outcome, buyerId } = result;
   const path = `/listing/${listing.slug}`;
-  if (result.outcome === "paid") {
-    await email(buyer?.email ?? null, `"${listing.title}" is yours`, [`Your payment of ${price} for "${listing.title}" went through. It's unlocked and ready for you.`, `Cashfree order: ${orderId}`], path);
-    await email(owner?.email ?? null, `New sale: "${listing.title}"`, [`${buyer?.name ?? "A buyer"} (@${buyer?.handle ?? "unknown"}) paid ${price} for "${listing.title}" through Cashfree.`, `Cashfree order: ${orderId}`], "/admin/merch");
-  } else {
-    await email(buyer?.email ?? null, `We'll refund your payment for "${listing.title}"`, [`Your payment of ${price} for "${listing.title}" arrived, but we couldn't complete the order. For example, someone else bought this exclusive listing a moment earlier, or you already own it.`, "We'll refund it to the way you paid. You don't need to do anything.", `Cashfree order: ${orderId}`], path);
-    await email(owner?.email ?? null, `Refund needed: "${listing.title}"`, [`${buyer?.name ?? "A buyer"} (@${buyer?.handle ?? "unknown"}) paid ${price} for "${listing.title}", but the order couldn't be completed (already sold, already owned, or the amount didn't match).`, `Refund Cashfree order ${orderId} from the Cashfree dashboard.`], "/admin/merch");
-    await reportError({ where: "checkout", message: `Cashfree order ${orderId} needs a refund`, path });
+  // Emails go out after the response, so neither the buyer's page nor Cashfree's webhook waits on them.
+  after(async () => {
+    const [buyer] = await db.select({ email: schema.users.email, name: schema.users.name, handle: schema.users.handle }).from(schema.users).where(eq(schema.users.id, buyerId)).limit(1);
+    const [owner] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, listing.creatorId)).limit(1);
+    const price = formatPrice(payment.amountCents, payment.currency);
+    const who = `${buyer?.name ?? "A buyer"} (@${buyer?.handle ?? "unknown"})`;
+    if (outcome === "paid") {
+      await email(buyer?.email ?? null, `"${listing.title}" is yours`, [`Your payment of ${price} for "${listing.title}" went through. It's unlocked and ready for you.`, `Cashfree order: ${orderId}`], path);
+      await email(owner?.email ?? null, `New sale: "${listing.title}"`, [`${who} paid ${price} for "${listing.title}" through Cashfree.`, `Cashfree order: ${orderId}`], "/admin/merch");
+    } else {
+      await email(buyer?.email ?? null, `We'll refund your payment for "${listing.title}"`, [`Your payment of ${price} for "${listing.title}" arrived, but we couldn't complete the order. For example, someone else bought this exclusive listing a moment earlier, or you already own it.`, "We'll refund it to the way you paid. You don't need to do anything.", `Cashfree order: ${orderId}`], path);
+      await email(owner?.email ?? null, `Refund needed: "${listing.title}"`, [`${who} paid ${price} for "${listing.title}", but the order couldn't be completed (already sold, already owned, or the amount didn't match).`, `Refund Cashfree order ${orderId} from the Cashfree dashboard.`], "/admin/merch");
+      await reportError({ where: "checkout", message: `Cashfree order ${orderId} needs a refund`, path });
+    }
+  });
+  // Next doesn't allow revalidating while a page renders. Those pages read the
+  // database on every visit anyway, so a page doing the check can skip it.
+  if (options.revalidate !== false) {
+    revalidatePath(path);
+    revalidatePath("/dashboard");
+    revalidatePath("/admin/merch");
   }
-  revalidatePath(path);
-  revalidatePath("/dashboard");
-  revalidatePath("/admin/merch");
-  return { slug: listing.slug, outcome: result.outcome };
+  return { slug: listing.slug, outcome };
+}
+
+/**
+ * The safety net for a buyer who paid, closed the tab, and whose webhook never
+ * came (not set up yet, or the site was down longer than Cashfree retries).
+ * When they open the listing again, ask Cashfree about their open checkouts.
+ * Checkouts expire after CHECKOUT_MINUTES, after which Cashfree reports them
+ * EXPIRED and they stop being checked; anything older than two days is left alone.
+ */
+export async function recheckOpenPayments(listingId: number, buyerId: number): Promise<Settled["outcome"] | null> {
+  const open = await db
+    .select({ orderId: schema.payments.providerOrderId })
+    .from(schema.payments)
+    .where(and(
+      eq(schema.payments.listingId, listingId),
+      eq(schema.payments.buyerId, buyerId),
+      eq(schema.payments.status, "created"),
+      gt(schema.payments.createdAt, new Date(Date.now() - 2 * 24 * 60 * 60_000)),
+    ))
+    .orderBy(desc(schema.payments.createdAt))
+    .limit(3);
+  let found: Settled["outcome"] | null = null;
+  for (const { orderId } of open) {
+    try {
+      const settled = await settleCashfreeOrder(orderId, { revalidate: false });
+      if (settled?.outcome === "paid") return "paid";
+      if (settled?.outcome === "refund_due") found = "refund_due";
+    } catch (error) {
+      // Cashfree being unreachable mustn't break the page. The webhook or a later visit settles it.
+      await reportError({ where: "recheckOpenPayments", message: String(error), path: `/listing (order ${orderId})` });
+    }
+  }
+  return found;
 }
 
 async function settledAgain(paymentId: number, slug: string): Promise<Settled> {

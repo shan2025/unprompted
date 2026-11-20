@@ -15,7 +15,7 @@ import { FlagForm } from "@/components/FlagForm";
 import { JsonLd } from "@/components/JsonLd";
 import { ClaimPaymentForm, PaymentLinkForm } from "@/components/PaymentForms";
 import { CashfreeCheckout } from "@/components/CashfreeCheckout";
-import { usesCashfree } from "@/lib/checkout";
+import { recheckOpenPayments, usesCashfree } from "@/lib/checkout";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -68,7 +68,13 @@ async function ListingView({ params, searchParams }: Props) {
   const user = await getCurrentUser();
   const isOwner = user?.id === listing.creatorId;
   const isAdmin = user?.role === "admin";
-  const orderStatus = user ? await getOrderStatus(listing.id, user.id) : null;
+  let orderStatus = user ? await getOrderStatus(listing.id, user.id) : null;
+  // A buyer who paid through Cashfree but whose confirmation never arrived gets it checked now.
+  let rechecked: Awaited<ReturnType<typeof recheckOpenPayments>> = null;
+  if (user && orderStatus !== "paid" && orderStatus !== "demo" && usesCashfree(listing)) {
+    rechecked = await recheckOpenPayments(listing.id, user.id);
+    if (rechecked) orderStatus = await getOrderStatus(listing.id, user.id);
+  }
   const purchased = orderStatus === "paid" || orderStatus === "demo";
   // Buyers keep what they bought, even after a listing leaves the market. Anyone
   // waiting on a seller keeps sight of the listing they've paid for too.
@@ -205,7 +211,7 @@ async function ListingView({ params, searchParams }: Props) {
           }}
         />
       )}
-      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1"} claimed={query.claimed === "1"} payment={typeof query.payment === "string" ? query.payment : undefined} isDemo={listing.isDemo} isOwner={isOwner} owned={purchased} />
+      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1" || rechecked === "paid"} claimed={query.claimed === "1"} payment={rechecked === "refund_due" ? "refund_due" : typeof query.payment === "string" ? query.payment : undefined} isDemo={listing.isDemo} isOwner={isOwner} owned={purchased} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
         <Link href={listing.priceCents > 0 ? "/marketplace" : "/explore"} className="hover:text-ink">
