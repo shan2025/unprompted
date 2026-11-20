@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Onboarding } from "@/components/Onboarding";
 import { getCurrentUser } from "@/lib/auth";
@@ -14,6 +15,6 @@ export default function StartPage() {
 }
 
 async function Start() {
-  const user = await getCurrentUser();
-  return <Onboarding signedIn={Boolean(user)} />;
+  if (await getCurrentUser()) redirect("/journal/new");
+  return <Onboarding signedIn={false} />;
 }

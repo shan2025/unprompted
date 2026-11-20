@@ -81,9 +81,9 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
             <Link href="/explore" className="btn-primary px-8 py-4">
               Explore the work
             </Link>
-            <Link href="/start" className="btn-ghost px-8 py-4">
-              Share or sell yours
-            </Link>
+            <Suspense fallback={null}>
+              <CreatorLinks />
+            </Suspense>
           </div>
         </div>
         <div style={d(300)} className="intro-open">
@@ -184,6 +184,28 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
         </Reveal>
       </section>
       </div>
+    </>
+  );
+}
+
+async function CreatorLinks() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return (
+      <Link href="/start" className="btn-ghost px-8 py-4">
+        Share or sell yours
+      </Link>
+    );
+  }
+
+  return (
+    <>
+      <Link href="/journal/new" className="btn-ghost px-8 py-4">
+        Share your work
+      </Link>
+      <Link href="/sell" className="btn-ghost px-8 py-4">
+        Sell your work
+      </Link>
     </>
   );
 }
