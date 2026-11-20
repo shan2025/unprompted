@@ -77,12 +77,12 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
             Explore writing, art, film, code, handicrafts and anything else people make themselves. Each piece shows how
             much AI was involved, with the reasoning behind the score. If it&apos;s for sale, you can buy it.
           </p>
-          <div style={d(340)} className="intro-rise mt-10 flex flex-wrap gap-3">
+          <div style={d(340)} className="intro-rise mt-10 flex flex-wrap items-center gap-3">
             <Link href="/explore" className="btn-primary px-8 py-4">
               Explore the work
             </Link>
             <Suspense fallback={null}>
-              <CreatorLinks />
+              <ShareWorkLink />
             </Suspense>
           </div>
         </div>
@@ -188,25 +188,12 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
   );
 }
 
-async function CreatorLinks() {
+async function ShareWorkLink() {
   const user = await getCurrentUser();
-  if (!user) {
-    return (
-      <Link href="/start" className="btn-ghost px-8 py-4">
-        Share or sell yours
-      </Link>
-    );
-  }
-
   return (
-    <>
-      <Link href="/journal/new" className="btn-ghost px-8 py-4">
-        Share your work
-      </Link>
-      <Link href="/sell" className="btn-ghost px-8 py-4">
-        Sell your work
-      </Link>
-    </>
+    <Link href={user ? "/journal/new" : "/start"} className="btn-ghost px-8 py-4">
+      Share your work
+    </Link>
   );
 }
 
