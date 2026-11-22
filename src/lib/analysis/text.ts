@@ -1,3 +1,4 @@
+import { groupEssaySpans, readEssay, recurringArticleSignals } from "./essay";
 import {
   ESSAY_FORMULAS,
   FORMULAS,
@@ -25,7 +26,7 @@ export type ContentKind = "prose" | "poetry" | "code";
 export interface Segment {
   start: number;
   end: number;
-  /** Probability (0-1) that this passage is machine-generated. */
+  /** Strength (0-1) of the style patterns in this passage. */
   ai: number;
   signals: string[];
 }
@@ -60,33 +61,46 @@ export interface AnalyzeOptions {
   essay?: boolean;
 }
 
-export function analyzeText(text: string, kind: ContentKind, options: AnalyzeOptions = {}): TextAnalysis {
+export function analyzeText(source: string, kind: ContentKind, options: AnalyzeOptions = {}): TextAnalysis {
+  const layout = options.essay && kind === "prose" ? readEssay(source) : null;
+  const text = layout?.text ?? source;
   const words = countWords(text);
   if (words === 0) {
     return { kind, aiShare: 0, confidence: 0, words: 0, segments: [], signals: [] };
   }
 
-  const spans = kind === "code" ? codeBlocks(text) : kind === "poetry" ? stanzas(text) : proseChunks(text);
+  const chunks = kind === "code" ? codeBlocks(text) : kind === "poetry" ? stanzas(text) : proseChunks(text);
+  const spans = layout?.outlined ? groupEssaySpans(chunks, layout.breaks, (s) => wordsIn(text, s)) : chunks;
   const docCode = kind === "code" ? codeDocFeatures(text) : null;
   const docCv = kind === "prose" ? lengthCv(spans.flatMap((s) => sentences(text, s)).map((s) => wordsIn(text, s))) : null;
-  const essay = options.essay && kind === "prose" ? { evenParagraphs: evenParagraphs(text) } : null;
+  const essay = layout ? { evenParagraphs: evenParagraphs(text), recurring: recurringArticleSignals(text, spans, words) } : null;
 
-  const segments = spans.map((span) => {
+  const segments = spans.map((span, i) => {
     const scored =
       kind === "code"
         ? scoreCode(text.slice(span.start, span.end), docCode)
         : kind === "poetry"
           ? scorePoetry(text.slice(span.start, span.end))
-          : scoreProse(text, span, docCv, essay);
+          : scoreProse(text, span, docCv, essay?.evenParagraphs, essay?.recurring[i]);
     return { ...span, ai: round(scored.p), signals: scored.signals };
   });
 
   let weighted = 0;
   let total = 0;
   for (const seg of segments) {
-    const len = seg.end - seg.start;
+    const len = layout ? wordsIn(text, seg) : seg.end - seg.start;
     weighted += len * softClass(seg.ai);
     total += len;
+  }
+  if (layout) {
+    // Quote the original list labels and emphasis with their prose. Other
+    // gaps (such as section headings) are displayed separately by the checker.
+    let previousEnd = 0;
+    for (const segment of segments) {
+      while (segment.start > previousEnd && /[ \t]/.test(text[segment.start - 1])) segment.start--;
+      while (segment.end < text.length && text[segment.end] === " " && /[*_]/.test(source[segment.end])) segment.end++;
+      previousEnd = segment.end;
+    }
   }
 
   return {
@@ -95,7 +109,7 @@ export function analyzeText(text: string, kind: ContentKind, options: AnalyzeOpt
     confidence: round(lengthConfidence(words, kind) * (MAX_CONFIDENCE[kind] / 0.55)),
     words,
     segments,
-    signals: topSignals(segments),
+    signals: topSignals(segments, options.essay),
   };
 }
 
@@ -128,7 +142,7 @@ export function combineAnalyses(parts: TextAnalysis[]): { aiShare: number; confi
 
 // ---------- prose ----------
 
-function scoreProse(text: string, span: Span, docCv: number | null, essay: { evenParagraphs: boolean } | null = null) {
+function scoreProse(text: string, span: Span, docCv: number | null, evenParas?: boolean, recurring: string[] = []) {
   const body = text.slice(span.start, span.end);
   const lower = body.toLowerCase();
   const sents = sentences(text, span);
@@ -181,10 +195,13 @@ function scoreProse(text: string, span: Span, docCv: number | null, essay: { eve
   const lowerStarts = sents.filter((s) => /^[a-z]/.test(text.slice(s.start, s.end))).length;
   z -= 0.5 * Math.min(lowerStarts, 2);
 
-  if (essay) {
-    const built = essaySignals(text, body, sents, nWords, essay.evenParagraphs, formulas.length > 0);
+  if (evenParas !== undefined) {
+    const built = essaySignals(text, body, sents, nWords, evenParas, formulas.length > 0);
     z += built.z;
     signals.push(...built.signals);
+    // Only co-occurring local habits that recur in other passages reach this point.
+    z += 0.85 * Math.min(recurring.length, 3);
+    signals.push(...recurring);
   }
 
   return { p: sigmoid(z), signals };
@@ -509,7 +526,7 @@ function phraseHits(lower: string) {
   return { weight, found };
 }
 
-function countWords(s: string) {
+export function countWords(s: string) {
   return (s.match(/[A-Za-z0-9À-ɏ']+/g) ?? []).length;
 }
 
@@ -546,10 +563,11 @@ function rhyme(a: string, b: string) {
   return a.slice(-n) === b.slice(-n);
 }
 
-function topSignals(segments: Segment[]) {
+function topSignals(segments: Segment[], patternsOnly = false) {
   const counts = new Map<string, number>();
   for (const seg of segments) {
     for (const s of seg.signals) {
+      if (patternsOnly && s.endsWith("(human-typical)")) continue;
       const key = s.replace(/ \(.*\)$/, "");
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }

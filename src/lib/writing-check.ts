@@ -32,12 +32,7 @@ export function isStrong(segment: Segment) {
   return segment.ai >= STRONG;
 }
 
-// Where the lines sit, from scoring 47 known human texts (essays, old and
-// modern, and encyclopaedia articles; 506 passages) and 10 known AI essays (30
-// passages) with the essay check on: 2% of human passages and 70% of AI
-// passages reach the clear line; 3% of human and 17% of AI passages fall in the
-// band just under it. No human text scored above 5% overall. It is a small
-// sample, and most of the AI essays came from one model.
+// A narrow band below the clear-pattern threshold.
 const MILD = 0.25;
 
 /** Some habits, short of a clear flag. Shown, so a result of "no clear patterns" never hides what was found. */
@@ -52,9 +47,7 @@ export function reasonsFlagged(segment: Segment) {
 
 /**
  * How much of the text shows clear signs of AI writing, as a whole percent. It
- * is the same figure a post's score card reports as "Automated scan: N% looks
- * machine-made": passages weighted by length and by how strong their patterns
- * are. It estimates style, not authorship.
+ * weights passages by length and by how strong their patterns are.
  */
 export function patternPercent(analysis: { aiShare: number }) {
   return Math.round(analysis.aiShare * 100);
@@ -68,8 +61,8 @@ export function patternPercent(analysis: { aiShare: number }) {
 export type PatternLevel = "none" | "mild" | "some" | "many" | "most";
 
 // Above the bottom step these follow the site's tiers (6–20, 21–50, 51+).
-export function patternLevel(percent: number, mildPassages: number): PatternLevel {
-  if (percent <= 5) return mildPassages > 0 ? "mild" : "none";
+export function patternLevel(percent: number, mildPassages: number, clearPassages = 0): PatternLevel {
+  if (percent === 0 && clearPassages === 0) return mildPassages > 0 ? "mild" : "none";
   if (percent <= 20) return "some";
   if (percent <= 50) return "many";
   return "most";
