@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { ChatIcon } from "./ChatIcon";
 
 // Phones get the main sections as a tab bar along the bottom, within thumb
 // reach, the way social apps do it. Tablets and up keep them in the header.
@@ -16,7 +15,6 @@ const TABS: Tab[] = [
   { href: "/journal/new", label: "Share", icon: () => <PlusIcon /> },
   { href: "/marketplace", label: "Shop", icon: (a) => <BagIcon filled={a} /> },
   { href: "/journal", label: "Journal", icon: (a) => <BookIcon filled={a} /> },
-  { href: "/chat", label: "Chat", icon: (a) => <ChatIcon className="h-6 w-6" filled={a} /> },
 ];
 
 export function TabBar() {
