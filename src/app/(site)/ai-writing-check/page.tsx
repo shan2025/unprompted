@@ -116,9 +116,8 @@ export default function WritingCheckPage() {
         {TITLE}
       </h1>
       <p className="intro-rise mt-5 text-lg leading-relaxed text-ink-soft" style={d(180)}>
-        Paste your essay, assignment or article and see what percentage of it shows the obvious signs of AI writing,
-        which passages stand out, and why. It is free, needs no account, and runs in your browser, so nothing you paste
-        is uploaded.
+        Paste your essay, assignment or article to see which passages show patterns common in AI writing and what
+        triggered each highlight. The check is free and runs in your browser.
       </p>
 
       <div className="intro-rise mt-8" style={d(260)}>
@@ -161,6 +160,11 @@ export default function WritingCheckPage() {
         </li>
         <li>
           <strong className="text-ink">Matching paragraphs</strong>: three or more, all nearly the same length.
+        </li>
+        <li>
+          <strong className="text-ink">Patterns across an article.</strong> The check groups short blocks within a
+          section and looks for combinations of broad claims, potential benefits, example lead-ins and lists that
+          recur elsewhere in the prose. Headings and table rows are excluded from the prose count.
         </li>
         <li>
           <strong className="text-ink">In poems</strong>: stock imagery, very uniform lines and strict rhyming couplets.

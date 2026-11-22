@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { analyzeText } from "../src/lib/analysis/text";
 import { checkWriting, EXAMPLE_TEXT, isFlagged, isMild, isStrong, patternLevel, patternPercent, reasonsFlagged } from "../src/lib/writing-check";
@@ -53,13 +54,56 @@ describe("the free writing check", () => {
   it("has no clean level: a low score is either no obvious patterns or mild ones", () => {
     expect(patternLevel(0, 0)).toBe("none");
     expect(patternLevel(0, 2)).toBe("mild");
-    expect(patternLevel(5, 1)).toBe("mild");
+    expect(patternLevel(3, 0, 1)).toBe("some");
+    expect(patternLevel(0, 1, 1)).toBe("some");
   });
 
   it("never lists a human-typical habit as a reason for a flag", () => {
     for (const segment of segments) {
       expect(reasonsFlagged(segment).some((reason) => reason.includes("human-typical"))).toBe(false);
     }
+  });
+});
+
+describe("structured articles", () => {
+  // Synthetic explainer with the heading, list, and table layout of the reported false negative.
+  const article = readFileSync(new URL("./fixtures/tree-canopies.md", import.meta.url), "utf8").trim();
+  const original = checkWriting(article, "prose");
+
+  it("finds recurring prose patterns in multiple sections of an explainer", () => {
+    expect(patternPercent(original)).toBeGreaterThan(50);
+    expect(original.segments.filter(isFlagged).length).toBeGreaterThan(3);
+    expect(original.segments.flatMap(reasonsFlagged)).toContain("Repeated claims about potential benefits");
+    expect(original.signals).not.toContain("Varied, uneven sentence rhythm");
+  });
+
+  it("reads the same article consistently across Markdown, plain headings and Windows line endings", () => {
+    const plain = article.replace(/^#+ +/gm, "").replace(/\*/g, "");
+    for (const paste of [plain, article.replace(/\r?\n/g, "\r\n")]) {
+      const checked = checkWriting(paste, "prose");
+      expect(patternPercent(checked)).toBe(patternPercent(original));
+      expect(checked.words).toBe(original.words);
+      for (const [i, span] of checked.segments.entries()) {
+        expect(span.start).toBeGreaterThanOrEqual(checked.segments[i - 1]?.end ?? 0);
+        expect(paste.slice(span.start, span.end)).not.toMatch(/^#|\| Season/);
+      }
+    }
+  });
+
+  it("leaves unrelated prose in a mixed article unflagged", () => {
+    const mixed = article + "\n\n## Field notes\n\n" + CASUAL_HUMAN;
+    const checked = checkWriting(mixed, "prose");
+    const notes = checked.segments.filter((s) => s.start >= mixed.indexOf(CASUAL_HUMAN));
+    expect(notes.length).toBeGreaterThan(0);
+    expect(notes.some(isFlagged)).toBe(false);
+    expect(patternPercent(checked)).toBeLessThan(patternPercent(original));
+  });
+
+  it("does not score a formal outline, numbered captions or a table as prose", () => {
+    const outline = "# Overview\n\n## Contents\n\n**1. Materials**\n\n**2. Methods**\n\n| Name | Result |\n| --- | --- |\n| Trial | 42 |";
+    expect(checkWriting(outline, "prose")).toMatchObject({ words: 0, aiShare: 0, segments: [] });
+    const notes = checkWriting(outline + "\n\n## Journal\n\n" + THOREAU, "prose");
+    expect(patternPercent(notes)).toBe(0);
   });
 });
 

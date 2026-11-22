@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import type { TextAnalysis } from "@/lib/analysis/text";
+import { countWords, type Segment, type TextAnalysis } from "@/lib/analysis/text";
 import { plural } from "@/lib/format";
 import {
   checkWriting,
@@ -41,12 +41,6 @@ const LEVELS: Record<PatternLevel, { label: string; text: string; bar: string }>
   many: { label: "Many clear patterns", text: "text-assist", bar: "bg-assist" },
   most: { label: "Mostly clear patterns", text: "text-heavy", bar: "bg-heavy" },
 };
-
-/** Words as a word processor counts them, so the number under the box and the one on the result card agree. */
-function countWords(text: string) {
-  const trimmed = text.trim();
-  return trimmed ? trimmed.split(/\s+/).length : 0;
-}
 
 // Stagger delay for the card's entrance animations (.si-* in globals.css).
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as React.CSSProperties;
@@ -118,7 +112,7 @@ export function WritingCheck() {
           <p id="writing-note">
             Checked in your browser. Your text is not uploaded, stored or used for anything. Up to {MAX_CHECK_CHARS.toLocaleString("en")} characters.
           </p>
-          <p className="tabular-nums">{plural(words, "word")}</p>
+          <p className="tabular-nums">{plural(words, "word")} pasted</p>
         </div>
 
         <fieldset className="mt-5">
@@ -138,7 +132,7 @@ export function WritingCheck() {
 
         {empty && (
           <p role="alert" className="mt-4 text-sm font-medium text-heavy">
-            Paste some writing first.
+            Add a passage of writing to check.
           </p>
         )}
 
@@ -172,8 +166,8 @@ function headline({ analysis }: Result) {
   const mild = analysis.segments.filter(isMild).length;
   if (flagged > 0) {
     return total === 1
-      ? "This passage shows clear signs of AI writing."
-      : `${flagged} of your ${total} passages ${flagged === 1 ? "shows" : "show"} clear signs of AI writing.`;
+      ? "This passage shows a clear writing pattern."
+      : `${flagged} of ${total} passages ${flagged === 1 ? "shows" : "show"} clear writing patterns.`;
   }
   if (mild > 0) {
     return total === 1
@@ -187,14 +181,14 @@ function headline({ analysis }: Result) {
 
 // The headline number, formed the way the home page's example score card is:
 // the percentage counts up, the label pops in, the bar grows and the rows rise.
-function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: number }) {
+function PatternCard({ analysis }: { analysis: TextAnalysis }) {
   const percent = patternPercent(analysis);
   const flagged = analysis.segments.filter(isFlagged).length;
   const mild = analysis.segments.filter(isMild).length;
-  const level = LEVELS[patternLevel(percent, mild)];
-  const common = analysis.signals.filter((signal) => !signal.endsWith("(human-typical)"));
+  const level = LEVELS[patternLevel(percent, mild, flagged)];
+  const common = analysis.signals;
   const rows = [
-    { label: "Words checked", value: words.toLocaleString("en") },
+    { label: "Words checked", value: analysis.words.toLocaleString("en") },
     { label: "Passages checked", value: analysis.segments.length },
     { label: "Passages with clear patterns", value: flagged, marked: flagged > 0 },
     { label: "Passages with mild patterns", value: mild, marked: mild > 0 },
@@ -205,7 +199,7 @@ function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: numbe
   return (
     <div className="card mt-3 p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <span className="eyebrow">Obvious AI patterns</span>
+        <span className="eyebrow">AI writing patterns</span>
         <span className="si-pop" style={d(900)}>
           <span className={`inline-flex items-center border border-current px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${level.text}`}>
             {level.label}
@@ -217,7 +211,7 @@ function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: numbe
         <span className={`font-display text-6xl font-light tracking-tight tabular-nums ${level.text}`}>
           <CountUp to={percent} delay={300} duration={1100} />%
         </span>
-        <span className="text-sm text-ink-soft">of your text shows clear signs of AI writing</span>
+        <span className="text-sm text-ink-soft">weighted pattern coverage</span>
       </div>
 
       <div className="mt-4 h-1.5 bg-field" aria-hidden="true">
@@ -225,8 +219,7 @@ function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: numbe
       </div>
 
       <p className="mt-3 text-xs leading-relaxed text-muted">
-        This check looks for a short list of obvious habits. It is not a trained detector: tools such as Turnitin, GPTZero and QuillBot judge the whole
-        text, and can score it very differently from this and from each other.
+        Longer passages with stronger patterns count for more. The percentage measures style. Authorship can only be assessed with other evidence.
       </p>
 
       {low && (
@@ -258,17 +251,50 @@ function PatternCard({ analysis, words }: { analysis: TextAnalysis; words: numbe
   );
 }
 
+function CheckedPassage({ segment, number, kind, piece }: { segment: Segment; number: number; kind: Kind; piece: string }) {
+  const body = `whitespace-pre-wrap break-words leading-relaxed text-ink ${kind === "poetry" ? "" : "text-[16px]"}`;
+  const mild = isMild(segment);
+  if (!isFlagged(segment) && !mild) return <p className={`px-4 ${body}`}>{piece}</p>;
+  const reasons = reasonsFlagged(segment);
+  return (
+    <div
+      className={`border-l-2 px-4 py-3 ${mild ? "border-line bg-field/60" : "border-assist"}`}
+      style={mild ? undefined : { backgroundColor: isStrong(segment) ? "var(--mark)" : "color-mix(in srgb, var(--mark) 45%, transparent)" }}
+    >
+      <p className={`text-[11px] font-semibold uppercase tracking-[0.12em] ${mild ? "text-ink-soft" : "text-assist"}`}>
+        Passage {number} · {mild ? "mild pattern" : isStrong(segment) ? "strong pattern" : "clear pattern"}
+      </p>
+      <p className={`mt-2 ${body}`}>{piece}</p>
+      <p className="mt-3 text-sm font-medium text-ink">{mild ? "What it picked up" : "Why it stands out"}</p>
+      {reasons.length > 0 && (
+        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-ink-soft">
+          {reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      )}
+      {(mild || reasons.length === 0) && (
+        <p className="mt-1 text-sm text-ink-soft">
+          {reasons.length > 0 ? "Plus small" : "Small"} habits adding up, such as fairly even sentence lengths or lists of three. None is strong on
+          its own.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Results({ result }: { result: Result }) {
   const { text, kind, analysis } = result;
   const segments = [...analysis.segments].sort((a, b) => a.start - b.start);
   const flagged = segments.filter(isFlagged).length;
+  const trailing = text.slice(segments.at(-1)?.end ?? 0).trim();
   const short = analysis.words < MIN_CHECK_WORDS;
 
   return (
     <section className="mt-10">
       <p className="eyebrow">Result</p>
       {/* Keyed by the check, so the card forms again each time. */}
-      <PatternCard key={result.run} analysis={analysis} words={countWords(text)} />
+      <PatternCard key={result.run} analysis={analysis} />
       <h2 className="mt-8 text-2xl font-light leading-tight sm:text-3xl">{headline(result)}</h2>
       <p className="mt-3 leading-relaxed text-ink-soft">
         {flagged === 0
@@ -283,46 +309,18 @@ function Results({ result }: { result: Result }) {
 
       <ol className="mt-8 space-y-4">
         {segments.map((segment, i) => {
-          const piece = text.slice(segment.start, segment.end);
-          const reasons = reasonsFlagged(segment);
-          const body = `whitespace-pre-wrap break-words leading-relaxed text-ink ${kind === "poetry" ? "" : "text-[16px]"}`;
-          if (!isFlagged(segment) && !isMild(segment)) {
-            return (
-              <li key={segment.start} className="px-4">
-                <p className={body}>{piece}</p>
-              </li>
-            );
-          }
-          // A mild passage gets the outline without the highlight, so it reads as "worth a look", not as a flag.
-          const mild = isMild(segment);
+          const preceding = text.slice(segments[i - 1]?.end ?? 0, segment.start).trim();
           return (
-            <li
-              key={segment.start}
-              className={`border-l-2 px-4 py-3 ${mild ? "border-line bg-field/60" : "border-assist"}`}
-              style={mild ? undefined : { backgroundColor: isStrong(segment) ? "var(--mark)" : "color-mix(in srgb, var(--mark) 45%, transparent)" }}
-            >
-              <p className={`text-[11px] font-semibold uppercase tracking-[0.12em] ${mild ? "text-ink-soft" : "text-assist"}`}>
-                Passage {i + 1} · {mild ? "mild pattern" : isStrong(segment) ? "strong pattern" : "clear pattern"}
-              </p>
-              <p className={`mt-2 ${body}`}>{piece}</p>
-              <p className="mt-3 text-sm font-medium text-ink">{mild ? "What it picked up" : "Why it stands out"}</p>
-              {reasons.length > 0 && (
-                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-ink-soft">
-                  {reasons.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                </ul>
-              )}
-              {(mild || reasons.length === 0) && (
-                <p className="mt-1 text-sm text-ink-soft">
-                  {reasons.length > 0 ? "Plus small" : "Small"} habits adding up, such as fairly even sentence lengths or lists of three. None is strong on
-                  its own.
-                </p>
-              )}
+            <li key={segment.start}>
+              {preceding && <p className="mb-3 whitespace-pre-wrap break-words px-4 text-ink-soft">{preceding}</p>}
+              <CheckedPassage segment={segment} number={i + 1} kind={kind} piece={text.slice(segment.start, segment.end)} />
             </li>
           );
         })}
       </ol>
+      {trailing && (
+        <p className="mt-4 whitespace-pre-wrap break-words px-4 text-ink-soft">{trailing}</p>
+      )}
 
       <div className="mt-10 bg-ink p-8 text-paper">
         <p className="font-display text-2xl font-normal">Wrote it yourself? Show how.</p>
