@@ -166,6 +166,14 @@ Apply the new migration with `npm run db:migrate` before starting the updated ap
 - Creators can edit unsold listings and withdraw published listings. Listings with pending, paid, demo or refunded orders retain their original work and terms; create a new listing for a new version. Withdrawal leaves existing orders and buyer access intact.
 - Admins record evidence reviews on the work detail page after opening the sources, confirming relevance and writing a review note. Reviews do not change numeric scores or claim cryptographic verification.
 
+### Qikink company merchandise
+
+Use the normal Sell form and choose a Merchandise product type. In Qikink My Products, prepare the print design and get the SKU for each purchasable size or colour. In the server environment, set `QIKINK_CATALOG` to JSON mapping the Unprompters listing slug to its variants, for example `{"company-tee":{"Black / M":"YOUR-QIKINK-SKU"}}`. Only the designated company owner's mapped listings use shipping checkout.
+
+Set `QIKINK_CLIENT_ID`, `QIKINK_CLIENT_SECRET` and `QIKINK_ENV` alongside the existing Cashfree credentials. Start with both providers in `sandbox` and use a product SKU available in that Qikink environment. For production, configure the production credentials and SKUs for both providers. Restart or redeploy after changing server settings.
+
+Checkout supports prepaid INR orders for one item delivered in India. Once Cashfree confirms the amount and currency, the app sends the order to Qikink using the reference `UNP<payment id>`. The owner's **Dashboard → My merch analytics → Recent Qikink orders** shows the handoff. For an uncertain submission, look up that exact reference in Qikink before retrying. A successful handoff records submission to Qikink, not shipment by a courier.
+
 ### Database regression checks
 
 `npm test` runs the unit suite. The PostgreSQL integration suite additionally needs `TEST_DATABASE_URL` pointing to an empty, disposable database named `unprompted_publishing_test_<timestamp>` on localhost. It runs the checked-in migrations and creates only test data. Run `npx vitest run tests/publishing.integration.test.ts` with that environment variable. Never point it at a production database.

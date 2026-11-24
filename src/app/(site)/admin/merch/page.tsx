@@ -6,6 +6,9 @@ import { requireUser } from "@/lib/auth";
 import { getMerchSales } from "@/lib/data";
 import { formatMoney } from "@/lib/format";
 import { isCompanyOwner } from "@/lib/merch";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { db, schema } from "@/lib/db";
+import { reviewShipment } from "@/app/actions/fulfillment";
 
 export const metadata: Metadata = { title: "My merch analytics", robots: { index: false } };
 
@@ -24,6 +27,12 @@ async function MerchReport() {
   const user = await requireUser("/admin/merch");
   if (!isCompanyOwner(user)) notFound();
   const report = await getMerchSales(user.id);
+  const p = schema.payments;
+  const shipments = await db.select({ id: p.id, status: p.fulfillment, title: schema.listings.title,
+    stale: sql<boolean>`(${p.shipment}->>'claimedAt')::bigint < extract(epoch from now() - interval '10 minutes') * 1000` }).from(p)
+    .innerJoin(schema.listings, eq(schema.listings.id, p.listingId))
+    .where(and(eq(schema.listings.creatorId, user.id), eq(p.status, "paid"), isNotNull(p.fulfillment)))
+    .orderBy(desc(p.id)).limit(100);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -62,7 +71,23 @@ async function MerchReport() {
           <Link href="/sell" className="link">List your merch</Link>
         </p>
       )}
-      <p className="mt-5 text-sm text-muted">Revenue uses the order amount in its original currency. A sale counts when you confirm the buyer’s payment.</p>
+      <p className="mt-5 text-sm text-muted">Revenue uses the order amount in its original currency. A sale counts once payment is confirmed.</p>
+      {shipments.length > 0 && <section className="mt-8">
+        <h2 className="text-xl font-medium">Recent Qikink orders</h2>
+        {shipments.map(s => <div key={s.id} className="border-b border-line py-3">
+          <p>{s.title} · UNP{s.id}</p>
+          <p className="text-sm text-muted">{{ waiting: "Waiting to send", submitting: "Submission in progress", sent: "Sent to Qikink", review: "Check this order in Qikink" }[s.status!]}</p>
+          {s.status !== "sent" && <form action={reviewShipment} className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+            <input type="hidden" name="payment" value={s.id} />
+            {s.status === "waiting" ? <button className="link" name="decision" value="send">Send order</button> : <>
+              <label><input type="checkbox" name="checked" required /> I checked UNP{s.id} in Qikink.</label>
+              <button className="link" name="decision" value="found">Already in Qikink</button>
+              {(s.status === "review" || s.stale) &&
+                <button className="link" name="decision" value="missing">Confirmed absent · retry</button>}
+            </>}
+          </form>}
+        </div>)}
+      </section>}
     </div>
   );
 }

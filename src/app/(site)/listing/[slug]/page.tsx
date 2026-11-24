@@ -15,6 +15,7 @@ import { FlagForm } from "@/components/FlagForm";
 import { JsonLd } from "@/components/JsonLd";
 import { ClaimPaymentForm, PaymentLinkForm } from "@/components/PaymentForms";
 import { CashfreeCheckout } from "@/components/CashfreeCheckout";
+import { fulfillmentVariants } from "@/lib/qikink";
 import { recheckOpenPayments, usesCashfree } from "@/lib/checkout";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
@@ -86,6 +87,7 @@ async function ListingView({ params, searchParams }: Props) {
   ]);
   const instantBuy = listing.priceCents === 0 || listing.isDemo;
   const cashfree = usesCashfree(listing);
+  const variants = listing.priceCents > 0 ? [...fulfillmentVariants(listing).keys()] : [];
   const upi = listing.paymentUrl && upiId(listing.paymentUrl);
   const canSeeDeliverable = isOwner || purchased || isAdmin;
   const showBuyBar = listing.status === "published" && !isOwner && !purchased && orderStatus !== "pending";
@@ -119,7 +121,7 @@ async function ListingView({ params, searchParams }: Props) {
             ) : listing.priceCents > 0 && !listing.isDemo && <PaymentLinkForm slug={listing.slug} current={listing.paymentUrl} />}
           </>
         ) : purchased ? (
-          <p className="rounded-lg bg-paper px-4 py-3 text-sm font-semibold text-human">You own this. It&apos;s unlocked below.</p>
+          <p className="rounded-lg bg-paper px-4 py-3 text-sm font-semibold text-human">{variants.length ? "Payment received. Thank you for your order." : "You own this. It's unlocked below."}</p>
         ) : orderStatus === "pending" ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">
             <strong className="text-ink">Waiting for {creator.name}.</strong> They&apos;re checking your payment, and the work unlocks here as soon as they confirm it.
@@ -135,13 +137,15 @@ async function ListingView({ params, searchParams }: Props) {
             </SubmitButton>
             {listing.priceCents > 0 && <p className="mt-2 text-center text-xs text-muted">Demo listing: no money changes hands.</p>}
           </form>
+        ) : variants.length && !cashfree ? (
+          <p className="text-sm text-muted">Shipping checkout is currently unavailable.</p>
         ) : cashfree ? (
           !user ? (
             <Link href={`/login?next=${encodeURIComponent(`/listing/${listing.slug}`)}`} className="btn-accent block w-full py-3 text-center text-[15px]">
               Log in to buy
             </Link>
           ) : (
-            <CashfreeCheckout slug={listing.slug} label={`Pay ${formatPrice(listing.priceCents, listing.currency)}`} askPhone={!user.phone} />
+            <CashfreeCheckout slug={listing.slug} label={`Pay ${formatPrice(listing.priceCents, listing.currency)}`} askPhone={!user.phone || Boolean(variants.length && !user.phone.startsWith("+91"))} variants={variants} askEmail={!user.email} />
           )
         ) : !listing.paymentUrl ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">The seller hasn&apos;t added a way to pay yet.</p>
@@ -277,14 +281,14 @@ async function ListingView({ params, searchParams }: Props) {
                     {listing.locked}
                   </div>
                 ) : (
-                  <p className="text-ink-soft">{physical ? "Contact the seller to arrange delivery." : "The preview above is the full work."}</p>
+                  <p className="text-ink-soft">{variants.length ? "Qikink ships to the address entered at checkout." : physical ? "Contact the seller to arrange delivery." : "The preview above is the full work."}</p>
                 )}
               </div>
             ) : (
               <div className="card mt-4 flex flex-col items-start gap-3 border-dashed p-6 sm:flex-row sm:items-center">
                 <LockIcon />
                 <p className="flex-1 text-ink-soft">
-                  {physical ? (listing.locked ? "The seller’s delivery instructions will appear here after purchase." : "Contact the seller for shipping or pickup details.") : listing.locked
+                  {variants.length ? "Enter your delivery address at checkout. Qikink prints and ships this item." : physical ? (listing.locked ? "The seller’s delivery instructions will appear here after purchase." : "Contact the seller for shipping or pickup details.") : listing.locked
                     ? "The full work unlocks after purchase. It was scanned along with the preview, so the score covers it too."
                     : "The preview above is the full work. Buying supports the creator and grants the license below."}
                 </p>

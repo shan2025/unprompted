@@ -8,6 +8,7 @@ import { isAutoEvidence } from "@/lib/post-form";
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { fulfillmentVariants } from "@/lib/qikink";
 import { redirect } from "next/navigation";
 import { assess, scoreColumns } from "@/lib/assess";
 import { getCurrentUser } from "@/lib/auth";
@@ -287,6 +288,7 @@ export async function claimPayment(_prev: PaymentState, fd: FormData): Promise<P
     if (!listing || listing.status !== "published" || listing.creatorId === user.id || !listing.paymentUrl) {
       return { message: "This listing isn't available to buy." };
     }
+    if (fulfillmentVariants(listing).size) return { message: "Use this product’s shipping checkout." };
     if (listing.license === "exclusive") {
       // A claim the seller hasn't answered in CLAIM_HOLD_DAYS stops holding the listing.
       const [other] = await tx

@@ -26,7 +26,7 @@ function loadSdk(): Promise<CashfreeSdk> {
   });
 }
 
-export function CashfreeCheckout({ slug, label, askPhone }: { slug: string; label: string; askPhone: boolean }) {
+export function CashfreeCheckout({ slug, label, askPhone, variants = [], askEmail = false }: { slug: string; label: string; askPhone: boolean; variants?: string[]; askEmail?: boolean }) {
   const [state, action, pending] = useActionState(startCheckout, null);
   // The checkout session that couldn't be opened, if any. Any other session is still opening.
   const [failed, setFailed] = useState<string | null>(null);
@@ -54,6 +54,26 @@ export function CashfreeCheckout({ slug, label, askPhone }: { slug: string; labe
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="slug" value={slug} />
+      {variants.length > 0 && <fieldset className="space-y-2">
+        <legend className="mb-2 font-medium">Delivery in India</legend>
+        <label className="block text-sm">Product option
+          <select name="variant" required className="field">
+            {variants.map(label => <option key={label}>{label}</option>)}
+          </select>
+        </label>
+        {([
+          ["first_name", "First name", "given-name"], ["last_name", "Last name", "family-name"],
+          ["address1", "Street address, building and flat", "street-address"], ["city", "City", "address-level2"],
+          ["province", "State or union territory", "address-level1"], ["zip", "PIN code", "postal-code"],
+        ] as const).map(([name, title, completion]) => (
+          <label key={name} className="block text-sm">{title}
+            <input className="field" required name={name} autoComplete={`shipping ${completion}`} maxLength={name === "zip" ? 6 : 200}
+              inputMode={name === "zip" ? "numeric" : "text"} pattern={name === "zip" ? "[1-9][0-9]{5}" : undefined} />
+          </label>
+        ))}
+        {askEmail && <label className="block text-sm">Delivery email<input type="email" name="delivery_email" className="field" required autoComplete="email" maxLength={254} /></label>}
+        <p className="hint">Qikink uses your delivery details to print and ship this item.</p>
+      </fieldset>}
       {showPhone && (
         <label className="block text-sm font-semibold">
           Mobile number
@@ -65,7 +85,7 @@ export function CashfreeCheckout({ slug, label, askPhone }: { slug: string; labe
         {busy ? "Opening secure checkout…" : label}
       </button>
       {message && <p role="alert" className="text-sm font-medium text-heavy">{message}</p>}
-      <p className="text-xs leading-relaxed text-muted">Pay by UPI, card, net banking or wallet on Cashfree&apos;s secure checkout. The work unlocks here as soon as the payment goes through.</p>
+      <p className="text-xs leading-relaxed text-muted">Pay by UPI, card, net banking or wallet on Cashfree&apos;s secure checkout.{!variants.length && " The work unlocks here as soon as the payment goes through."}</p>
     </form>
   );
 }

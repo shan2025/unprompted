@@ -12,6 +12,7 @@ import { siteUrl } from "@/lib/format";
 import { parsePhone } from "@/lib/phone";
 import { withinLimit } from "@/lib/rate-limit";
 import { reportError } from "@/lib/report-error";
+import { fulfillmentVariants, prepareShipment } from "@/lib/qikink";
 
 export type CheckoutState =
   | { message?: string; needsPhone?: boolean; session?: undefined }
@@ -25,7 +26,7 @@ export async function startCheckout(_prev: CheckoutState, fd: FormData): Promise
 
   // Cashfree needs a phone number for every order.
   const typed = String(fd.get("phone") ?? "").trim();
-  const phone = user.phone ?? (typed ? parsePhone(typed) : null);
+  const phone = typed ? parsePhone(typed) : user.phone;
   if (!phone) return { needsPhone: true, message: typed ? "Enter a valid mobile number, with the country code if it's outside India." : undefined };
 
   if (!(await withinLimit(`checkout:user:${user.id}`, 20, 60 * 60))) {
@@ -53,9 +54,13 @@ export async function startCheckout(_prev: CheckoutState, fd: FormData): Promise
       )).limit(1);
       if (other) return { message: `Someone else is paying for this exclusive listing right now. If they don't finish, it opens again within ${CHECKOUT_MINUTES} minutes.` };
     }
+    const variants = fulfillmentVariants(listing);
+    const shipment = variants.size ? prepareShipment(variants, fd, phone, user.email, listing.currency) : null;
+    if (typeof shipment === "string") return { message: shipment };
     await tx.insert(schema.payments).values({
       provider: "cashfree", providerOrderId: orderId, listingId: listing.id, buyerId: user.id,
       amountCents: listing.priceCents, currency: listing.currency,
+      shipment, fulfillment: shipment ? "waiting" : null,
     });
     return { listing };
   });
@@ -80,7 +85,8 @@ export async function startCheckout(_prev: CheckoutState, fd: FormData): Promise
     });
     return { session: { id: order.payment_session_id, mode: cashfreeMode() } };
   } catch (error) {
-    await db.update(schema.payments).set({ status: "failed" }).where(eq(schema.payments.providerOrderId, orderId));
+    await db.update(schema.payments).set({ status: "failed", fulfillment: null, shipment: null })
+      .where(and(eq(schema.payments.providerOrderId, orderId), eq(schema.payments.status, "created")));
     await reportError({ where: "startCheckout", message: String(error), path: `/listing/${slug}` });
     return { message: "We couldn't open the payment page. Try again in a minute." };
   }

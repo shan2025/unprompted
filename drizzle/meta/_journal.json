@@ -162,6 +162,13 @@
       "when": 1795164866783,
       "tag": "0022_cashfree_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795173482173,
+      "tag": "0023_qikink_fulfillment",
+      "breakpoints": true
     }
   ]
 }

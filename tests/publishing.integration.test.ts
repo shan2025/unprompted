@@ -36,6 +36,9 @@ import { createListing, updateListing, withdrawListing } from "@/app/actions/lis
 import { reviewProcessEvidence } from "@/app/actions/admin";
 import { getMerchSales, getOrderStatus, searchListings } from "@/lib/data";
 import { STAGES } from "@/lib/scoring";
+import { dispatchShipment } from "@/lib/fulfillment";
+import { settleCashfreeOrder } from "@/lib/checkout";
+import { prepareShipment, fulfillmentVariants } from "@/lib/qikink";
 
 let creator = 0, other = 0;
 function form(kind: "post" | "listing" = "post") {
@@ -60,6 +63,58 @@ describe.skipIf(!configured)("publishing against isolated PostgreSQL", () => {
   }, 30_000);
   beforeEach(() => { session.id = creator; session.role = "member"; });
   afterAll(async () => { await closeDb(); });
+
+  it("submits a paid merch order once and holds ambiguous submissions for review", async () => {
+    await expect(createListing(null, form("listing"))).rejects.toThrow("REDIRECT:");
+    const [listing] = await db.select().from(schema.listings).orderBy(desc(schema.listings.id)).limit(1);
+    try {
+      vi.stubEnv("COMPANY_OWNER_USER_ID", String(creator));
+      vi.stubEnv("QIKINK_CATALOG", JSON.stringify({ [listing.slug]: { "Blue / M": "TEE-BLU-M" } }));
+      vi.stubEnv("QIKINK_ENV", "sandbox");
+      vi.stubEnv("CASHFREE_ENV", "sandbox");
+      vi.stubEnv("CASHFREE_APP_ID", "test");
+      vi.stubEnv("CASHFREE_SECRET_KEY", "test");
+      vi.stubEnv("QIKINK_CLIENT_ID", "test");
+      vi.stubEnv("QIKINK_CLIENT_SECRET", "test");
+      const merch = { ...listing, productType: "tshirt" };
+      expect(fulfillmentVariants({ ...merch, creatorId: other }).size).toBe(0);
+      expect(fulfillmentVariants({ ...merch, productType: "writing" }).size).toBe(0);
+      const variants = fulfillmentVariants(merch);
+      const fd = new FormData();
+      for (const [key, value] of Object.entries({ variant: "Blue / M", first_name: "Test", last_name: "Buyer", address1: "Test street", city: "Mumbai", province: "Maharashtra", zip: "400001" })) fd.set(key, value);
+      const shipment = prepareShipment(variants, fd, "+919876543210", "buyer@example.test", "INR");
+      if (typeof shipment === "string") throw Error(shipment);
+      fd.set("variant", "unlisted");
+      expect(typeof prepareShipment(variants, fd, "+919876543210", "buyer@example.test", "INR")).toBe("string");
+      const [p, ambiguous] = await db.insert(schema.payments).values(["test-qikink-1", "test-qikink-2"].map(providerOrderId => ({
+        provider: "cashfree" as const, providerOrderId, listingId: listing.id, buyerId: other, currency: "INR", amountCents: 79900, shipment, fulfillment: "waiting" as const,
+      }))).returning();
+      const requests: Record<string, unknown>[] = [];
+      vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+        if (url === `https://sandbox.cashfree.com/pg/orders/${p.providerOrderId}`) {
+          return Response.json({ order_status: "PAID", order_amount: 799, order_currency: "INR" });
+        }
+        if (url === "https://sandbox.qikink.com/api/token") return Response.json({ Accesstoken: "test-token" });
+        expect(url).toBe("https://sandbox.qikink.com/api/order/create");
+        const payload = JSON.parse(String(init.body));
+        requests.push(payload);
+        if (payload.order_number === `UNP${ambiguous.id}`) throw Error("Connection lost");
+        return Response.json({ order_id: 123 });
+      }));
+      await dispatchShipment(p.id);
+      expect(requests).toHaveLength(0);
+      await Promise.all([settleCashfreeOrder(p.providerOrderId), settleCashfreeOrder(p.providerOrderId)]);
+      await settleCashfreeOrder(p.providerOrderId);
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchObject({ order_number: `UNP${p.id}`, gateway: "Prepaid", total_order_value: "799.00", line_items: [{ sku: "TEE-BLU-M", quantity: "1" }] });
+      expect((await db.select().from(schema.payments).where(eq(schema.payments.id, p.id)))[0]).toMatchObject({ fulfillment: "sent", shipment: null });
+      await db.update(schema.payments).set({ status: "paid" }).where(eq(schema.payments.id, ambiguous.id));
+      await dispatchShipment(ambiguous.id);
+      await dispatchShipment(ambiguous.id);
+      expect(requests).toHaveLength(2);
+      expect((await db.select().from(schema.payments).where(eq(schema.payments.id, ambiguous.id)))[0].fulfillment).toBe("review");
+    } finally { vi.unstubAllEnvs(); vi.unstubAllGlobals(); }
+  });
 
   it("counts only confirmed sales of the owner's merchandise in each order's currency", async () => {
     const [owner, buyerA, buyerB, buyerC, buyerD] = await db.insert(schema.users).values(

@@ -133,6 +133,8 @@ export default function PrivacyPage() {
             The <strong className="text-ink">payment provider</strong> a seller uses. You pay through their link, so that
             provider and the seller handle your payment details under their own policies. We never see them.
           </li>
+            <li>For company merchandise fulfilled by Qikink, we share the selected product, recipient name,
+              shipping address, phone number and email with Qikink so it can print and deliver your order.</li>
         </List>
         <p>
           We may also disclose data where Indian law requires it, for example to a court or government authority with a

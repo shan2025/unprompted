@@ -15,6 +15,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { SavedPhoto } from "../product-photos";
+import type { Shipment } from "../qikink";
 import type { MediaScan } from "../analysis/media";
 import type { Segment } from "../analysis/text";
 import type { Disclosure, Evidence, Score } from "../scoring";
@@ -203,6 +204,8 @@ export const payments = pgTable(
     provider: text("provider", { enum: ["cashfree"] }).notNull(),
     /** Our order ID at the gateway, also kept on the order as its payment reference. */
     providerOrderId: text("provider_order_id").notNull().unique(),
+    shipment: jsonb("shipment").$type<Shipment>(),
+    fulfillment: text("fulfillment", { enum: ["waiting", "submitting", "sent", "review"] }),
     listingId: integer("listing_id")
       .notNull()
       .references(() => listings.id, { onDelete: "cascade" }),
