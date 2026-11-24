@@ -59,15 +59,15 @@ function matches(query: string) {
 export function Onboarding({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goal, setGoal] = useState<Goal | null>(null);
   const [categories, setCategories] = useState<CategoryId[]>([]);
   const [ai, setAi] = useState<string | null>(null);
   // Sharing or selling follows the creator questions: those answers prefill the first post or listing.
-  const selling = goals.includes("sell");
-  const creating = selling || goals.includes("share");
+  const selling = goal === "sell";
+  const creating = selling || goal === "share";
 
   const steps = [
-    { title: "What brings you here?", sub: "Pick as many as you like. We'll set things up around what you want to do." },
+    { title: "What brings you here?", sub: "Pick one to get started. We'll set things up around what you want to do." },
     creating
       ? {
           title: "What do you make?",
@@ -79,23 +79,24 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
       : { title: "How much AI is okay?", sub: "Every piece shows its AI involvement, so the choice is yours." },
   ];
 
-  const ready = [goals.length > 0, categories.length > 0, ai !== null][step];
+  const ready = [goal !== null, categories.length > 0, ai !== null][step];
   const last = step === steps.length - 1;
 
-  function toggleGoal(v: string) {
-    const goal = v as Goal;
-    const nextGoals = goals.includes(goal) ? goals.filter((g) => g !== goal) : [...goals, goal];
-    const nextCreating = nextGoals.includes("sell") || nextGoals.includes("share");
-    setGoals(nextGoals);
+  // Picking a goal goes straight on to the next question: "Share my work" opens
+  // "What do you make?". The short pause lets the pick register before the step changes.
+  function pickGoal(v: string) {
+    const picked = v as Goal;
+    const nextCreating = picked === "sell" || picked === "share";
+    setGoal(picked);
     // The AI question has different answers for creators and explorers.
     if (nextCreating !== creating) setAi(null);
+    setTimeout(() => setStep((s) => (s === 0 ? 1 : s)), 220);
   }
 
   function next() {
     if (!ready) return;
     if (!last) return setStep(step + 1);
     // A post or listing has one category, so the form starts with the first pick.
-    // Selling wins when both are picked: a listing is shared on Explore too.
     const destination = creating
       ? `${selling ? "/sell" : "/journal/new"}?category=${categories[0]}&ai=${ai}`
       : `/explore?category=${categories.join(",")}${ai ? `&maxAi=${ai}` : ""}`;
@@ -138,7 +139,7 @@ export function Onboarding({ signedIn }: { signedIn: boolean }) {
           </div>
 
           <div key={`a${step}`} className="rise">
-            {step === 0 && <Choices options={GOALS} value={goals} onChange={toggleGoal} />}
+            {step === 0 && <Choices options={GOALS} value={goal} onChange={pickGoal} />}
             {step === 1 && <CategorySearch value={categories} onChange={setCategories} onSubmit={next} />}
             {step === 2 && <Choices options={creating ? SELLER_AI : BUYER_AI} value={ai} onChange={setAi} onPick={next} />}
           </div>
@@ -255,6 +256,9 @@ function CategorySearch({
   onSubmit: () => void;
 }) {
   const [query, setQuery] = useState("");
+  // The list stays hidden until the field is clicked or tabbed into, so the step
+  // opens on just the search. Coming back with picks made shows it straight away.
+  const [open, setOpen] = useState(value.length > 0);
   const results = useMemo(() => matches(query), [query]);
   const allShown = results.length > 0 && results.every((c) => value.includes(c.id));
 
@@ -275,11 +279,14 @@ function CategorySearch({
         </svg>
         <input
           id="category-search"
-          autoFocus
           autoComplete="off"
           value={query}
           placeholder="Search categories"
-          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setOpen(true);
+            setQuery(e.target.value);
+          }}
           onKeyDown={(e) => {
             if (e.key !== "Enter") return;
             e.preventDefault();
@@ -288,70 +295,74 @@ function CategorySearch({
           }}
           className="h-[72px] w-full bg-transparent text-[18px] text-ink placeholder:text-muted focus:outline-none"
           role="combobox"
-          aria-expanded
+          aria-expanded={open}
           aria-controls="category-list"
         />
       </div>
 
-      <div id="category-list" role="listbox" aria-multiselectable className="max-h-[min(420px,50dvh)] overflow-y-auto no-scrollbar py-4">
-        <div className="flex items-center justify-between gap-4 px-8 pb-2 text-[13px] font-semibold text-ink-soft">
-          <span>{query.trim() ? "Matches" : "Pick as many as you like"}</span>
-          <span className="flex shrink-0 items-center gap-4 whitespace-nowrap">
-            {value.length > 0 && <span className="font-normal text-muted">{value.length} selected</span>}
-            {results.length > 0 && (
-              // Covers what's on screen: every category, or just the search matches.
-              // Picks already made stay first, since the first one starts the listing.
-              <button
-                type="button"
-                onClick={() =>
-                  onChange(
-                    allShown
-                      ? value.filter((v) => !results.some((c) => c.id === v))
-                      : [...value, ...results.map((c) => c.id).filter((id) => !value.includes(id))],
-                  )
-                }
-                className="font-semibold text-ink underline underline-offset-4 hover:no-underline"
-              >
-                {allShown ? "Clear all" : "Select all"}
-              </button>
-            )}
-          </span>
-        </div>
-        {results.length === 0 && (
-          <button type="button" onClick={() => pick("other")} className="block w-full px-8 py-2.5 text-left text-[18px] text-ink-soft hover:text-ink">
-            No exact match. Choose <span className="text-ink">Other</span>
-          </button>
-        )}
-        {results.map((c) => {
-          const on = value.includes(c.id);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              role="option"
-              aria-selected={on}
-              aria-label={c.label}
-              onClick={() => pick(c.id)}
-              className="flex w-full items-center justify-between gap-4 px-8 py-2.5 text-left hover:bg-field"
-            >
-              <span className="flex items-center gap-3">
-                <span
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? "border-ink bg-ink" : "border-[#bdbdbd]"}`}
-                  aria-hidden="true"
+      {/* Every category shows at once: a capped list with a hidden scrollbar cut off
+          after Music & audio and looked like the step was unfinished. */}
+      {open && (
+        <div id="category-list" role="listbox" aria-multiselectable className="rise py-4">
+          <div className="flex items-center justify-between gap-4 px-8 pb-2 text-[13px] font-semibold text-ink-soft">
+            <span>{query.trim() ? "Matches" : "Pick as many as you like"}</span>
+            <span className="flex shrink-0 items-center gap-4 whitespace-nowrap">
+              {value.length > 0 && <span className="font-normal text-muted">{value.length} selected</span>}
+              {results.length > 0 && (
+                // Covers what's on screen: every category, or just the search matches.
+                // Picks already made stay first, since the first one starts the listing.
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange(
+                      allShown
+                        ? value.filter((v) => !results.some((c) => c.id === v))
+                        : [...value, ...results.map((c) => c.id).filter((id) => !value.includes(id))],
+                    )
+                  }
+                  className="font-semibold text-ink underline underline-offset-4 hover:no-underline"
                 >
-                  {on && (
-                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="m2.5 6 2.5 2.5 4.5-5" />
-                    </svg>
-                  )}
-                </span>
-                <span className={`text-[18px] ${on ? "text-ink" : "text-ink-soft"}`}>{c.label}</span>
-              </span>
-              <span className="hidden text-xs text-muted sm:block">{c.blurb}</span>
+                  {allShown ? "Clear all" : "Select all"}
+                </button>
+              )}
+            </span>
+          </div>
+          {results.length === 0 && (
+            <button type="button" onClick={() => pick("other")} className="block w-full px-8 py-2.5 text-left text-[18px] text-ink-soft hover:text-ink">
+              No exact match. Choose <span className="text-ink">Other</span>
             </button>
-          );
-        })}
-      </div>
+          )}
+          {results.map((c) => {
+            const on = value.includes(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="option"
+                aria-selected={on}
+                aria-label={c.label}
+                onClick={() => pick(c.id)}
+                className="flex w-full items-center justify-between gap-4 px-8 py-2.5 text-left hover:bg-field"
+              >
+                <span className="flex items-center gap-3">
+                  <span
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center border ${on ? "border-ink bg-ink" : "border-[#bdbdbd]"}`}
+                    aria-hidden="true"
+                  >
+                    {on && (
+                      <svg viewBox="0 0 12 12" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="m2.5 6 2.5 2.5 4.5-5" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={`text-[18px] ${on ? "text-ink" : "text-ink-soft"}`}>{c.label}</span>
+                </span>
+                <span className="hidden text-xs text-muted sm:block">{c.blurb}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
