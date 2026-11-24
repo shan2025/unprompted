@@ -4,7 +4,7 @@ import { publishDraft, PublicationConflict } from "@/lib/publishing";
 import { hasDuplicateEvidence } from "@/lib/evidence";
 import { parseCoverPattern, parseCoverTheme } from "@/lib/cover-themes";
 import { randomBytes } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -264,7 +264,7 @@ export async function toggleFollow(handle: string, returnTo: string) {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
 
-  const [target] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.handle, handle)).limit(1);
+  const [target] = await db.select({ id: schema.users.id }).from(schema.users).where(and(eq(schema.users.handle, handle), isNull(schema.users.deletedAt))).limit(1);
   if (!target || target.id === user.id) return;
 
   const where = and(eq(schema.follows.followerId, user.id), eq(schema.follows.followingId, target.id));

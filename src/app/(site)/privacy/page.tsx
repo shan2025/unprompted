@@ -84,7 +84,8 @@ export default function PrivacyPage() {
         </List>
         <p>
           We use your data on the basis of your consent, which you give when you create an account, and for the legitimate
-          uses the law allows, such as preventing fraud. You can withdraw consent at any time by deleting your account.
+          uses the law allows, such as preventing fraud. You can withdraw consent at any time by deleting your account
+          (see below).
         </p>
       </Section>
 
@@ -151,9 +152,17 @@ export default function PrivacyPage() {
 
       <Section title="How long we keep it">
         <p>
-          We keep your data while your account is open. When you delete your account we delete your personal data within
-          30 days, except records we must keep by law (for example, records of payments), which we keep only as long as
-          required.
+          We keep your data while your account is open. You can delete your account at any time at the bottom of{" "}
+          <Link href="/dashboard/profile#delete-account" className="link text-ink">Edit profile</Link>. It happens at once: your
+          profile, email address, phone number, posts, unsold listings, comments, appreciations, follows, chat messages,
+          questions, reports, drafts and uploaded files are deleted.
+        </p>
+        <p>
+          Two things stay. A listing someone bought stays available to its buyers, withdrawn from sale, because they paid
+          for it. And records of sales and purchases (the work, amount, date and payment reference) stay for the other person
+          and for tax law, under &ldquo;Deleted account&rdquo; with no name or contact details, for as long as the law
+          requires. A delivery address for merchandise is kept only until the order reaches our print partner. Copies in our
+          providers&apos; backups and logs expire on their own within 30 days.
         </p>
       </Section>
 

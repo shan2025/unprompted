@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "./db";
 import { hideDemo } from "./demo";
@@ -12,8 +12,8 @@ const historySize = 50;
 export { MAX_MESSAGE_LENGTH } from "./chat-rules";
 
 function realMember() {
-  // The seed script uses this reserved domain for its preview accounts.
-  return hideDemo() ? sql`(${users.email} is null or ${users.email} not like '%@unprompted.test')` : undefined;
+  // Deleted accounts can't be messaged. The seed script uses a reserved domain for its preview accounts.
+  return and(isNull(users.deletedAt), hideDemo() ? sql`(${users.email} is null or ${users.email} not like '%@unprompted.test')` : undefined);
 }
 
 function contains(query: string) {

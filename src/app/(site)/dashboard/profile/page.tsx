@@ -10,6 +10,8 @@ import { formatDate, siteUrl } from "@/lib/format";
 import { phoneLoginEnabled } from "@/lib/sms";
 import { ResendVerification } from "@/components/VerifyEmail";
 import { AddEmailForm, LinkPhoneForm } from "@/components/PhoneForms";
+import { DeleteAccount } from "@/components/DeleteAccount";
+import { deletionBlocker, soldListingCount } from "@/lib/account-deletion";
 
 export const metadata: Metadata = { title: "Edit profile" };
 
@@ -77,11 +79,15 @@ function LoginMethods({
 
 async function EditProfile() {
   const user = await requireUser("/dashboard/profile");
-  const [row] = await db
-    .select({ bio: schema.users.bio, links: schema.users.links, createdAt: schema.users.createdAt, emailNotifications: schema.users.emailNotifications })
-    .from(schema.users)
-    .where(eq(schema.users.id, user.id))
-    .limit(1);
+  const [[row], blocker, soldListings] = await Promise.all([
+    db
+      .select({ bio: schema.users.bio, links: schema.users.links, createdAt: schema.users.createdAt, emailNotifications: schema.users.emailNotifications })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.id))
+      .limit(1),
+    deletionBlocker(user),
+    soldListingCount(user.id),
+  ]);
   const profilePath = `/u/${user.handle}`;
   return (
     <>
@@ -108,6 +114,7 @@ async function EditProfile() {
       />
       <LoginMethods email={user.email} emailVerified={user.emailVerified} phone={user.phone} phoneEnabled={phoneLoginEnabled()} />
       {user.email && <NotificationSwitch initial={row?.emailNotifications ?? true} />}
+      <DeleteAccount handle={user.handle} blocker={blocker} soldListings={soldListings} />
     </>
   );
 }

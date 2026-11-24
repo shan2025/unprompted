@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, avg, count, desc, eq, gt, ilike, inArray, isNotNull, lte, or, sql, sum } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gt, ilike, inArray, isNotNull, isNull, lte, or, sql, sum } from "drizzle-orm";
 import { isCategory } from "./categories";
 import { PRODUCTS } from "./product-types";
 import type { Sort } from "./sorts";
@@ -217,7 +217,7 @@ export async function getCreator(handle: string) {
   const [creator] = await db
     .select({ id: users.id, name: users.name, handle: users.handle, bio: users.bio, avatarFile: users.avatarFile, links: users.links, founding: users.founding, createdAt: users.createdAt })
     .from(users)
-    .where(eq(users.handle, handle))
+    .where(and(eq(users.handle, handle), isNull(users.deletedAt)))
     .limit(1);
   if (!creator) return null;
 

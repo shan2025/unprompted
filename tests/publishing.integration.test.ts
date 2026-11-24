@@ -15,6 +15,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({
   getCurrentUser: async () => ({ ...session, verified: true, email: "test@example.test", handle: `tester${session.id}`, name: "Test creator" }),
   requireAdmin: async () => { if (session.role !== "admin") throw new Error("Not an admin"); return session; },
+  destroySession: async () => {},
 }));
 vi.mock("@/lib/db", async () => {
   const { drizzle } = await import("drizzle-orm/postgres-js");
@@ -34,7 +35,9 @@ import { openWorkDraft, saveWorkDraft } from "@/app/actions/drafts";
 import { createPost, updatePost } from "@/app/actions/posts";
 import { createListing, updateListing, withdrawListing } from "@/app/actions/listings";
 import { reviewProcessEvidence } from "@/app/actions/admin";
-import { getMerchOrders, getMerchSales, getOrderStatus, salesCount, searchListings } from "@/lib/data";
+import { getCreator, getMerchOrders, getMerchSales, getOrderStatus, salesCount, searchListings } from "@/lib/data";
+import { deleteAccount, soldListingCount } from "@/lib/account-deletion";
+import { deleteMyAccount } from "@/app/actions/account";
 import { STAGES } from "@/lib/scoring";
 import { dispatchShipment } from "@/lib/fulfillment";
 import { settleCashfreeOrder } from "@/lib/checkout";
@@ -329,5 +332,93 @@ describe.skipIf(!configured)("publishing against isolated PostgreSQL", () => {
     expect(reviewed.processVerified).toBe(true);
     expect(reviewed.evidenceReview?.reviewerId).toBe(creator);
     expect(reviewed.aiPercent).toBe(post.aiPercent);
+  });
+
+  describe("account deletion", () => {
+    async function member(name: string) {
+      const [row] = await db.insert(schema.users).values({
+        handle: `gone_${name}`, name: `Gone ${name}`, email: `gone_${name}@publishing.test`, phone: null, passwordHash: "test-only", emailVerifiedAt: new Date(),
+      }).returning();
+      return row;
+    }
+    async function share(as: number, kind: "post" | "listing", title: string) {
+      session.id = as;
+      const fd = form(kind); fd.set("title", title);
+      await expect(kind === "post" ? createPost(null, fd) : createListing(null, fd)).rejects.toThrow("REDIRECT:");
+      const table = kind === "post" ? schema.posts : schema.listings;
+      const [row] = await db.select({ id: table.id }).from(table).where(eq(table.title, title));
+      return row.id;
+    }
+    const userRow = async (id: number) => (await db.select().from(schema.users).where(eq(schema.users.id, id)))[0];
+
+    it("deletes an account with no sales outright, with its work, activity and files", async () => {
+      const gone = await member("plain");
+      await db.insert(schema.uploads).values({ name: "goneavatar00000000000000.webp", contentType: "image/webp", bytes: Buffer.from("x") });
+      await db.update(schema.users).set({ avatarFile: "goneavatar00000000000000.webp" }).where(eq(schema.users.id, gone.id));
+      const post = await share(gone.id, "post", "A post that goes");
+      const othersPost = await share(other, "post", "A post that stays");
+      await db.insert(schema.postComments).values([{ postId: othersPost, authorId: gone.id, body: "Lovely" }, { postId: post, authorId: other, body: "Goes with the post" }]);
+      await db.insert(schema.follows).values([{ followerId: gone.id, followingId: other }, { followerId: other, followingId: gone.id }]);
+      await db.insert(schema.directMessages).values({ senderId: other, recipientId: gone.id, body: "Hello" });
+
+      session.id = gone.id;
+      const typo = new FormData(); typo.set("confirm", "someone_else");
+      expect(await deleteMyAccount(null, typo)).toMatchObject({ message: expect.stringMatching(/exactly/) });
+      // The mocked session's handle is tester<id>; typing it with an @ and capitals still counts.
+      const confirm = new FormData(); confirm.set("confirm", `@TESTER${gone.id}`);
+      await expect(deleteMyAccount(null, confirm)).rejects.toThrow("REDIRECT:/account-deleted");
+
+      expect(await userRow(gone.id)).toBeUndefined();
+      expect(await db.select().from(schema.posts).where(eq(schema.posts.id, post))).toHaveLength(0);
+      expect(await db.select().from(schema.posts).where(eq(schema.posts.id, othersPost))).toHaveLength(1);
+      expect(await db.select().from(schema.postComments).where(eq(schema.postComments.postId, othersPost))).toHaveLength(0);
+      expect(await db.select().from(schema.uploads).where(eq(schema.uploads.name, "goneavatar00000000000000.webp"))).toHaveLength(0);
+      expect(await db.select().from(schema.follows).where(eq(schema.follows.followingId, other))).toHaveLength(0);
+      expect(await db.select().from(schema.directMessages).where(eq(schema.directMessages.senderId, other))).toHaveLength(0);
+    });
+
+    it("keeps sold listings for their buyers and empties the seller's row", async () => {
+      const seller = await member("seller");
+      const sold = await share(seller.id, "listing", "Sold before deletion");
+      const unsold = await share(seller.id, "listing", "Never sold");
+      await db.insert(schema.orders).values({ listingId: sold, buyerId: other, amountCents: 50000, currency: "INR", status: "paid" });
+
+      expect(await soldListingCount(seller.id)).toBe(1);
+      expect(await deleteAccount(seller.id)).toMatchObject({ outcome: "emptied", email: seller.email });
+      expect(await userRow(seller.id)).toMatchObject({
+        email: null, phone: null, name: "Deleted account", handle: `deleted-${seller.id}`, bio: "", avatarFile: null, deletedAt: expect.any(Date),
+      });
+      expect((await db.select().from(schema.listings).where(eq(schema.listings.id, sold)))[0]).toMatchObject({ status: "withdrawn", locked: "Original buyer delivery" });
+      expect(await db.select().from(schema.listings).where(eq(schema.listings.id, unsold))).toHaveLength(0);
+      expect(await getOrderStatus(sold, other)).toBe("paid");
+      expect(await getCreator(`deleted-${seller.id}`)).toBeNull();
+      expect(await deleteAccount(seller.id)).toEqual({ blocked: expect.stringMatching(/already/) });
+    });
+
+    it("keeps a buyer's purchases as anonymous sales records for the seller", async () => {
+      const buyer = await member("buyer");
+      const listing = await share(other, "listing", "Bought by a leaver");
+      await db.insert(schema.orders).values({ listingId: listing, buyerId: buyer.id, amountCents: 20000, currency: "INR", status: "paid", paymentReference: "UTR123" });
+      expect(await deleteAccount(buyer.id)).toMatchObject({ outcome: "emptied" });
+      expect(await salesCount(listing)).toBe(1);
+      expect((await userRow(buyer.id)).email).toBeNull();
+    });
+
+    it("waits for pending payments and refuses moderators and the company owner", async () => {
+      const seller = await member("waiting");
+      const listing = await share(seller.id, "listing", "Payment being checked");
+      await db.insert(schema.orders).values({ listingId: listing, buyerId: other, amountCents: 10000, currency: "INR", status: "pending" });
+      expect(await deleteAccount(seller.id)).toEqual({ blocked: expect.stringMatching(/waiting for you to confirm/) });
+      expect((await userRow(seller.id)).email).toBe(seller.email);
+
+      const moderator = await member("moderator");
+      await db.update(schema.users).set({ role: "admin" }).where(eq(schema.users.id, moderator.id));
+      expect(await deleteAccount(moderator.id)).toEqual({ blocked: expect.stringMatching(/Moderator/) });
+      const owner = await member("owner");
+      try {
+        vi.stubEnv("COMPANY_OWNER_USER_ID", String(owner.id));
+        expect(await deleteAccount(owner.id)).toEqual({ blocked: expect.stringMatching(/company/) });
+      } finally { vi.unstubAllEnvs(); }
+    });
   });
 });

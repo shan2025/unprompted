@@ -51,8 +51,14 @@ export const users = pgTable("users", {
   founding: boolean("founding").notNull().default(false),
   /** When they proved they own the email: a link we sent, or a Google login. Null until then. */
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  /**
+   * When the person deleted their account. The row only stays, emptied of
+   * personal details, while sales records or a buyer's purchases point at it
+   * (account-deletion.ts). Accounts with nothing like that are deleted outright.
+   */
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: createdAt(),
-}, (t) => [check("users_email_or_phone", sql`${t.email} is not null or ${t.phone} is not null`)]).enableRLS();
+}, (t) => [check("users_email_or_phone", sql`${t.email} is not null or ${t.phone} is not null or ${t.deletedAt} is not null`)]).enableRLS();
 
 /** Six-digit codes texted to log in, sign up or add a number to an account. */
 export const phoneCodes = pgTable(
