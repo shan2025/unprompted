@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 792 913" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2=".68" y2="1">
+      <stop stop-color="#f4e3d2"/>
+      <stop offset=".25" stop-color="#e3d1bf"/>
+      <stop offset=".47" stop-color="#f6e3ce"/>
+      <stop offset=".72" stop-color="#c3ab93"/>
+      <stop offset="1" stop-color="#796859"/>
+    </linearGradient>
+    <linearGradient id="far" x1=".58" y1=".28" x2=".45" y2=".91">
+      <stop stop-color="#f5e1cc"/>
+      <stop offset="1" stop-color="#9a8673"/>
+    </linearGradient>
+    <linearGradient id="near" x1=".65" y1="0" x2=".32" y2=".97">
+      <stop stop-color="#dac5af"/>
+      <stop offset=".36" stop-color="#9b8774"/>
+      <stop offset="1" stop-color="#443a31"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="#aa9581"/>
+      <stop offset="1" stop-color="#645548"/>
+    </linearGradient>
+    <linearGradient id="edge" x2=".6" y2="1">
+      <stop stop-color="#534637"/>
+      <stop offset="1" stop-color="#29251f"/>
+    </linearGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".84" numOctaves="3" stitchTiles="stitch"/></filter>
+  </defs>
+  <path fill="url(#paper)" d="M0 0h792v913H0z"/>
+  <path fill="url(#far)" d="M792 195C638 280 564 422 449 591l343 226Z"/>
+  <path fill="url(#near)" d="M0 401c167 36 192 121 337 146 165 28 323-56 455-110v476H0Z"/>
+  <path fill="url(#fold)" stroke="#dbc4aa" stroke-opacity=".35" d="M298 913c202-73 303-225 494-250v250Z"/>
+  <path fill="url(#edge)" d="M197 913c236-52 393-165 595-142v142Z"/>
+  <path fill="#a89b8c" filter="url(#grain)" opacity=".12" d="M0 0h792v913H0z"/>
+</svg>
