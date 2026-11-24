@@ -86,7 +86,7 @@ export async function HomeFeed({ searchParams }: { searchParams: Promise<HomeFee
           ) : (
             <>
               Nothing shared yet.{" "}
-              <Link href="/start" className="link text-ink">
+              <Link href="/start?goal=share" className="link text-ink">
                 Be the first.
               </Link>
             </>

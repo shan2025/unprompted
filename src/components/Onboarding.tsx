@@ -7,7 +7,7 @@ import { CATEGORIES, type CategoryId } from "@/lib/categories";
 import { Cover } from "./Cover";
 import { Logo } from "./Logo";
 
-type Goal = "share" | "sell" | "buy";
+export type Goal = "share" | "sell" | "buy";
 
 const GOALS: { id: Goal; label: string; hint: string }[] = [
   { id: "share", label: "Share my work", hint: "Post something you made, with how you made it. Nothing has to be for sale." },
@@ -56,10 +56,11 @@ function matches(query: string) {
 }
 
 /** New creators finish by creating an account; explorers, and anyone signed in, go straight on. */
-export function Onboarding({ signedIn }: { signedIn: boolean }) {
+export function Onboarding({ signedIn, initialGoal }: { signedIn: boolean; initialGoal?: Goal }) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
-  const [goal, setGoal] = useState<Goal | null>(null);
+  // Arriving with a goal already chosen (a Share button) skips the first question.
+  const [step, setStep] = useState(initialGoal ? 1 : 0);
+  const [goal, setGoal] = useState<Goal | null>(initialGoal ?? null);
   const [categories, setCategories] = useState<CategoryId[]>([]);
   const [ai, setAi] = useState<string | null>(null);
   // Sharing or selling follows the creator questions: those answers prefill the first post or listing.

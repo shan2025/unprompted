@@ -191,7 +191,7 @@ export default function Home({ searchParams }: { searchParams: Promise<HomeFeedP
 async function ShareWorkLink() {
   const user = await getCurrentUser();
   return (
-    <Link href={user ? "/journal/new" : "/start"} className="btn-ghost px-8 py-4">
+    <Link href={user ? "/journal/new" : "/start?goal=share"} className="btn-ghost px-8 py-4">
       Share your work
     </Link>
   );
@@ -265,7 +265,7 @@ async function Recent() {
     return (
       <p className="card p-8 text-center text-ink-soft">
         Nothing shared yet.{" "}
-        <Link href="/start" className="link text-ink">
+        <Link href="/start?goal=share" className="link text-ink">
           Be the first.
         </Link>
       </p>
