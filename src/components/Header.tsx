@@ -15,28 +15,25 @@ import { NavLink } from "./NavLink";
 export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur md:static md:bg-white md:backdrop-blur-none">
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-8 md:h-[72px] lg:gap-10">
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:max-md:gap-6 sm:max-md:px-8 md:h-[72px] lg:gap-10 lg:px-8">
         <Link href="/" aria-label="Unprompters home" className="shrink-0">
           {/* Phones show the mark with a bold wordmark, like an app's title bar. */}
           <span className="inline-flex items-center gap-2 text-ink md:hidden">
             <Mark className="h-[26px] w-[26px]" />
-            <span className="text-[19px] font-extrabold tracking-[-0.02em]">Unprompters</span>
+            <span className="hidden text-[19px] font-extrabold tracking-[-0.02em] min-[384px]:inline">Unprompters</span>
           </span>
           <span className="hidden md:inline-flex">
             <Logo />
           </span>
         </Link>
-        <nav className="hidden items-center gap-6 whitespace-nowrap text-[15px] text-ink md:flex lg:gap-8">
+        <nav className="hidden items-center gap-4 whitespace-nowrap text-[15px] text-ink md:flex lg:gap-8">
           <NavLink href="/explore">Explore</NavLink>
           <NavLink href="/marketplace">Marketplace</NavLink>
           <NavLink href="/journal">Journal</NavLink>
           <NavLink href="/standard" className="hidden xl:inline">
             How scoring works
           </NavLink>
-          {/* Last in the row, so nothing shifts when it arrives for someone signed in. */}
-          <Suspense fallback={null}>
-            <ChatLink />
-          </Suspense>
+          <NavLink href="/ai-writing-check" className="hidden xl:inline">AI Checker</NavLink>
         </nav>
         <div className="ml-auto">
           <Suspense fallback={<div className="h-11 w-36" />}>
@@ -46,11 +43,6 @@ export function Header() {
       </div>
     </header>
   );
-}
-
-// Chat needs an account, so visitors who aren't signed in don't get a link that only leads to the log-in page.
-async function ChatLink() {
-  return (await getCurrentUser()) ? <NavLink href="/chat">Chat</NavLink> : null;
 }
 
 async function UserMenu() {

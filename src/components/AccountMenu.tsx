@@ -10,7 +10,6 @@ const ITEM = "block w-full px-4 py-2.5 text-left text-sm text-ink hover:bg-line/
 const SMALL_PRINT = [
   { href: "/about", label: "About" },
   { href: "/standard", label: "How scoring works" },
-  { href: "/ai-writing-check", label: "AI writing check" },
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
   { href: "/refunds", label: "Refunds" },
@@ -76,6 +75,12 @@ export function AccountMenu({
           </Link>
           <Link href="/dashboard/profile" className={ITEM} onClick={close}>
             Edit profile
+          </Link>
+          <Link href="/chat" className={ITEM} onClick={close}>
+            Chat
+          </Link>
+          <Link href="/ai-writing-check" className={`${ITEM} xl:hidden`} onClick={close}>
+            AI Checker
           </Link>
           <Link href="/dashboard" className={ITEM} onClick={close}>
             {creator ? "Dashboard" : "Your account"}
