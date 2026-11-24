@@ -1,4 +1,6 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { Logo } from "./Logo";
 import "./auth.css";
 
 type Props = {
@@ -10,6 +12,10 @@ type Props = {
 export function AuthShell({ title, subtitle, children }: Props) {
   return (
     <div className="auth-shell">
+      {/* There's no site header on these pages, so the logo is the way home. */}
+      <Link href="/" aria-label="Unprompters home" className="auth-home">
+        <Logo />
+      </Link>
       <aside className="auth-hero" aria-label="About Unprompters">
         <div className="auth-figures" aria-hidden="true">
           <svg viewBox="0 0 792 600" preserveAspectRatio="xMidYMid meet" focusable="false">

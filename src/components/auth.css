@@ -1,4 +1,12 @@
+/* Log in and sign up have no site header (see app/(auth)/layout.tsx). Don't
+   reach out to page chrome from here: Next keeps visited pages mounted but
+   hidden, so a body:has(.auth-shell) rule kept restyling the header on every
+   page after the login screen had been opened. */
 .auth-shell {
+  position: relative;
+  /* Sizes follow the window's width, capped by its height, so the whole card
+     fits on a wide but short window instead of running off the bottom. */
+  --u: min(1vw, 1.3svh);
   --ink: #231f1c;
   --ink-soft: #514a44;
   --muted: #706760;
@@ -6,9 +14,21 @@
   --accent-soft: #f5e6db;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-height: calc(100svh - clamp(72px, 5vw, 80px));
+  min-height: 100svh;
   background: #f5efe9;
   color: var(--ink);
+}
+
+/* Over the picture's top-left corner, out of the two-column grid. */
+.auth-home {
+  position: absolute;
+  z-index: 1;
+  top: clamp(1.25rem, calc(2.6 * var(--u)), 2.5rem);
+  left: clamp(1.25rem, calc(3.4 * var(--u)), 3.5rem);
+}
+
+.auth-home:hover {
+  opacity: .7;
 }
 
 .auth-hero {
@@ -29,13 +49,13 @@
 }
 
 .auth-caption {
-  padding: 0 8% clamp(2.5rem, 5.5vw, 6rem) 10%;
+  padding: 0 8% clamp(2.5rem, calc(5.5 * var(--u)), 6rem) 10%;
   color: #fff8ed;
 }
 
 .auth-caption p {
   max-width: 24ch;
-  font-size: clamp(2rem, 3.12vw, 3.55rem);
+  font-size: clamp(2rem, calc(3.12 * var(--u)), 3.55rem);
   font-weight: 400;
   line-height: 1.08;
   letter-spacing: -.035em;
@@ -44,8 +64,8 @@
 .auth-caption ul {
   display: grid;
   gap: .42rem;
-  margin-top: clamp(1rem, 1.6vw, 1.6rem);
-  font-size: clamp(.94rem, 1.22vw, 1.25rem);
+  margin-top: clamp(1rem, calc(1.6 * var(--u)), 1.6rem);
+  font-size: clamp(.94rem, calc(1.22 * var(--u)), 1.25rem);
   line-height: 1.45;
 }
 
@@ -65,44 +85,44 @@
 .auth-form-pane {
   display: grid;
   place-items: center;
-  padding: clamp(2rem, 4vw, 4.25rem) clamp(1.5rem, 4.75vw, 5rem);
+  padding: clamp(2rem, calc(4 * var(--u)), 4.25rem) clamp(1.5rem, calc(4.75 * var(--u)), 5rem);
 }
 
 .auth-card {
   width: 100%;
   max-width: 40.5rem;
-  padding: clamp(1.75rem, 3.55vw, 3.65rem);
-  border-radius: clamp(1.25rem, 2vw, 2rem);
+  padding: clamp(1.75rem, calc(3.55 * var(--u)), 3.65rem);
+  border-radius: clamp(1.25rem, calc(2 * var(--u)), 2rem);
   background: #fcf8f4;
   box-shadow: 0 1.25rem 2.5rem -.875rem rgb(71 50 32 / 24%);
 }
 
 .auth-card h1 {
-  font-size: clamp(2.15rem, 3.4vw, 3.5rem);
+  font-size: clamp(2.15rem, calc(3.4 * var(--u)), 3.5rem);
   font-weight: 450;
   line-height: 1.05;
   letter-spacing: -.048em;
 }
 
 .auth-subtitle {
-  margin: .5rem 0 clamp(1.6rem, 2.7vw, 2.75rem);
+  margin: .5rem 0 clamp(1.6rem, calc(2.7 * var(--u)), 2.75rem);
   color: var(--muted);
-  font-size: clamp(1rem, 1.48vw, 1.5rem);
+  font-size: clamp(1rem, calc(1.48 * var(--u)), 1.5rem);
   line-height: 1.4;
 }
 
 .auth-card .label {
   margin-bottom: .45rem;
-  font-size: clamp(.94rem, 1.2vw, 1.18rem);
+  font-size: clamp(.94rem, calc(1.2 * var(--u)), 1.18rem);
   font-weight: 550;
 }
 
 .auth-card .field,
 .auth-card .btn-ghost,
 .auth-card .btn-primary {
-  min-height: clamp(2.9rem, 3.55vw, 3.6rem);
+  min-height: clamp(2.9rem, calc(3.55 * var(--u)), 3.6rem);
   border-radius: .72rem;
-  font-size: clamp(1rem, 1.2vw, 1.18rem);
+  font-size: clamp(1rem, calc(1.2 * var(--u)), 1.18rem);
 }
 
 .auth-card .field {
@@ -125,7 +145,7 @@
 .auth-input-wrap > svg {
   position: absolute;
   top: 50%;
-  left: clamp(.85rem, 1.45vw, 1.45rem);
+  left: clamp(.85rem, calc(1.45 * var(--u)), 1.45rem);
   width: 1.25rem;
   height: 1.25rem;
   translate: 0 -50%;
@@ -133,7 +153,7 @@
 }
 
 .auth-input-wrap input {
-  padding-inline-start: clamp(2.65rem, 4.1vw, 4.15rem);
+  padding-inline-start: clamp(2.65rem, calc(4.1 * var(--u)), 4.15rem);
 }
 
 .auth-password {
@@ -160,12 +180,12 @@
 
 .auth-form {
   display: grid;
-  gap: clamp(1rem, 1.5vw, 1.6rem);
+  gap: clamp(1rem, calc(1.5 * var(--u)), 1.6rem);
 }
 
 .auth-forgot {
   justify-self: end;
-  font-size: clamp(.9rem, 1.14vw, 1.1rem);
+  font-size: clamp(.9rem, calc(1.14 * var(--u)), 1.1rem);
 }
 
 .auth-card .btn-primary {
@@ -188,40 +208,25 @@
 }
 
 .auth-switch {
-  margin-top: clamp(1.3rem, 2vw, 2rem);
+  margin-top: clamp(1.3rem, calc(2 * var(--u)), 2rem);
   color: var(--muted);
   text-align: center;
-  font-size: clamp(.94rem, 1.15vw, 1.15rem);
-}
-
-@media (min-width: 48rem) {
-  body:has(.auth-shell) > header {
-    background: #fbf7f2;
-  }
-
-  body:has(.auth-shell) > header > div {
-    max-width: 100rem;
-    height: clamp(72px, 5vw, 80px);
-    padding-inline: clamp(1rem, 3.4vw, 3.5rem);
-  }
-}
-
-@media (min-width: 80rem) {
-  body:has(.auth-shell) > header nav {
-    gap: clamp(2rem, 2.7vw, 2.75rem);
-    font-size: clamp(1rem, 1.25vw, 1.25rem);
-  }
-
-  body:has(.auth-shell) > header a[aria-label="Unprompters home"] span.uppercase {
-    font-size: clamp(1.05rem, 1.3vw, 1.3rem);
-  }
+  font-size: clamp(.94rem, calc(1.15 * var(--u)), 1.15rem);
 }
 
 @media (max-width: 53.99rem) {
   .auth-shell {
     display: flex;
     flex-direction: column;
-    min-height: calc(100svh - 7.5rem);
+    /* Leaves room for the 4rem phone tab bar. */
+    min-height: calc(100svh - 4rem);
+  }
+
+  /* A slim band above the picture, in its colour, clear of the notch. */
+  .auth-home {
+    position: static;
+    padding: max(1rem, env(safe-area-inset-top)) max(6%, calc((100% - 34rem) / 2)) 0;
+    background: #edddcc;
   }
 
   .auth-hero {
@@ -247,7 +252,7 @@
 
   .auth-caption p {
     max-width: 18ch;
-    font-size: clamp(1.25rem, 4.6vw, 1.9rem);
+    font-size: clamp(1.25rem, calc(4.6 * var(--u)), 1.9rem);
   }
 
   .auth-caption ul {
@@ -257,11 +262,11 @@
   .auth-form-pane {
     flex: 1;
     align-items: start;
-    padding: clamp(1rem, 4vw, 2.5rem);
+    padding: clamp(1rem, calc(4 * var(--u)), 2.5rem);
   }
 
   .auth-card {
     max-width: 34rem;
-    padding: clamp(1.25rem, 5vw, 2.5rem);
+    padding: clamp(1.25rem, calc(5 * var(--u)), 2.5rem);
   }
 }
