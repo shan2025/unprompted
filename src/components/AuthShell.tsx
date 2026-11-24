@@ -1,50 +1,53 @@
-import type { CSSProperties, ReactNode } from "react";
-import { Cover } from "@/components/Cover";
+import type { ReactNode } from "react";
+import "./auth.css";
 
 type Props = {
   title: string;
   subtitle: string;
-  coverSlug: string;
-  coverCategory: string;
-  panelHeading: string;
-  panelPoints: string[];
   children: ReactNode;
 };
 
-/** Split auth layout: a tall drawn cover with a short pitch beside the form. */
-export function AuthShell({ title, subtitle, coverSlug, coverCategory, panelHeading, panelPoints, children }: Props) {
+export function AuthShell({ title, subtitle, children }: Props) {
   return (
-    <div className="mx-auto grid min-h-[calc(100vh-6.5rem)] max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:py-16">
-      <aside className="intro-open cv-play relative hidden overflow-hidden lg:block">
-        <Cover slug={coverSlug} category={coverCategory as never} palette={0} title="" className="absolute inset-0 h-full w-full" />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent p-10 pt-32 text-white">
-          <p className="text-3xl font-light leading-tight">{panelHeading}</p>
-          <ul className="mt-6 space-y-2 text-sm text-white/85">
-            {panelPoints.map((p) => (
-              <li key={p} className="flex gap-3">
-                <span aria-hidden className="mt-2 h-px w-4 shrink-0 bg-white/70" />
-                {p}
-              </li>
-            ))}
+    <div className="auth-shell">
+      <aside className="auth-hero" aria-label="About Unprompters">
+        <div className="auth-figures" aria-hidden="true">
+          <svg viewBox="0 0 792 600" preserveAspectRatio="xMidYMid meet" focusable="false">
+            <defs>
+              <linearGradient id="auth-charcoal" x2=".92" y2=".65" gradientUnits="objectBoundingBox">
+                <stop stopColor="#685646" />
+                <stop offset=".55" stopColor="#40372e" />
+                <stop offset="1" stopColor="#302a23" />
+              </linearGradient>
+              <linearGradient id="auth-clay" x1=".3" y1="0" x2=".86" y2=".92" gradientUnits="objectBoundingBox">
+                <stop stopColor="#ed9a64" />
+                <stop offset=".53" stopColor="#bc663b" />
+                <stop offset="1" stopColor="#883f20" />
+              </linearGradient>
+              <clipPath id="auth-square"><path d="M141 130h319v296H141z" /></clipPath>
+            </defs>
+            <path fill="url(#auth-charcoal)" d="M141 130h319v296H141z" />
+            <ellipse cx="533" cy="387" rx="155" ry="161" fill="url(#auth-clay)" opacity=".92" />
+            <ellipse cx="533" cy="387" rx="155" ry="161" fill="#763513" opacity=".48" clipPath="url(#auth-square)" />
+            <path d="M268 52v525M436 52v525M600 52v534" fill="none" stroke="#4b3d30" strokeOpacity=".35" />
+            <path d="m178 571 165-112 148 112Z" fill="none" stroke="#37291c" strokeWidth="9" />
+          </svg>
+        </div>
+        <div className="auth-caption">
+          <p>Made by people, for people who notice.</p>
+          <ul>
+            <li>Share your work with a human-made score</li>
+            <li>Follow creators you love</li>
+            <li>Sell directly in the marketplace</li>
           </ul>
         </div>
       </aside>
-
-      <div className="flex flex-col justify-center">
-        <div className="mx-auto w-full max-w-sm">
-          <div className="intro-open cv-play mb-8 h-20 overflow-hidden lg:hidden">
-            <Cover slug={coverSlug} category={coverCategory as never} palette={0} title="" className="h-full" />
-          </div>
-          <h1 className="intro-rise text-4xl font-light tracking-tight" style={{ "--d": "150ms" } as CSSProperties}>
-            {title}
-          </h1>
-          <p className="intro-rise mt-3 text-ink-soft" style={{ "--d": "230ms" } as CSSProperties}>
-            {subtitle}
-          </p>
-          <div className="intro-rise mt-10" style={{ "--d": "310ms" } as CSSProperties}>
-            {children}
-          </div>
-        </div>
+      <div className="auth-form-pane">
+        <section className="auth-card" aria-labelledby="auth-title">
+          <h1 id="auth-title">{title}</h1>
+          <p className="auth-subtitle">{subtitle}</p>
+          {children}
+        </section>
       </div>
     </div>
   );

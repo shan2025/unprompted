@@ -29,6 +29,7 @@ export function AuthForm({
   const [emailState, emailAction, emailPending] = useActionState(mode === "login" ? login : signup, null);
   const [phoneState, phoneAction, phonePending] = useActionState(phoneLogin, null);
   const [identifier, setIdentifier] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const redirectTo = emailState?.next ?? phoneState?.next;
   useEffect(() => {
@@ -63,7 +64,7 @@ export function AuthForm({
           {googleError}
         </p>
       )}
-      <form action={usingPhone ? phoneAction : emailAction} className="space-y-4">
+      <form action={usingPhone ? phoneAction : emailAction} className="auth-form">
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="mode" value={mode} />
         {usingPhone && <input type="hidden" name="intent" value="send" />}
@@ -72,26 +73,33 @@ export function AuthForm({
             <label htmlFor="name" className="label">
               Your name
             </label>
-            <input id="name" name="name" className="field" defaultValue={v.name ?? phoneState?.name} autoComplete="name" required />
+            <input id="name" name="name" className="field" placeholder="Enter your name" defaultValue={v.name ?? phoneState?.name} autoComplete="name" required />
           </div>
         )}
         <div>
           <label htmlFor="identifier" className="label">
             {phone ? "Email or phone number" : "Email"}
           </label>
-          <input
-            id="identifier"
-            name="identifier"
-            type={phone ? "text" : "email"}
-            inputMode={usingPhone ? "tel" : "email"}
-            className="field"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            autoComplete={phone ? "username" : "email"}
-            autoCapitalize="none"
-            spellCheck={false}
-            required
-          />
+          <div className="auth-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+              <rect x="2" y="4.5" width="20" height="15" rx="2" />
+              <path d="m3 6 9 6.5L21 6" />
+            </svg>
+            <input
+              id="identifier"
+              name="identifier"
+              type={phone ? "text" : "email"}
+              inputMode={usingPhone ? "tel" : "email"}
+              className="field"
+              placeholder={phone ? "Enter your email or phone number" : "Enter your email"}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete={phone ? "username" : "email"}
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+            />
+          </div>
           {usingPhone && <p className="hint">We&apos;ll text you a code. Outside India? Start with + and your country code.</p>}
         </div>
         {!usingPhone && (
@@ -99,23 +107,40 @@ export function AuthForm({
             <label htmlFor="password" className="label">
               Password
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              className="field"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              minLength={mode === "signup" ? 8 : undefined}
-              required
-            />
-            {mode === "signup" ? (
-              <p className="hint">At least 8 characters.</p>
-            ) : (
-              <Link href="/forgot-password" className="mt-2 inline-block text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
-                Forgot password?
-              </Link>
-            )}
+            <div className="auth-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+                <rect x="4" y="10" width="16" height="12" rx="2" />
+                <path d="M7 10V7a5 5 0 0 1 10 0v3m-5 5v3" />
+              </svg>
+              <input
+                id="password"
+                name="password"
+                type={passwordVisible ? "text" : "password"}
+                className="field auth-password"
+                placeholder={mode === "login" ? "Enter your password" : "Create a password"}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                minLength={mode === "signup" ? 8 : undefined}
+                required
+              />
+              <button
+                type="button"
+                className="auth-reveal"
+                aria-label={passwordVisible ? "Hide password" : "Show password"}
+                aria-controls="password"
+                onClick={() => setPasswordVisible(!passwordVisible)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+                  <path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7S2 12 2 12Z" />
+                  <circle cx="12" cy="12" r="3" />
+                  {passwordVisible && <path d="m3 3 18 18" />}
+                </svg>
+              </button>
+            </div>
+            {mode === "signup" && <p className="hint">At least 8 characters.</p>}
           </div>
+        )}
+        {mode === "login" && !usingPhone && (
+          <Link href="/forgot-password" className="link auth-forgot">Forgot password?</Link>
         )}
         {error && (
           <p role="alert" className={ALERT}>
@@ -168,9 +193,9 @@ export function AuthForm({
         </div>
       )}
 
-      <p className="mt-6 text-center text-sm text-ink-soft">
-        {mode === "login" ? "New here? " : "Already have an account? "}
-        <Link href={otherHref} className="link font-semibold text-ink">
+      <p className="auth-switch">
+        {mode === "login" ? "New to Unprompters? " : "Already have an account? "}
+        <Link href={otherHref} className="link ml-1 font-semibold text-ink">
           {mode === "login" ? "Create an account" : "Log in"}
         </Link>
       </p>
