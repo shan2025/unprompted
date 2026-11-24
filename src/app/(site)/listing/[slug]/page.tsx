@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { buyListing } from "@/app/actions/listings";
 import { AskCreator } from "@/components/AskCreator";
+import { EnquireToBuy } from "@/components/EnquireToBuy";
 import { Cover } from "@/components/Cover";
 import { ProductGallery } from "@/components/ProductGallery";
 import { productLabel } from "@/lib/product-types";
@@ -130,7 +131,7 @@ async function ListingView({ params, searchParams }: Props) {
             {listing.status !== "published" ? (
               <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">This product is not currently for sale.</p>
             ) : !cashfree || !variants.length ? (
-              <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Shipping checkout is currently unavailable.</p>
+              <EnquireToBuy title={listing.title} creatorName={creator.name} merch />
             ) : !user ? (
               <Link href={`/login?next=${encodeURIComponent(`/listing/${listing.slug}`)}`} className="btn-accent block w-full py-3 text-center text-[15px]">
                 Log in to buy
@@ -165,7 +166,7 @@ async function ListingView({ params, searchParams }: Props) {
             <CashfreeCheckout slug={listing.slug} label={`Pay ${formatPrice(listing.priceCents, listing.currency)}`} askPhone={!user.phone} />
           )
         ) : !listing.paymentUrl ? (
-          <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">The seller hasn&apos;t added a way to pay yet.</p>
+          <EnquireToBuy title={listing.title} creatorName={creator.name} merch={physical} />
         ) : reserved ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Reserved. The seller is checking another buyer&apos;s payment for this exclusive listing, so please don&apos;t pay yet.</p>
         ) : !user ? (

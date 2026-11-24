@@ -24,7 +24,7 @@ export function AskCreator({
   const heading = target === "post" ? "Love this work?" : "Got a question?";
 
   return (
-    <div className="card p-5">
+    <div id="ask" className="card scroll-mt-24 p-5">
       <span className="eyebrow">Ask the creator</span>
       <p className="mt-2 font-display text-xl font-medium">{heading}</p>
       <p className="mt-1 text-sm leading-relaxed text-ink-soft">

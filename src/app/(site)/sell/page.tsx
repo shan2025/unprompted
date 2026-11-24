@@ -6,6 +6,7 @@ import { SellForm } from "@/components/SellForm";
 import { ConfirmEmailCard } from "@/components/VerifyEmailNotice";
 import { requireUser } from "@/lib/auth";
 import { sellsThroughCashfree } from "@/lib/checkout";
+import { isCompanyOwner } from "@/lib/merch";
 import { isCategory } from "@/lib/categories";
 import { LEVELS, type Level } from "@/lib/scoring";
 
@@ -54,5 +55,5 @@ async function Gate({ searchParams }: Props) {
   if (prefill.ai) qs.set("ai", prefill.ai);
   const user = await requireUser(qs.size ? `/sell?${qs}` : "/sell", { newcomers: true });
   if (!user.verified) return <ConfirmEmailCard email={user.email ?? ""} doing="sell your work" />;
-  return <DraftWorkspace userId={user.id} kind="listing"><SellForm defaultCategory={prefill.category} defaultAi={prefill.ai} gatewayCheckout={sellsThroughCashfree(user)} /></DraftWorkspace>;
+  return <DraftWorkspace userId={user.id} kind="listing"><SellForm defaultCategory={prefill.category} defaultAi={prefill.ai} gatewayCheckout={sellsThroughCashfree(user)} paymentLinkOptional={isCompanyOwner(user)} /></DraftWorkspace>;
 }

@@ -11,7 +11,7 @@ import type { EditableListing, FieldErrors, PreviewState } from "@/lib/listing-f
 import { LEVELS, LEVEL_INFO, STAGES, STAGE_INFO, type Level } from "@/lib/scoring";
 import { EvidenceFields, FieldError, filesTooBigMessage, ScorePreview, Section } from "./FormParts";
 
-export function SellForm({ defaultCategory, defaultAi, listing, gatewayCheckout = false }: { defaultCategory?: string; defaultAi?: Level; listing?: EditableListing; gatewayCheckout?: boolean }) {
+export function SellForm({ defaultCategory, defaultAi, listing, gatewayCheckout = false, paymentLinkOptional = false }: { defaultCategory?: string; defaultAi?: Level; listing?: EditableListing; gatewayCheckout?: boolean; paymentLinkOptional?: boolean }) {
   const draft = useDraftWorkspace();
   const formRef = useRef<HTMLFormElement>(null);
   const [createState, createAction, publishing] = useActionState(async (previous: Parameters<typeof createListing>[0], form: FormData) => {
@@ -141,11 +141,12 @@ export function SellForm({ defaultCategory, defaultAi, listing, gatewayCheckout 
           ) : (
             <div hidden={!paid}>
               <label htmlFor="paymentUrl" className="label">
-                Payment link
+                Payment link{paymentLinkOptional && " (optional)"}
               </label>
               <input id="paymentUrl" name="paymentUrl" disabled={!paid} className="field" placeholder="https://rzp.io/… or upi://pay?pa=…" defaultValue={draft?.value("paymentUrl") ?? listing?.paymentUrl ?? ""} />
               <p className="hint">
                 Use a payment link that charges the amount and currency above.
+                {paymentLinkOptional && " Or leave it empty to sell by enquiry: buyers message you, and you agree payment and delivery by email."}
               </p>
               <FieldError errors={errors} name="paymentUrl" />
             </div>
