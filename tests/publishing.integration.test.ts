@@ -34,7 +34,7 @@ import { openWorkDraft, saveWorkDraft } from "@/app/actions/drafts";
 import { createPost, updatePost } from "@/app/actions/posts";
 import { createListing, updateListing, withdrawListing } from "@/app/actions/listings";
 import { reviewProcessEvidence } from "@/app/actions/admin";
-import { getMerchSales, getOrderStatus, searchListings } from "@/lib/data";
+import { getMerchOrders, getMerchSales, getOrderStatus, salesCount, searchListings } from "@/lib/data";
 import { STAGES } from "@/lib/scoring";
 import { dispatchShipment } from "@/lib/fulfillment";
 import { settleCashfreeOrder } from "@/lib/checkout";
@@ -113,6 +113,51 @@ describe.skipIf(!configured)("publishing against isolated PostgreSQL", () => {
       await dispatchShipment(ambiguous.id);
       expect(requests).toHaveLength(2);
       expect((await db.select().from(schema.payments).where(eq(schema.payments.id, ambiguous.id)))[0].fulfillment).toBe("review");
+    } finally { vi.unstubAllEnvs(); vi.unstubAllGlobals(); }
+  });
+
+  it("lets a buyer order the same merch again and counts every paid order", async () => {
+    const fd = form("listing");
+    fd.set("category", "tshirt"); fd.set("title", "Repeat T-shirt");
+    await expect(createListing(null, fd)).rejects.toThrow("REDIRECT:");
+    const [listing] = await db.select().from(schema.listings).where(eq(schema.listings.title, "Repeat T-shirt"));
+    try {
+      vi.stubEnv("QIKINK_ENV", "sandbox");
+      vi.stubEnv("CASHFREE_ENV", "sandbox");
+      vi.stubEnv("CASHFREE_APP_ID", "test");
+      vi.stubEnv("CASHFREE_SECRET_KEY", "test");
+      vi.stubEnv("QIKINK_CLIENT_ID", "test");
+      vi.stubEnv("QIKINK_CLIENT_SECRET", "test");
+      const shipment = {
+        mode: "sandbox" as const, sku: "TEE-BLK-L", label: "Black / L",
+        address: { first_name: "Test", last_name: "Buyer", address1: "Test street", city: "Pune", province: "Maharashtra", zip: "411001", phone: "9876543210", email: "buyer@example.test", country_code: "IN" as const },
+      };
+      // The buyer's first T-shirt, already paid and recorded as their order.
+      await db.insert(schema.orders).values({ listingId: listing.id, buyerId: other, status: "paid", amountCents: 79900, currency: "INR", paymentReference: "test-repeat-first" });
+      const [again, double] = await db.insert(schema.payments).values([
+        { provider: "cashfree" as const, providerOrderId: "test-repeat-again", listingId: listing.id, buyerId: other, currency: "INR", amountCents: 79900, shipment, fulfillment: "waiting" as const },
+        // Without a shipment, a second payment from an owner is a double payment.
+        { provider: "cashfree" as const, providerOrderId: "test-repeat-double", listingId: listing.id, buyerId: other, currency: "INR", amountCents: 79900 },
+      ]).returning();
+      const created: Record<string, unknown>[] = [];
+      vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+        if (url.startsWith("https://sandbox.cashfree.com/pg/orders/")) return Response.json({ order_status: "PAID", order_amount: 799, order_currency: "INR" });
+        if (url === "https://sandbox.qikink.com/api/token") return Response.json({ Accesstoken: "test-token" });
+        created.push(JSON.parse(String(init.body)));
+        return Response.json({ order_id: 456 });
+      }));
+      expect(await settleCashfreeOrder(again.providerOrderId)).toMatchObject({ outcome: "paid" });
+      expect(await settleCashfreeOrder(double.providerOrderId)).toMatchObject({ outcome: "refund_due" });
+      expect(created).toEqual([expect.objectContaining({ order_number: `UNP${again.id}`, line_items: [expect.objectContaining({ sku: "TEE-BLK-L" })] })]);
+      const [order] = await db.select().from(schema.orders).where(eq(schema.orders.listingId, listing.id));
+      expect(order).toMatchObject({ status: "paid", paymentReference: "test-repeat-first" });
+      expect((await getMerchOrders(listing.id, other)).map(o => [o.id, o.status, o.fulfillment])).toEqual([
+        [double.id, "refund_due", null],
+        [again.id, "paid", "sent"],
+      ]);
+      expect(await salesCount(listing.id)).toBe(2);
+      const report = await getMerchSales(creator);
+      expect(report.products.find(p => p.title === "Repeat T-shirt")).toMatchObject({ confirmed: 2, revenue: new Map([["INR", 159800]]) });
     } finally { vi.unstubAllEnvs(); vi.unstubAllGlobals(); }
   });
 

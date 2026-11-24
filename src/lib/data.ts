@@ -7,7 +7,7 @@ import { hideDemo } from "./demo";
 import { db, schema } from "./db";
 import { TIER_INFO, type Tier } from "./scoring";
 
-const { listings, posts, users, orders, flags, inquiries } = schema;
+const { listings, posts, users, orders, payments, flags, inquiries } = schema;
 
 // Listings anyone can see. "in_review" and "removed" are owner/admin only.
 const PUBLIC_STATUSES = ["published", "sold"] as const;
@@ -163,11 +163,34 @@ export async function hasPendingOrder(listingId: number) {
 }
 
 export async function salesCount(listingId: number) {
-  const [row] = await db
-    .select({ n: count() })
-    .from(orders)
-    .where(and(eq(orders.listingId, listingId), inArray(orders.status, COMPLETED_ORDERS)));
-  return row?.n ?? 0;
+  const [[row], [repeat]] = await Promise.all([
+    db.select({ n: count() }).from(orders).where(and(eq(orders.listingId, listingId), inArray(orders.status, COMPLETED_ORDERS))),
+    db.select({ n: count() }).from(payments).where(and(eq(payments.listingId, listingId), REPEAT_PURCHASE)),
+  ]);
+  return (row?.n ?? 0) + (repeat?.n ?? 0);
+}
+
+/**
+ * Paid Cashfree payments that no order stands for. A buyer has one order per
+ * listing, so a second T-shirt from the same buyer is only a payment.
+ * Explicit table names, since drizzle leaves single-table columns unqualified.
+ */
+const REPEAT_PURCHASE = and(
+  eq(payments.status, "paid"),
+  sql`not exists (select 1 from orders o where o.listing_id = "payments"."listing_id" and o.payment_reference = "payments"."provider_order_id")`,
+);
+
+export type MerchOrder = { id: number; status: "paid" | "refund_due"; fulfillment: string | null; amountCents: number; currency: string; paidAt: Date | null };
+
+/** A buyer's merchandise orders for one listing, newest first. */
+export async function getMerchOrders(listingId: number, buyerId: number): Promise<MerchOrder[]> {
+  const rows = await db
+    .select({ id: payments.id, status: payments.status, fulfillment: payments.fulfillment, amountCents: payments.amountCents, currency: payments.currency, paidAt: payments.paidAt })
+    .from(payments)
+    .where(and(eq(payments.listingId, listingId), eq(payments.buyerId, buyerId), inArray(payments.status, ["paid", "refund_due"])))
+    .orderBy(desc(payments.id))
+    .limit(10);
+  return rows as MerchOrder[];
 }
 
 /**
@@ -237,6 +260,16 @@ export async function getMerchSales(ownerId: number) {
     eq(listings.creatorId, ownerId), eq(listings.isDemo, false),
     inArray(listings.productType, PRODUCTS.filter(product => product.physical).map(product => product.id)),
   )).groupBy(listings.id, orders.currency).orderBy(asc(listings.title), asc(listings.id), asc(orders.currency));
+  // Repeat purchases by a buyer who already has an order for the product.
+  const repeats = await db.select({
+    id: listings.id, slug: listings.slug, title: listings.title, currency: payments.currency,
+    confirmed: sql<number>`count(*)`.mapWith(Number), pending: sql<number>`0`.mapWith(Number),
+    revenue: sql<number>`sum(${payments.amountCents})`.mapWith(Number),
+  }).from(payments).innerJoin(listings, eq(listings.id, payments.listingId)).where(and(
+    REPEAT_PURCHASE, gt(payments.amountCents, 0), eq(listings.creatorId, ownerId), eq(listings.isDemo, false),
+    inArray(listings.productType, PRODUCTS.filter(product => product.physical).map(product => product.id)),
+  )).groupBy(listings.id, payments.currency);
+  rows.push(...repeats);
 
   type ProductSales = { slug: string; title: string; confirmed: number; revenue: Map<string, number> };
   const products = new Map<number, ProductSales>();
@@ -249,7 +282,7 @@ export async function getMerchSales(ownerId: number) {
     confirmed += row.confirmed;
     pending += row.pending;
     if (row.currency && row.confirmed) {
-      product.revenue.set(row.currency, row.revenue);
+      product.revenue.set(row.currency, (product.revenue.get(row.currency) ?? 0) + row.revenue);
       revenue.set(row.currency, (revenue.get(row.currency) ?? 0) + row.revenue);
     }
     products.set(row.id, product);

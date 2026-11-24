@@ -12,7 +12,9 @@ import { siteUrl } from "@/lib/format";
 import { parsePhone } from "@/lib/phone";
 import { withinLimit } from "@/lib/rate-limit";
 import { reportError } from "@/lib/report-error";
-import { fulfillmentVariants, prepareShipment } from "@/lib/qikink";
+import { fulfillmentVariants, prepareShipment, shipsThroughQikink } from "@/lib/qikink";
+
+const SHIPPING_UNAVAILABLE = "Shipping is unavailable for this item. Please try again later.";
 
 export type CheckoutState =
   | { message?: string; needsPhone?: boolean; session?: undefined }
@@ -42,9 +44,20 @@ export async function startCheckout(_prev: CheckoutState, fd: FormData): Promise
     if (!listing || listing.status !== "published" || listing.creatorId === user.id || !usesCashfree(listing)) {
       return { message: "This listing isn't available to buy." };
     }
-    const [owned] = await tx.select({ id: schema.orders.id }).from(schema.orders)
-      .where(and(eq(schema.orders.listingId, listing.id), eq(schema.orders.buyerId, user.id), inArray(schema.orders.status, COMPLETED_ORDERS))).limit(1);
-    if (owned) return { message: "You already own this." };
+    let variants: Map<string, string>;
+    try {
+      variants = fulfillmentVariants(listing);
+    } catch (error) {
+      await reportError({ where: "startCheckout", message: `QIKINK_CATALOG: ${String(error)}`, path: `/listing/${slug}` });
+      return { message: SHIPPING_UNAVAILABLE };
+    }
+    if (shipsThroughQikink(listing) && !variants.size) return { message: SHIPPING_UNAVAILABLE };
+    // Merchandise can be ordered again. Anything else is bought once.
+    if (!variants.size) {
+      const [owned] = await tx.select({ id: schema.orders.id }).from(schema.orders)
+        .where(and(eq(schema.orders.listingId, listing.id), eq(schema.orders.buyerId, user.id), inArray(schema.orders.status, COMPLETED_ORDERS))).limit(1);
+      if (owned) return { message: "You already own this." };
+    }
     if (listing.license === "exclusive") {
       const [other] = await tx.select({ id: schema.payments.id }).from(schema.payments).where(and(
         eq(schema.payments.listingId, listing.id),
@@ -54,7 +67,6 @@ export async function startCheckout(_prev: CheckoutState, fd: FormData): Promise
       )).limit(1);
       if (other) return { message: `Someone else is paying for this exclusive listing right now. If they don't finish, it opens again within ${CHECKOUT_MINUTES} minutes.` };
     }
-    const variants = fulfillmentVariants(listing);
     const shipment = variants.size ? prepareShipment(variants, fd, phone, user.email, listing.currency) : null;
     if (typeof shipment === "string") return { message: shipment };
     await tx.insert(schema.payments).values({

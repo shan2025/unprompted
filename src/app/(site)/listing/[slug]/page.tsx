@@ -15,7 +15,8 @@ import { FlagForm } from "@/components/FlagForm";
 import { JsonLd } from "@/components/JsonLd";
 import { ClaimPaymentForm, PaymentLinkForm } from "@/components/PaymentForms";
 import { CashfreeCheckout } from "@/components/CashfreeCheckout";
-import { fulfillmentVariants } from "@/lib/qikink";
+import { fulfillmentVariants, shipsThroughQikink } from "@/lib/qikink";
+import { reportError } from "@/lib/report-error";
 import { recheckOpenPayments, usesCashfree } from "@/lib/checkout";
 import { ScoreCard } from "@/components/Score";
 import { SegmentView } from "@/components/SegmentView";
@@ -24,7 +25,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { browseHref } from "@/lib/browse";
 import { categoryLabel, isCategory, LICENSES, licenseLabel } from "@/lib/categories";
 import { ListingCard } from "@/components/ListingCard";
-import { getListing, getOrderStatus, hasPendingOrder, salesCount, searchListings } from "@/lib/data";
+import { getListing, getMerchOrders, getOrderStatus, hasPendingOrder, salesCount, searchListings, type MerchOrder } from "@/lib/data";
 import { formatDate, formatPrice, plural, siteUrl } from "@/lib/format";
 import { paymentProvider, upiId } from "@/lib/payment-link";
 import { EVIDENCE_KINDS, TIER_INFO, type Tier } from "@/lib/scoring";
@@ -70,12 +71,16 @@ async function ListingView({ params, searchParams }: Props) {
   const isOwner = user?.id === listing.creatorId;
   const isAdmin = user?.role === "admin";
   let orderStatus = user ? await getOrderStatus(listing.id, user.id) : null;
+  // Company merchandise ships through Qikink and can be ordered again and again.
+  const shipping = listing.priceCents > 0 && shipsThroughQikink(listing);
+  const variants = shipping ? await shippingOptions(listing) : [];
   // A buyer who paid through Cashfree but whose confirmation never arrived gets it checked now.
   let rechecked: Awaited<ReturnType<typeof recheckOpenPayments>> = null;
-  if (user && orderStatus !== "paid" && orderStatus !== "demo" && usesCashfree(listing)) {
+  if (user && (shipping || (orderStatus !== "paid" && orderStatus !== "demo")) && usesCashfree(listing)) {
     rechecked = await recheckOpenPayments(listing.id, user.id);
     if (rechecked) orderStatus = await getOrderStatus(listing.id, user.id);
   }
+  const merchOrders = shipping && user ? await getMerchOrders(listing.id, user.id) : [];
   const purchased = orderStatus === "paid" || orderStatus === "demo";
   // Buyers keep what they bought, even after a listing leaves the market. Anyone
   // waiting on a seller keeps sight of the listing they've paid for too.
@@ -87,10 +92,9 @@ async function ListingView({ params, searchParams }: Props) {
   ]);
   const instantBuy = listing.priceCents === 0 || listing.isDemo;
   const cashfree = usesCashfree(listing);
-  const variants = listing.priceCents > 0 ? [...fulfillmentVariants(listing).keys()] : [];
   const upi = listing.paymentUrl && upiId(listing.paymentUrl);
   const canSeeDeliverable = isOwner || purchased || isAdmin;
-  const showBuyBar = listing.status === "published" && !isOwner && !purchased && orderStatus !== "pending";
+  const showBuyBar = listing.status === "published" && !isOwner && (shipping ? cashfree && variants.length > 0 : !purchased && orderStatus !== "pending");
   const { analysis } = listing;
   const evidence = listing.evidence;
   const photos = [...(listing.coverFile ? [listing.coverFile] : []), ...listing.gallery.map(photo => photo.file)];
@@ -120,8 +124,23 @@ async function ListingView({ params, searchParams }: Props) {
               <p className="mt-3 text-sm text-muted">Buyers pay through Cashfree checkout, and sales appear in <Link href="/admin/merch" className="link">your merch analytics</Link>.</p>
             ) : listing.priceCents > 0 && !listing.isDemo && <PaymentLinkForm slug={listing.slug} current={listing.paymentUrl} />}
           </>
+        ) : shipping ? (
+          <div className="space-y-4">
+            {merchOrders.length > 0 && <MerchOrders orders={merchOrders} />}
+            {listing.status !== "published" ? (
+              <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">This product is not currently for sale.</p>
+            ) : !cashfree || !variants.length ? (
+              <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">Shipping checkout is currently unavailable.</p>
+            ) : !user ? (
+              <Link href={`/login?next=${encodeURIComponent(`/listing/${listing.slug}`)}`} className="btn-accent block w-full py-3 text-center text-[15px]">
+                Log in to buy
+              </Link>
+            ) : (
+              <CashfreeCheckout slug={listing.slug} label={`${merchOrders.length ? "Order another" : "Pay"} · ${formatPrice(listing.priceCents, listing.currency)}`} askPhone={!user.phone?.startsWith("+91")} variants={variants} askEmail={!user.email} />
+            )}
+          </div>
         ) : purchased ? (
-          <p className="rounded-lg bg-paper px-4 py-3 text-sm font-semibold text-human">{variants.length ? "Payment received. Thank you for your order." : "You own this. It's unlocked below."}</p>
+          <p className="rounded-lg bg-paper px-4 py-3 text-sm font-semibold text-human">You own this. It&apos;s unlocked below.</p>
         ) : orderStatus === "pending" ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">
             <strong className="text-ink">Waiting for {creator.name}.</strong> They&apos;re checking your payment, and the work unlocks here as soon as they confirm it.
@@ -137,15 +156,13 @@ async function ListingView({ params, searchParams }: Props) {
             </SubmitButton>
             {listing.priceCents > 0 && <p className="mt-2 text-center text-xs text-muted">Demo listing: no money changes hands.</p>}
           </form>
-        ) : variants.length && !cashfree ? (
-          <p className="text-sm text-muted">Shipping checkout is currently unavailable.</p>
         ) : cashfree ? (
           !user ? (
             <Link href={`/login?next=${encodeURIComponent(`/listing/${listing.slug}`)}`} className="btn-accent block w-full py-3 text-center text-[15px]">
               Log in to buy
             </Link>
           ) : (
-            <CashfreeCheckout slug={listing.slug} label={`Pay ${formatPrice(listing.priceCents, listing.currency)}`} askPhone={!user.phone || Boolean(variants.length && !user.phone.startsWith("+91"))} variants={variants} askEmail={!user.email} />
+            <CashfreeCheckout slug={listing.slug} label={`Pay ${formatPrice(listing.priceCents, listing.currency)}`} askPhone={!user.phone} />
           )
         ) : !listing.paymentUrl ? (
           <p className="rounded-lg bg-paper px-4 py-3 text-sm text-ink-soft">The seller hasn&apos;t added a way to pay yet.</p>
@@ -215,7 +232,7 @@ async function ListingView({ params, searchParams }: Props) {
           }}
         />
       )}
-      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1" || rechecked === "paid"} claimed={query.claimed === "1"} payment={rechecked === "refund_due" ? "refund_due" : typeof query.payment === "string" ? query.payment : undefined} isDemo={listing.isDemo} isOwner={isOwner} owned={purchased} />
+      <Banners status={listing.status} created={query.created === "1"} purchased={query.purchased === "1" || rechecked === "paid"} claimed={query.claimed === "1"} payment={rechecked === "refund_due" ? "refund_due" : typeof query.payment === "string" ? query.payment : undefined} isDemo={listing.isDemo} isOwner={isOwner} owned={purchased && !shipping} merch={shipping} />
 
       <nav className="mb-4 text-sm text-muted" aria-label="Breadcrumb">
         <Link href={listing.priceCents > 0 ? "/marketplace" : "/explore"} className="hover:text-ink">
@@ -281,14 +298,14 @@ async function ListingView({ params, searchParams }: Props) {
                     {listing.locked}
                   </div>
                 ) : (
-                  <p className="text-ink-soft">{variants.length ? "Qikink ships to the address entered at checkout." : physical ? "Contact the seller to arrange delivery." : "The preview above is the full work."}</p>
+                  <p className="text-ink-soft">{shipping ? "Qikink ships to the address entered at checkout." : physical ? "Contact the seller to arrange delivery." : "The preview above is the full work."}</p>
                 )}
               </div>
             ) : (
               <div className="card mt-4 flex flex-col items-start gap-3 border-dashed p-6 sm:flex-row sm:items-center">
                 <LockIcon />
                 <p className="flex-1 text-ink-soft">
-                  {variants.length ? "Enter your delivery address at checkout. Qikink prints and ships this item." : physical ? (listing.locked ? "The seller’s delivery instructions will appear here after purchase." : "Contact the seller for shipping or pickup details.") : listing.locked
+                  {shipping ? "Enter your delivery address at checkout. Qikink prints and ships this item." : physical ? (listing.locked ? "The seller’s delivery instructions will appear here after purchase." : "Contact the seller for shipping or pickup details.") : listing.locked
                     ? "The full work unlocks after purchase. It was scanned along with the preview, so the score covers it too."
                     : "The preview above is the full work. Buying supports the creator and grants the license below."}
                 </p>
@@ -476,6 +493,7 @@ function Banners({
   isDemo,
   isOwner,
   owned,
+  merch,
 }: {
   status: string;
   created: boolean;
@@ -485,6 +503,7 @@ function Banners({
   isDemo: boolean;
   isOwner: boolean;
   owned: boolean;
+  merch: boolean;
 }) {
   const banner = (tone: string, text: React.ReactNode) => (
     <div className={`mb-6 rounded-xl border px-4 py-3 text-sm ${tone}`} role="status">
@@ -516,11 +535,53 @@ function Banners({
   }
   if (created) return banner("border-human/40 bg-card text-ink", <><strong>Your listing is live.</strong> Share the badge below to show your score anywhere.</>);
   if (claimed && !owned) return banner("border-human/40 bg-card text-ink", <><strong>The seller&apos;s been told.</strong> The work unlocks here once they&apos;ve checked your payment.</>);
+  if (purchased && merch) return banner("border-human/40 bg-card text-ink", <><strong>Order placed.</strong> We&apos;ve emailed you a confirmation. It will be printed and shipped to the address you entered, and you can follow it here.</>);
   if (purchased) return banner("border-human/40 bg-card text-ink", <><strong>It&apos;s yours.</strong> The full work is unlocked below.{isDemo && " (Demo purchase, no payment taken.)"}</>);
   if (payment === "failed" && !owned) return banner("border-heavy/40 bg-card text-ink", <><strong>The payment didn&apos;t go through.</strong> No money was taken. You can try again below.</>);
-  if (payment === "pending" && !owned) return banner("border-assist/40 bg-card text-ink", <><strong>Your payment is still processing.</strong> If it goes through, the work unlocks here and we&apos;ll email you. Refresh in a minute.</>);
-  if (payment === "refund_due") return banner("border-heavy/40 bg-card text-ink", <><strong>We couldn&apos;t complete this order.</strong> Your payment arrived, but the listing was no longer available to you. We&apos;ll refund it to the way you paid.</>);
+  if (payment === "pending" && !owned) return banner("border-assist/40 bg-card text-ink", <><strong>Your payment is still processing.</strong> If it goes through, {merch ? "your order is placed" : "the work unlocks here"} and we&apos;ll email you. Refresh in a minute.</>);
+  if (payment === "refund_due") return banner("border-heavy/40 bg-card text-ink", <><strong>We couldn&apos;t complete this order.</strong> Your payment arrived, but {merch ? "we couldn't accept the order" : "the listing was no longer available to you"}. We&apos;ll refund it to the way you paid.</>);
   return null;
+}
+
+/** The product options a buyer can choose. A broken catalog setting closes checkout instead of breaking the page. */
+async function shippingOptions(listing: Parameters<typeof fulfillmentVariants>[0]) {
+  try {
+    return [...fulfillmentVariants(listing).keys()];
+  } catch (error) {
+    await reportError({ where: "listing page", message: `QIKINK_CATALOG: ${String(error)}`, path: `/listing/${listing.slug}` });
+    return [];
+  }
+}
+
+const MERCH_STATUS: Record<string, string> = {
+  waiting: "Order received",
+  submitting: "Order received",
+  review: "Order received",
+  sent: "Sent for printing and shipping",
+};
+
+function MerchOrders({ orders }: { orders: MerchOrder[] }) {
+  return (
+    <div className="rounded-lg bg-paper px-4 py-3 text-sm">
+      <p className="font-semibold text-ink">Your orders</p>
+      <ul className="mt-2 space-y-2">
+        {orders.map((order) => (
+          <li key={order.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <span className={order.status === "refund_due" ? "text-heavy" : "text-human"}>
+              {order.status === "refund_due" ? "Couldn't be completed. We'll refund it." : MERCH_STATUS[order.fulfillment ?? ""] ?? "Paid"}
+            </span>
+            <span className="text-xs text-muted tabular-nums">
+              UNP{order.id}
+              {order.paidAt && ` · ${formatDate(order.paidAt)}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-muted">
+        Questions about an order? <Link href="/contact" className="link">Contact us</Link> with its reference.
+      </p>
+    </div>
+  );
 }
 
 function LockIcon() {

@@ -82,7 +82,7 @@ export async function settleCashfreeOrder(orderId: string, options: { revalidate
 
     const refund = async () => {
       await tx.update(schema.payments).set({ status: "refund_due", paidAt: new Date(), fulfillment: null, shipment: null }).where(eq(schema.payments.id, locked.id));
-      return { outcome: "refund_due" as const, listing, buyerId: locked.buyerId };
+      return { outcome: "refund_due" as const, listing, buyerId: locked.buyerId, shipment: null };
     };
     if (!amountMatches) return refund();
 
@@ -96,9 +96,10 @@ export async function settleCashfreeOrder(orderId: string, options: { revalidate
         setWhere: ne(schema.orders.status, "paid"),
       })
       .returning({ id: schema.orders.id });
-    if (!order) return refund();
+    // Merchandise can be bought again: each payment is another item to print.
+    if (!order && !locked.fulfillment) return refund();
 
-    if (listing.license === "exclusive") {
+    if (order && listing.license === "exclusive") {
       // Someone else bought the only copy while this buyer was paying.
       if (listing.status === "sold") {
         const [other] = await tx.select({ id: schema.orders.id }).from(schema.orders)
@@ -113,12 +114,12 @@ export async function settleCashfreeOrder(orderId: string, options: { revalidate
         .where(and(eq(schema.orders.listingId, listing.id), eq(schema.orders.status, "pending"), ne(schema.orders.buyerId, locked.buyerId)));
     }
     await tx.update(schema.payments).set({ status: "paid", paidAt: new Date() }).where(eq(schema.payments.id, locked.id));
-    return { outcome: "paid" as const, listing, buyerId: locked.buyerId };
+    return { outcome: "paid" as const, listing, buyerId: locked.buyerId, shipment: locked.shipment };
   });
   // Another call settled it first.
   if (!result) return settledAgain(payment.id, payment.slug);
 
-  const { listing, outcome, buyerId } = result;
+  const { listing, outcome, buyerId, shipment } = result;
   const path = `/listing/${listing.slug}`;
   // Emails go out after the response, so neither the buyer's page nor Cashfree's webhook waits on them.
   after(async () => {
@@ -127,8 +128,18 @@ export async function settleCashfreeOrder(orderId: string, options: { revalidate
     const price = formatPrice(payment.amountCents, payment.currency);
     const who = `${buyer?.name ?? "A buyer"} (@${buyer?.handle ?? "unknown"})`;
     if (outcome === "paid") {
-      await email(buyer?.email ?? null, `"${listing.title}" is yours`, [`Your payment of ${price} for "${listing.title}" went through. ${payment.fulfillment ? "We received your merchandise order." : "It's unlocked and ready for you."}`, `Cashfree order: ${orderId}`], path);
-      await email(owner?.email ?? null, `New sale: "${listing.title}"`, [`${who} paid ${price} for "${listing.title}" through Cashfree.`, `Cashfree order: ${orderId}`], "/admin/merch");
+      if (shipment) {
+        // The buyer's account email, or the delivery email they typed at checkout.
+        const { address } = shipment;
+        await email(buyer?.email ?? address.email, `Your order: "${listing.title}"`, [
+          `Your payment of ${price} for "${listing.title}" (${shipment.label}) went through.`,
+          `It will be printed and shipped to ${address.first_name} ${address.last_name}, ${address.city}, ${address.province} ${address.zip}. You can follow the order on the product page.`,
+          `Order reference: UNP${payment.id}`,
+        ], path);
+      } else {
+        await email(buyer?.email ?? null, `"${listing.title}" is yours`, [`Your payment of ${price} for "${listing.title}" went through. It's unlocked and ready for you.`, `Cashfree order: ${orderId}`], path);
+      }
+      await email(owner?.email ?? null, `New sale: "${listing.title}"`, [`${who} paid ${price} for "${listing.title}"${shipment ? ` (${shipment.label})` : ""} through Cashfree.`, `Cashfree order: ${orderId}`], "/admin/merch");
     } else {
       await email(buyer?.email ?? null, `We'll refund your payment for "${listing.title}"`, [`Your payment of ${price} for "${listing.title}" arrived, but we couldn't complete the order. For example, someone else bought this exclusive listing a moment earlier, or you already own it.`, "We'll refund it to the way you paid. You don't need to do anything.", `Cashfree order: ${orderId}`], path);
       await email(owner?.email ?? null, `Refund needed: "${listing.title}"`, [`${who} paid ${price} for "${listing.title}", but the order couldn't be completed (already sold, already owned, or the amount didn't match).`, `Refund Cashfree order ${orderId} from the Cashfree dashboard.`], "/admin/merch");

@@ -13,8 +13,16 @@ export type Shipment = {
 };
 type Listing = { slug: string; creatorId: number; productType: string | null; isDemo: boolean };
 
+/**
+ * The company's own physical products ship through Qikink. Without a mapped SKU
+ * they can't be sold at all, or a buyer could pay without giving an address.
+ */
+export function shipsThroughQikink(listing: Listing) {
+  return !listing.isDemo && isCompanyOwner({ id: listing.creatorId }) && Boolean(productType(listing.productType)?.physical);
+}
+
 export function fulfillmentVariants(listing: Listing): Map<string, string> {
-  if (listing.isDemo || !isCompanyOwner({ id: listing.creatorId }) || !productType(listing.productType)?.physical) return new Map();
+  if (!shipsThroughQikink(listing)) return new Map();
   const catalog: unknown = JSON.parse(process.env.QIKINK_CATALOG?.trim() || "{}");
   if (!catalog || typeof catalog !== "object" || Array.isArray(catalog)) throw Error("Invalid QIKINK_CATALOG");
   if (!Object.hasOwn(catalog, listing.slug)) return new Map();
