@@ -12,6 +12,7 @@ import { siteUrl } from "@/lib/format";
 import { parsePhone } from "@/lib/phone";
 import { withinLimit } from "@/lib/rate-limit";
 import { reportError } from "@/lib/report-error";
+import { track } from "@/lib/track";
 import { fulfillmentVariants, prepareShipment, shipsThroughQikink } from "@/lib/qikink";
 
 const SHIPPING_UNAVAILABLE = "Shipping is unavailable for this item. Please try again later.";
@@ -94,6 +95,14 @@ export async function startCheckout(_prev: CheckoutState, fd: FormData): Promise
       notifyUrl: site.startsWith("https://") ? `${site}/api/payments/cashfree/webhook` : null,
       note: listing.title,
       expiresAt,
+    });
+    track(user, "checkout_started", {
+      method: "cashfree",
+      listing_id: listing.id,
+      category: listing.category,
+      amount: listing.priceCents / 100,
+      currency: listing.currency,
+      merch: Boolean(shipsThroughQikink(listing)),
     });
     return { session: { id: order.payment_session_id, mode: cashfreeMode() } };
   } catch (error) {

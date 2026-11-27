@@ -12,6 +12,7 @@ import { GOOGLE_COOKIE, googleEnabled, googleProfile } from "@/lib/google";
 import { makeHandle } from "@/lib/handles";
 import { hashPassword } from "@/lib/password";
 import { clientIp, withinLimit } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 
 /**
  * Google sends people back here. Someone whose verified Google email already has
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
       .returning({ id: schema.users.id });
     if (user) {
       await createSession(user.id);
+      track({ id: user.id, email: profile.email, role: "member" }, "signed_up", { method: "google" });
       redirect(safeNext(started.next, "/explore"));
     }
     // Signed up with this email a moment ago, in another tab.

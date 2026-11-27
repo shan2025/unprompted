@@ -9,6 +9,7 @@ import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { siteUrl } from "@/lib/format";
 import { MAX_QUESTION, MIN_QUESTION, type AskState } from "@/lib/inquiry";
 import { withinLimit } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 
 const { listings, posts, users, inquiries } = schema;
 
@@ -56,6 +57,7 @@ export async function askCreator(_prev: AskState, fd: FormData): Promise<AskStat
   }
 
   await db.insert(inquiries).values({ [work.column]: work.id, senderId: user.id, creatorId: work.creatorId, message });
+  track(user, "creator_asked", { work_type: work.column === "listingId" ? "listing" : "post", work_id: work.id, creator_id: work.creatorId });
 
   const link = `${siteUrl()}${work.path}`;
   const firstName = work.creatorName.split(" ")[0];

@@ -4,10 +4,12 @@ import { Suspense } from "react";
 import "@fontsource-variable/figtree";
 import "./globals.css";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { PostHogAnalytics } from "@/components/PostHogAnalytics";
 import { ga4MeasurementId } from "@/lib/analytics";
 import { ga4RunsInThisEnvironment, ga4TracksVisitor } from "@/lib/analytics-audience";
 import { getCurrentUser } from "@/lib/auth";
 import { siteUrl } from "@/lib/format";
+import { posthogHost, posthogKey } from "@/lib/product-analytics";
 import { SITE_DESCRIPTION as DESCRIPTION } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
@@ -46,6 +48,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <AnalyticsForVisitor measurementId={ga4MeasurementId} />
           </Suspense>
         )}
+        {posthogKey && ga4RunsInThisEnvironment() && (
+          <Suspense fallback={null}>
+            <ProductAnalyticsForVisitor apiKey={posthogKey} />
+          </Suspense>
+        )}
       </body>
     </html>
   );
@@ -54,4 +61,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 async function AnalyticsForVisitor({ measurementId }: { measurementId: string }) {
   const user = await getCurrentUser();
   return <GoogleAnalytics measurementId={measurementId} enabled={ga4TracksVisitor(user)} />;
+}
+
+// Same audience rules as GA: production only, never admins, the company owner or listed team accounts.
+async function ProductAnalyticsForVisitor({ apiKey }: { apiKey: string }) {
+  const user = await getCurrentUser();
+  if (!ga4TracksVisitor(user)) return null;
+  const person = user && { id: user.id, handle: user.handle, name: user.name, verified: user.verified };
+  return <PostHogAnalytics apiKey={apiKey} host={posthogHost} person={person} />;
 }

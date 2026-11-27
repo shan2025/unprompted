@@ -8,6 +8,7 @@ import { canEdit, isReaction } from "@/lib/chat-rules";
 import { db, schema } from "@/lib/db";
 import { UNVERIFIED_MESSAGE } from "@/lib/email-verification";
 import { withinLimit } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 
 const { directMessageReactions, directMessages } = schema;
 
@@ -63,6 +64,8 @@ export async function sendDirectMessage(
     });
   if (!message) return { error: "That message isn't available to reply to. Remove the reply to send your draft." };
   await clearTyping(user.id, recipient.id);
+  // Never the message text: only that one was sent, and whether it was a reply.
+  track(user, "message_sent", { is_reply: replyToId !== null });
   refresh();
   return { sentId: message.id };
 }

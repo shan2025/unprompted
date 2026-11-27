@@ -9,6 +9,7 @@ import { safeNext } from "@/lib/format";
 import { makeHandle } from "@/lib/handles";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { clearLimits, clientIp, withinLimit } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 
 // On success the form does a full page load to `next`, rather than an in-app
 // redirect, so no page remembered from before the login change is reused.
@@ -48,6 +49,7 @@ export async function signup(_prev: AuthState, fd: FormData): Promise<AuthState>
       .returning({ id: schema.users.id });
     if (user) {
       await createSession(user.id);
+      track({ id: user.id, email, role: "member" }, "signed_up", { method: "email" });
       await sendVerificationEmail({ id: user.id, name, email });
       return { next: safeNext(fd.get("next"), "/explore") };
     }

@@ -23,6 +23,7 @@ import { announce } from "@/lib/indexnow";
 import { MAX_EVIDENCE, parseListingForm, UNREADABLE_EVIDENCE, UNREADABLE_IMAGE, type CreateState, type PreviewState } from "@/lib/listing-form";
 import { PAYMENT_LINK_HELP, parsePaymentLink } from "@/lib/payment-link";
 import { withinLimit } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 import { deleteUploads, saveEvidenceFiles, saveUpload, saveWithUploads } from "@/lib/uploads";
 
 function slugify(title: string) {
@@ -211,6 +212,14 @@ export async function createListing(_prev: CreateState, fd: FormData): Promise<C
     throw error;
   }
 
+  track(user, "listing_created", {
+    category: v.category,
+    product_type: v.productType,
+    status: score.needsReview ? "in_review" : "published",
+    price: v.priceCents / 100,
+    currency: v.currency,
+    license: v.license,
+  });
   // Ask Bing and others to crawl it now, if it went live straight away.
   if (!score.needsReview) announce([`/listing/${slug}`, `/u/${user.handle}`]);
   revalidatePath("/admin/merch");
@@ -245,6 +254,7 @@ export async function buyListing(slug: string) {
     if (listing.license === "exclusive") {
       await tx.update(schema.listings).set({ status: "sold" }).where(eq(schema.listings.id, listing.id));
     }
+    if (!listing.isDemo) track(user, "order_paid", { method: "free", listing_id: listing.id, category: listing.category, amount: 0, currency: listing.currency });
     return true;
   });
   redirect(bought ? `/listing/${slug}?purchased=1` : `/listing/${slug}`);
@@ -322,9 +332,10 @@ export async function claimPayment(_prev: PaymentState, fd: FormData): Promise<P
       })
       .returning({ id: schema.orders.id });
     if (!order) return { message: "You've already told the seller about this order." };
-    return { title: listing.title, creatorId: listing.creatorId };
+    return { title: listing.title, creatorId: listing.creatorId, listingId: listing.id, category: listing.category, amountCents: listing.priceCents, currency: listing.currency };
   });
   if (result.message) return { message: result.message };
+  track(user, "checkout_started", { method: "payment_link", listing_id: result.listingId, category: result.category, amount: result.amountCents! / 100, currency: result.currency });
 
   const [seller] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, result.creatorId!)).limit(1);
   if (seller) {
@@ -378,7 +389,7 @@ export async function reviewOrder(fd: FormData) {
         .returning({ buyerId: schema.orders.buyerId });
       outbid = others.map((o) => o.buyerId);
     }
-    return { buyerId: order.buyerId, title: listing.title, slug: listing.slug, outbid };
+    return { buyerId: order.buyerId, title: listing.title, slug: listing.slug, outbid, listingId: listing.id, category: listing.category };
   });
   if (!result) return;
 
@@ -397,7 +408,10 @@ export async function reviewOrder(fd: FormData) {
     }
   }
 
-  const [buyer] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, result.buyerId)).limit(1);
+  const [buyer] = await db.select({ email: schema.users.email, role: schema.users.role }).from(schema.users).where(eq(schema.users.id, result.buyerId)).limit(1);
+  if (buyer && decision === "paid") {
+    track({ id: result.buyerId, email: buyer.email, role: buyer.role }, "order_paid", { method: "payment_link", listing_id: result.listingId, category: result.category });
+  }
   if (buyer) {
     await notify(
       buyer.email,

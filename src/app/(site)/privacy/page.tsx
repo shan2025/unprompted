@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ContactLine, LegalPage, List, Section } from "@/components/LegalPage";
 import { ga4MeasurementId } from "@/lib/analytics";
 import { ga4RunsInThisEnvironment } from "@/lib/analytics-audience";
+import { posthogKey } from "@/lib/product-analytics";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   const usesGoogleAnalytics = ga4MeasurementId && ga4RunsInThisEnvironment();
+  const usesPostHog = posthogKey && ga4RunsInThisEnvironment();
   return (
     <LegalPage
       eyebrow="Legal"
@@ -54,6 +56,17 @@ export default function PrivacyPage() {
               categories for posts, listings and profiles, and remove query strings from the page addresses we send.</>
             )}
           </li>
+          {usesPostHog && (
+            <li>
+              <strong className="text-ink">How the site is used:</strong> we use PostHog to understand how people use
+              {" "}{SITE.name}, so we can improve it. It records the pages you visit, and, if you&apos;re logged in, key
+              actions linked to your account number, handle and name, such as signing up, posting, listing, buying and
+              messaging (never what your messages say). It may also record how you move around a page (session replays),
+              with everything you type hidden; we don&apos;t record chat, your dashboard or sign-in pages. It uses a
+              first-party cookie. We never send PostHog your email address or phone number, and when you delete your
+              account we remove your name and handle from it.
+            </li>
+          )}
           <li>
             <strong className="text-ink">View counts on posts:</strong> when you open a post, we count one view for that
             day so the author can see how many people read it. To tell visitors apart we store a scrambled code made
@@ -62,7 +75,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="text-ink">One login cookie</strong> that keeps you signed in.
-            {usesGoogleAnalytics ? " We use no advertising cookies." : " We use no advertising or tracking cookies."}
+            {usesGoogleAnalytics || usesPostHog ? " We use no advertising cookies." : " We use no advertising or tracking cookies."}
           </li>
           <li>
             <strong className="text-ink">Technical logs</strong> kept by our hosting providers (such as IP address and
@@ -116,6 +129,11 @@ export default function PrivacyPage() {
             us your name and email address under its own privacy policy.
             {usesGoogleAnalytics && " Google Analytics also processes the visit statistics described above."}
           </li>
+          {usesPostHog && (
+            <li>
+              <strong className="text-ink">PostHog</strong>: product analytics, as described above (servers outside India).
+            </li>
+          )}
           <li>
             The <strong className="text-ink">creator you ask a question</strong>: they see your name, profile handle, email
             address and your question, so they can reply to you directly. The form tells you this before you send it. If a

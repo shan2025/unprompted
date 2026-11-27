@@ -13,6 +13,7 @@ import { hashPassword } from "@/lib/password";
 import { checkCode, issueCode } from "@/lib/phone-codes";
 import { parsePhone } from "@/lib/phone";
 import { phoneLoginEnabled } from "@/lib/sms";
+import { track } from "@/lib/track";
 
 const { users } = schema;
 
@@ -89,6 +90,7 @@ export async function phoneLogin(prev: PhoneLoginState, fd: FormData): Promise<P
       .returning({ id: users.id });
     if (user) {
       await createSession(user.id);
+      track({ id: user.id, email: null, role: "member" }, "signed_up", { method: "phone" });
       return { step: "code", phone, next: safeNext(next, "/explore") };
     }
     // Signed up with this number a moment ago, in another tab.

@@ -9,6 +9,7 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { siteUrl } from "@/lib/format";
 import { withinLimit } from "@/lib/rate-limit";
 import { reportError } from "@/lib/report-error";
+import { track } from "@/lib/track";
 
 export type DeleteAccountState = { message?: string } | null;
 
@@ -24,6 +25,8 @@ export async function deleteMyAccount(_prev: DeleteAccountState, fd: FormData): 
   if ("blocked" in result) return { message: result.blocked };
 
   await destroySession();
+  // Strip who they were from their analytics profile; what's left is an ID that no longer matches anyone.
+  track(user, "account_deleted", {}, { handle: null, name: null, verified: null, deleted: true });
   const { email, name } = result;
   if (email) {
     after(() => sendEmail({

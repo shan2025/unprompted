@@ -9,6 +9,7 @@ import { formatPrice, siteUrl } from "./format";
 import { isCompanyOwner } from "./merch";
 import { reportError } from "./report-error";
 import { dispatchShipment } from "./fulfillment";
+import { track } from "./track";
 
 /**
  * How long a Cashfree checkout stays open. It also holds an exclusive listing
@@ -123,10 +124,20 @@ export async function settleCashfreeOrder(orderId: string, options: { revalidate
   const path = `/listing/${listing.slug}`;
   // Emails go out after the response, so neither the buyer's page nor Cashfree's webhook waits on them.
   after(async () => {
-    const [buyer] = await db.select({ email: schema.users.email, name: schema.users.name, handle: schema.users.handle }).from(schema.users).where(eq(schema.users.id, buyerId)).limit(1);
+    const [buyer] = await db.select({ email: schema.users.email, name: schema.users.name, handle: schema.users.handle, role: schema.users.role }).from(schema.users).where(eq(schema.users.id, buyerId)).limit(1);
     const [owner] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, listing.creatorId)).limit(1);
     const price = formatPrice(payment.amountCents, payment.currency);
     const who = `${buyer?.name ?? "A buyer"} (@${buyer?.handle ?? "unknown"})`;
+    if (buyer) {
+      track({ id: buyerId, email: buyer.email, role: buyer.role }, outcome === "paid" ? "order_paid" : "order_refund_due", {
+        method: "cashfree",
+        listing_id: listing.id,
+        category: listing.category,
+        amount: payment.amountCents / 100,
+        currency: payment.currency,
+        merch: Boolean(shipment),
+      });
+    }
     if (outcome === "paid") {
       if (shipment) {
         // The buyer's account email, or the delivery email they typed at checkout.

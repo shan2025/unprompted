@@ -26,6 +26,7 @@ import {
   type PostPreviewState,
 } from "@/lib/post-form";
 import { withinLimit } from "@/lib/rate-limit";
+import { track } from "@/lib/track";
 import { deleteUploads, saveEvidenceFiles, saveUpload, saveWithUploads } from "@/lib/uploads";
 
 function slugify(title: string) {
@@ -146,6 +147,12 @@ export async function createPost(_prev: PostCreateState, fd: FormData): Promise<
     })),
   ); } catch (error) { if (error instanceof PublicationConflict) return { message: error.message }; throw error; }
 
+  track(user, "post_published", {
+    category: v.category,
+    status: result.score.needsReview ? "in_review" : "published",
+    has_cover: Boolean(coverFile),
+    has_video: Boolean(v.videoUrl),
+  });
   // Ask Bing and others to crawl it now, if it's live and long enough to be in search.
   if (!result.score.needsReview && worthIndexing({ subtitle: v.subtitle, body: v.body, coverFile, videoUrl: v.videoUrl })) {
     announce([`/journal/${slug}`, `/u/${user.handle}`]);
@@ -254,7 +261,10 @@ export async function toggleAppreciation(slug: string) {
   const removed = await db.delete(schema.postAppreciations).where(where).returning({ postId: schema.postAppreciations.postId });
   if (removed.length === 0) {
     const added = await db.insert(schema.postAppreciations).values({ postId: post.id, userId: user.id }).onConflictDoNothing().returning({ postId: schema.postAppreciations.postId });
-    if (added.length) after(() => notifyAppreciation(user, post).catch((e) => console.error("[notify] appreciation", e)));
+    if (added.length) {
+      after(() => notifyAppreciation(user, post).catch((e) => console.error("[notify] appreciation", e)));
+      track(user, "work_appreciated", { post_id: post.id });
+    }
   }
   revalidatePath(path);
 }
@@ -271,7 +281,10 @@ export async function toggleFollow(handle: string, returnTo: string) {
   const removed = await db.delete(schema.follows).where(where).returning({ id: schema.follows.followerId });
   if (removed.length === 0) {
     const added = await db.insert(schema.follows).values({ followerId: user.id, followingId: target.id }).onConflictDoNothing().returning({ id: schema.follows.followerId });
-    if (added.length) after(() => notifyFollow(user, target.id).catch((e) => console.error("[notify] follow", e)));
+    if (added.length) {
+      after(() => notifyFollow(user, target.id).catch((e) => console.error("[notify] follow", e)));
+      track(user, "creator_followed", { creator_id: target.id });
+    }
   }
   revalidatePath(back);
 }
@@ -296,6 +309,7 @@ export async function addComment(_prev: CommentState, fd: FormData): Promise<Com
 
   await db.insert(schema.postComments).values({ postId: post.id, authorId: user.id, body });
   after(() => notifyComment(user, post, body).catch((e) => console.error("[notify] comment", e)));
+  track(user, "comment_added", { post_id: post.id });
   revalidatePath(`/journal/${slug}`);
   // A new key tells the form to clear itself.
   return { ok: true, key: Date.now() };
